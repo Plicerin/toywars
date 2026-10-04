@@ -30,7 +30,8 @@ destroy pays some. The first monster that reaches the box slams that shelf's
 lid and clears it; the second one through the same shelf ends the game.
 
 Toys unlock wave by wave: army man (shoots), teddy (soaks up bites), tank
-(one heavy shell), cowboy (lassos a monster in place), cannon (heavy shots),
+(one heavy shell), cowboy (lassos a monster in place), cannon (cannonballs that
+splash monsters bunched together),
 jet (takes off and flies its shelf, hitting every monster it passes, once). Monsters arrive wave by wave too:
 dino, wind-up mice (in packs of three), crawler (army bullets pass over it
 while it chews), knight (charges once its shield breaks), helicopter (hops

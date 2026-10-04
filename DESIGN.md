@@ -18,7 +18,9 @@ row, and the earliest-position variant has no cycles left for it. The
 knight's armor shows in its sprite (with and without the shield), not as a
 dark red; enemies move every other frame (half of them each frame).
 Numbers as built: army man fires every 42 frames (1 damage), tank every 300
-(8), cannon every 198 (3); cowboy lasso holds 60 frames, every 120; chewing
+(8), cannon every 198 (3, and the same to every other monster on the shelf
+within 12 pixels of the one hit: the burst is swept one monster per odd frame,
+so its cost stays bounded); cowboy lasso holds 60 frames, every 120; chewing
 takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
 
 ## Board

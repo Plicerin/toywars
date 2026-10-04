@@ -145,7 +145,7 @@ function quietGame() {
   g.frames(2);
   const hush = () => g.set('spawnTimer', 200);
   const run = (n, input = {}) => g.frames(n, input, hush);
-  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); } // (an empty slot's shelf is $FF)
   return { ...g, run };
 }
 const enemy = (g, i, lane, x, type, hp) => { g.set('eLane', lane, i); g.set('eX', x, i); g.set('eType', type, i); g.set('eHP', hp, i); g.set('eState', 0, i); };
@@ -259,7 +259,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   g.press();
   g.frames(2);
   g.set('spawnLeft', 0);
-  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); } // (an empty slot's shelf is $FF)
   g.frames(4);
   check('when a wave is done the next starts and unlocks the teddy', g.sc('wave') === 2 && g.sc('unlock') === 2 && g.sc('spawnLeft') === 7);
   let spawned = 0;
@@ -320,10 +320,39 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a T-Rex crushes a toy in one bite', g.sc('slotType', 0) === 0);
 }
 {
+  const g = quietGame();
+  slot(g, 3, 5, 40); // cannon, middle shelf, x 48
+  enemy(g, 0, 1, 120, 1, 20); // the one it hits
+  enemy(g, 1, 1, 131, 1, 20); // 11 pixels behind: splashed
+  enemy(g, 2, 1, 146, 1, 20); // 26 pixels behind: out of reach
+  enemy(g, 3, 0, 125, 1, 20); // another shelf
+  let f = 0;
+  while (g.sc('eHP', 0) === 20 && f < 600) { g.run(1); f += 1; }
+  g.run(12); // the burst checks one monster every other frame
+  const hp = [0, 1, 2, 3].map((i) => g.sc('eHP', i));
+  check('a cannonball splashes: 3 damage to the monster it hits and any other on its shelf within 12 pixels', hp.join() === '17,17,20,20', `health ${hp.join(', ')} after ${f} frames`);
+  enemy(g, 1, 1, g.sc('eX', 0) + 8, 1, 3); // and the splash can kill
+  const before = score(g);
+  f = 0;
+  while (g.sc('eHP', 0) === 17 && f < 600) { g.run(1); f += 1; }
+  g.run(12);
+  check('a splash kill counts', g.sc('eType', 1) === 0 && score(g) === before + 10, `kind ${g.sc('eType', 1)}, score ${before} -> ${score(g)}`);
+}
+{
+  const g = quietGame();
+  slot(g, 3, 1, 8); // army man, middle shelf
+  enemy(g, 0, 1, 120, 1, 20);
+  enemy(g, 1, 1, 126, 1, 20);
+  let f = 0;
+  while (g.sc('eHP', 0) === 20 && f < 600) { g.run(1); f += 1; }
+  g.run(12);
+  check('bullets do not splash', g.sc('eHP', 0) === 19 && g.sc('eHP', 1) === 20, `health ${g.sc('eHP', 0)}, ${g.sc('eHP', 1)}`);
+}
+{
   const g = boot();
   g.press(); g.frames(2);
   g.set('wave', 5); g.set('spawnLeft', 0);
-  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); } // (an empty slot's shelf is $FF)
   let first = 0;
   for (let f = 0; f < 600 && !first; f += 1) { g.frames(1); first = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i)).find((t) => t) ?? 0; }
   check('wave 6 opens with its boss, a T-Rex', g.sc('wave') === 6 && first === 8, `first kind ${first}`);
@@ -332,7 +361,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   const g = boot();
   g.press(); g.frames(2);
   g.set('wave', 3); g.set('spawnLeft', 0);
-  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); } // (an empty slot's shelf is $FF)
   const seen = new Set();
   let packs = 0;
   for (let f = 0; f < 5000; f += 1) {
@@ -396,7 +425,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   const start = watch(g, 40);
   check('a new game starts with the wave jingle on channel 0 (pure tone)', start.some((a) => a.v0 > 0 && a.c0 === 4));
   const hush = () => g.set('spawnTimer', 200);
-  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); } // (an empty slot's shelf is $FF)
   watch(g, 60, {}, hush);
   g.frames(1, { fire: true }, hush);
   const place = watch(g, 20, {}, hush);
@@ -413,7 +442,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   enemy(g, 0, 1, 56, 1, 99);
   const chew = watch(g, 64, {}, hush);
   check('chewing crunches on channel 1 (AUDC 3)', chew.some((a) => a.v1 > 0 && a.c1 === 3));
-  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); } // (an empty slot's shelf is $FF)
   g.set('lids', 2);
   enemy(g, 0, 1, 42, 1, 6);
   const over = watch(g, 120, {}, hush);

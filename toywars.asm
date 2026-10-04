@@ -105,6 +105,9 @@ W_musPos    ds 1        ; music: eighth note 0-63 of the theme
 W_musTimer  ds 1        ;   frames into it (0-11)
 W_shotDmg   ds 3        ; per shelf: damage of the shot in flight, 0 = none
 W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing crawler)
+W_splashX   ds 1        ; a cannonball's burst being swept (odd frames): x of the monster hit,
+W_splashL   ds 1        ;   its shelf,
+W_splashN   ds 1        ;   that monster << 4 | monsters left to check (0 = none)
 W_score     ds 3        ; BCD, most significant first
 W_wave      ds 1        ; binary, from 1
 W_batt      ds 1        ; batteries, binary 0-99
@@ -137,6 +140,9 @@ R_slotHP     = W_slotHP + $80
 R_slotCool   = W_slotCool + $80
 R_shotDmg    = W_shotDmg + $80
 R_shotKind   = W_shotKind + $80
+R_splashX    = W_splashX + $80
+R_splashL    = W_splashL + $80
+R_splashN    = W_splashN + $80
 R_score      = W_score + $80
 R_wave       = W_wave + $80
 R_batt       = W_batt + $80

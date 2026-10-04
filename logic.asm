@@ -24,6 +24,8 @@ NKINDS      = 9                 ; (kind 0 = none; the jet has no pace entry)
 SHOT_ARMY   = 1
 SHOT_TANK   = 2
 SHOT_CANNON = 3
+SPLASH      = 12                ; a cannonball's splash reach, pixels each way
+CANNON_DMG  = 3
 ST_ATTRACT  = 0
 ST_PLAY     = 1
 ST_OVER     = 2
@@ -133,6 +135,7 @@ Logic:
     jmp .finish
 .odd:
     jsr Toys
+    jsr Splash
 .finish:
 Finish:
     jsr Flash
@@ -210,10 +213,12 @@ ClearBoard:
     ldx #NENEMY-1
 .rows:
     sta eTop,x
+    sta W_eLane,x
     dex
     bpl .rows
     lda #0
     ldx #2
+    sta W_splashN
 .shots:
     lda #0
     sta W_shotDmg,x
@@ -598,6 +603,7 @@ Kill:                           ; enemy X destroyed: batteries and score
     sta W_eType,x
     lda #$FF
     sta eTop,x
+    sta W_eLane,x               ; (no shelf: shots skip the empty slot)
     lda R_dirty
     ora #1
     sta W_dirty
@@ -1029,6 +1035,7 @@ Breach:
     sta W_eType,y
     lda #$FF
     sta eTop,y
+    sta W_eLane,y
 .next:
     dey
     bpl .clear
@@ -1146,9 +1153,7 @@ FindAhead:
     sta lt3
     ldy #NENEMY-1
 .loop:
-    lda R_eType,y
-    beq .next
-    lda R_eLane,y
+    lda R_eLane,y               ; (an empty slot's shelf is $FF)
     cmp lt1
     bne .next
     lda R_eX,y
@@ -1203,16 +1208,16 @@ Shots:
 ; ShotHit (X = shelf, lt0 = shot x): carry set if it hit an enemy
 ShotHit:
     SUBROUTINE
-    ldy #NENEMY-1
-.loop:
-    lda R_eType,y
-    beq .next
-    lda R_eLane,y
-    cmp lt1
-    bne .next
     lda lt0
     clc
     adc #3
+    sta lt3                     ; the shot's right end
+    ldy #NENEMY-1
+.loop:
+    lda R_eLane,y               ; (an empty slot's shelf is $FF)
+    cmp lt1
+    bne .next
+    lda lt3
     cmp R_eX,y
     bcc .next                   ; shot ends left of the enemy
     lda R_eX,y
@@ -1236,6 +1241,22 @@ ShotHit:
     lda R_eState,y
     bmi .next                   ; bullets pass over a crawler that is chewing
 .hit:
+    lda R_shotKind,x
+    cmp #SHOT_CANNON
+    bne .direct
+    lda R_splashN
+    bne .direct                 ; (one burst at a time)
+    lda R_eX,y
+    sta W_splashX
+    stx W_splashL
+    tya
+    asl
+    asl
+    asl
+    asl
+    ora #NENEMY
+    sta W_splashN
+.direct:
     lda R_shotDmg,x
     sty lt2
     ldx lt2
@@ -1251,6 +1272,54 @@ ShotHit:
     dey
     bpl .loop
     clc
+    rts
+
+
+; Splash (odd frames): a cannonball's burst also hits every other monster on
+; its shelf within SPLASH pixels of the one it hit; one monster is checked a
+; frame (five frames a burst), which keeps the frame time bounded
+Splash:
+    SUBROUTINE
+    lda R_splashN
+    beq .done
+    sta lt0
+    and #$0F
+    tax
+    dex                         ; X = the monster to check
+    bne .more
+    lda #0                      ; the last one: the burst is over
+    beq .store
+.more:
+    lda lt0
+    sec
+    sbc #1
+.store:
+    sta W_splashN
+    lda lt0
+    lsr
+    lsr
+    lsr
+    lsr
+    sta lt0
+    cpx lt0
+    beq .done                   ; (it took its hit already)
+    lda R_eType,x
+    beq .done
+    lda R_eLane,x
+    cmp R_splashL
+    bne .done                   ; (a flying jet's shelf is 4-6)
+    lda R_eX,x
+    sec
+    sbc R_splashX
+    bcs .right
+    eor #$FF                    ; (carry clear: + 1 makes it positive)
+    adc #1
+.right:
+    cmp #SPLASH+1
+    bcs .done
+    lda #CANNON_DMG
+    jmp Damage
+.done:
     rts
 
 ;-------------------------------------------------------------------------------
@@ -1375,6 +1444,7 @@ JetAct:
     sta W_eType,x
     lda #$FF
     sta eTop,x
+    sta W_eLane,x               ; (no shelf: shots skip the empty slot)
     rts
 
 ;-------------------------------------------------------------------------------
@@ -1628,7 +1698,7 @@ ToySound:   .byte 0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
 ToyCost:    .byte 0, 10, 5, 25, 15, 20, 30
 ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1
 ToyPeriod:  .byte 0, 7, 0, 50, 20, 33, 0        ; visits (6 frames) between shots
-ToyDmg:     .byte 0, 1, 0, 8, 0, 3, 0
+ToyDmg:     .byte 0, 1, 0, 8, 0, CANNON_DMG, 0
 ; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
 EnHP:       .byte 0,   6,   5,   3,    1,    6,     2,     3,  20
 EnReward:   .byte 0,   3,   3,   2,    1,    4,     3,     3,  10   ; batteries
