@@ -260,5 +260,39 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('after a breather enemies arrive at the right edge', spawned > 0 && g.sc('eX', i) >= 149 && g.sc('spawnLeft') === 6, `x ${i === undefined ? '-' : g.sc('eX', i)}`);
 }
 
+// ---------------------------------------------------------------- sound
+{
+  // what the TIA's audio registers hold after each frame
+  const watch = (g, n, input = {}, each) => { const out = []; for (let k = 0; k < n; k += 1) { g.frames(1, input, each); out.push({ ...g.m.bus.audio }); } return out; };
+  const g = boot();
+  const quiet = watch(g, 60);
+  check('attract mode is silent', quiet.every((a) => a.v0 === 0 && a.v1 === 0));
+  g.frames(1, { fire: true });
+  const start = watch(g, 40);
+  check('a new game starts with the wave jingle on channel 0 (pure tone)', start.some((a) => a.v0 > 0 && a.c0 === 4));
+  const hush = () => g.set('spawnTimer', 200);
+  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  watch(g, 60, {}, hush);
+  g.frames(1, { fire: true }, hush);
+  const place = watch(g, 20, {}, hush);
+  check('placing a toy chirps on channel 0, then goes quiet', place.some((a) => a.v0 > 0 && a.f0 === 15) && place.at(-1).v0 === 0);
+  g.set('batt', 0); g.set('cursor', 4); g.press(); // an empty slot
+  const broke = watch(g, 10, {}, hush);
+  check('trying to place without batteries buzzes (AUDC 6)', broke.some((a) => a.v0 > 0 && a.c0 === 6));
+  g.set('batt', 30);
+  enemy(g, 0, 1, 70, 1, 2);
+  const fight = watch(g, 240, {}, hush);
+  check('army man shots pop on channel 1 (noise)', fight.some((a) => a.v1 > 0 && a.c1 === 8));
+  check('the kill plays its falling tone on channel 1 (AUDC 12)', g.sc('eType', 0) === 0 && fight.some((a) => a.v1 > 0 && a.c1 === 12));
+  enemy(g, 0, 1, 56, 1, 99);
+  const chew = watch(g, 64, {}, hush);
+  check('chewing crunches on channel 1 (AUDC 3)', chew.some((a) => a.v1 > 0 && a.c1 === 3));
+  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  g.set('lids', 2);
+  enemy(g, 0, 1, 42, 1, 6);
+  const over = watch(g, 120, {}, hush);
+  check('game over plays its jingle (AUDC 12 on channel 0) and then goes silent', g.sc('state') === 2 && over.some((a) => a.v0 > 0 && a.c0 === 12) && over.at(-1).v0 === 0 && over.at(-1).v1 === 0);
+}
+
 console.log(failures ? `${failures} check(s) failed` : 'all checks passed');
 process.exit(failures ? 1 : 0);

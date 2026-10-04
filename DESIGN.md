@@ -7,8 +7,9 @@ from the right. (The reference mockup is kept locally, not in the repo.)
 
 Status: playable (2026-10-04). Built: board, batteries, all six toys, three
 enemies (dino, helicopter, crawler), waves 1-12 with unlocks and the second
-lap, lid slams, game over. Not yet: mouse, knight, balloon clown, pogo frog,
-T-Rex, the jet's flight in green, sound, Game Select, difficulty switch.
+lap, lid slams, game over, sound effects. Not yet: mouse, knight, balloon
+clown, pogo frog, T-Rex, the jet's flight in green, music, Game Select,
+difficulty switch.
 Numbers as built: army man fires every 42 frames (1 damage), tank every 300
 (8), cannon every 198 (3); cowboy lasso holds 60 frames, every 120; chewing
 takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
@@ -107,6 +108,16 @@ first). Speed stays fixed until the second lap.
 
 Within a wave: trickle → ramp → final burst, announced by a flash and a
 sound. Score: points per enemy, bonus per shelf never breached.
+
+## Sound
+
+Two TIA channels, table-driven (logic.asm, SndData): channel 0 for the
+player and the game (cursor tick, toy select, place/pick-up chirps, the
+no-batteries buzz, the wave jingle, the game-over tune), channel 1 for the
+fighting (army man pop, tank boom, cannon thump, lasso whip, hit, kill,
+chewing crunch, lid slam, jet strike). A new sound replaces the one on its
+channel unless that one has a higher priority. Steps are two frames long
+and advance on even frames.
 
 ## Hardware limits the design accepts
 

@@ -64,6 +64,8 @@ lt2         ds 1
 lt3         ds 1
 lt4         ds 1
 lt5         ds 1
+sndX        ds 1        ; SndPlay keeps X and Y here
+sndY        ds 1
 QUEUE       ds 40       ; event records, 8 bytes: return lo, hi, gfx lo, hi, feet, color page, HMP1, next y
 STACKTOP    = $FF
 
@@ -85,6 +87,9 @@ W_slotType  ds 9        ; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
 W_slotHP    ds 9
 W_slotCool  ds 9        ; visits (6 frames) until the toy acts again
 W_toyShelf  ds 1        ; the shelf whose toys act next
+W_sndPos    ds 2        ; per channel: position in SndData
+W_sndTimer  ds 2        ;   ticks left in the step
+W_sndPri    ds 2        ;   priority of what's playing (0 = quiet)
 W_shotDmg   ds 3        ; per shelf: damage of the shot in flight, 0 = none
 W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing crawler)
 W_score     ds 3        ; BCD, most significant first
@@ -138,6 +143,9 @@ R_rand       = W_rand + $80
 R_flash      = W_flash + $80
 R_dirty      = W_dirty + $80
 R_toyShelf   = W_toyShelf + $80
+R_sndPos     = W_sndPos + $80
+R_sndTimer   = W_sndTimer + $80
+R_sndPri     = W_sndPri + $80
 R_cells      = W_cells + $80
     echo "Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
 

@@ -20,6 +20,29 @@ ST_OVER     = 2
 COL_WHITE   = $0E
 BREACH_X    = 41                ; an enemy left of this is at the toy box
 
+; sound effects (ids into SndStart/SndChan/SndPri)
+SND_CURSOR  = 0
+SND_SELECT  = 1
+SND_PLACE   = 2
+SND_PICK    = 3
+SND_NOBATT  = 4
+SND_WAVE    = 5
+SND_OVER    = 6
+SND_POP     = 7
+SND_BOOM    = 8
+SND_THUMP   = 9
+SND_LASSO   = 10
+SND_HIT     = 11
+SND_KILL    = 12
+SND_CHEW    = 13
+SND_SLAM    = 14
+SND_JET     = 15
+
+    MAC SOUND                   ; play sound {1} (keeps X and Y)
+    lda #{1}
+    jsr SndPlay
+    ENDM
+
 ;-------------------------------------------------------------------------------
 LogicInit:
     SUBROUTINE
@@ -30,7 +53,7 @@ LogicInit:
     jsr ClearBoard
     lda #7
     sta W_dirty
-    jmp Finish
+    rts
 
 ;-------------------------------------------------------------------------------
 Logic:
@@ -87,6 +110,11 @@ Logic:
 .finish:
 Finish:
     jsr Flash
+    lda frame                   ; even frames (with the shots): sound, its
+    lsr                         ; steps are two frames long; odd frames (with
+    bcs .oddFinish              ; the toys): the kernel's toy pointers
+    jmp SndUpdate
+.oddFinish:
     jmp SlotPointers
 
 ;-------------------------------------------------------------------------------
@@ -167,6 +195,7 @@ StartWave:
     lda R_dirty
     ora #4
     sta W_dirty
+    SOUND SND_WAVE
     rts
 
 WaveIndex:                      ; X = (wave - 1) mod 12
@@ -313,6 +342,10 @@ Cursor:
     beq .noRight
     inx
 .noRight:
+    cpx R_cursor
+    beq .same
+    SOUND SND_CURSOR
+.same:
     stx W_cursor
 .done:
     rts
@@ -328,6 +361,7 @@ NextToy:
     lda #1
 .ok:
     sta W_toy
+    SOUND SND_SELECT
     rts
 
 PrevToy:
@@ -339,6 +373,7 @@ PrevToy:
     lda R_unlock
 .ok:
     sta W_toy
+    SOUND SND_SELECT
     rts
 
 ; Act: on the cursor's slot, place the chosen toy (if there are batteries
@@ -356,6 +391,7 @@ Act:
     jsr SetBatt
     lda #0
     sta W_slotType,x
+    SOUND SND_PICK
     rts
 .place:
     ldy R_toy
@@ -372,13 +408,17 @@ Act:
     sta W_slotHP,x
     lda #5                      ; first action after 30 frames
     sta W_slotCool,x
+    SOUND SND_PLACE
+    rts
 .cant:
+    SOUND SND_NOBATT
     rts
 
 ; JetStrike (X = slot): ten damage to every enemy on the slot's shelf; the
 ; jet is spent
 JetStrike:
     SUBROUTINE
+    SOUND SND_JET
     lda SlotLane,x
     sta lt0
     lda #24
@@ -419,10 +459,12 @@ Damage:
     beq Kill
     bcc Kill
     sta W_eHP,x
+    SOUND SND_HIT
     rts
 
 Kill:                           ; enemy X destroyed: batteries and score
     SUBROUTINE
+    SOUND SND_KILL
     ldy R_eType,x
     lda EnReward,y
     clc
@@ -687,6 +729,7 @@ Enemies:
     lda frame
     and #15                     ; one bite every 16 frames
     bne .next
+    SOUND SND_CHEW
     ldy lt1
     lda R_slotHP,y
     sec
@@ -728,8 +771,10 @@ Breach:
     bpl .clear
     lda #40
     sta W_flash
+    SOUND SND_SLAM
     rts
 .over:
+    SOUND SND_OVER
     lda #ST_OVER
     sta W_state
     lda #120
@@ -758,10 +803,24 @@ Toys:
     adc #2
     tax
 .loop:
+    jsr ToyAct
+    dex
+    bmi .done
+    cpx lt4
+    bcs .loop
+.done:
+    rts
+
+ToyAct:                         ; slot X (kept)
+    SUBROUTINE
     lda R_slotType,x
-    beq .next
+    bne .some
+    rts
+.some:
     cmp #TOY_TEDDY
-    beq .next
+    bne .acts
+    rts
+.acts:
     sta lt5
     lda R_slotCool,x
     beq .ready
@@ -789,6 +848,7 @@ Toys:
     and #$C0
     ora #60
     sta W_eState,y
+    SOUND SND_LASSO
     lda #20                     ; next lasso after 2 seconds
     sta W_slotCool,x
     jmp .next
@@ -813,13 +873,9 @@ Toys:
     ldy lt5
     lda ToyPeriod,y
     sta W_slotCool,x
+    lda ToySound,y
+    jsr SndPlay
 .next:
-    dex
-    bmi .done
-    cpx lt4
-    bcc .done
-    jmp .loop
-.done:
     rts
 
 ; FindAhead: Y = the nearest enemy on shelf lt1 right of x lt0 ($FF, N set,
@@ -1001,6 +1057,150 @@ SlotPointer:                    ; slot X
     sta slotPtr,x
 .next:
     rts
+
+;-------------------------------------------------------------------------------
+; Sound: channel 0 plays the player's actions and jingles, channel 1 combat.
+; A sound is a list of steps (ticks of two frames, AUDC*16+AUDV, AUDF) ending
+; in a zero; a new sound replaces the one playing on its channel unless that
+; one matters more (SndPri).
+SndPlay:                        ; A = sound id; keeps X and Y
+    SUBROUTINE
+    stx sndX
+    sty sndY
+    tay
+    ldx SndChan,y
+    lda SndPri,y
+    cmp R_sndPri,x
+    bcc .done                   ; something more important is playing
+    sta W_sndPri,x
+    lda SndStart,y
+    sta W_sndPos,x
+    lda #0
+    sta W_sndTimer,x
+.done:
+    ldx sndX
+    ldy sndY
+    rts
+
+SndUpdate:                      ; even frames: next step when a step's time is up
+    SUBROUTINE
+    ldx #1
+.chan:
+    lda R_sndTimer,x
+    beq .step
+    sec
+    sbc #1
+    sta W_sndTimer,x
+    jmp .next
+.step:
+    ldy R_sndPos,x
+    lda SndData,y
+    beq .quiet
+    sec
+    sbc #1                      ; this tick is the step's first
+    sta W_sndTimer,x
+    lda SndData+1,y
+    lsr
+    lsr
+    lsr
+    lsr
+    sta AUDC0,x
+    lda SndData+1,y
+    and #$0F
+    sta AUDV0,x
+    lda SndData+2,y
+    sta AUDF0,x
+    tya
+    clc
+    adc #3
+    sta W_sndPos,x
+    jmp .next
+.quiet:
+    lda #0
+    sta AUDV0,x
+    sta W_sndPri,x
+.next:
+    dex
+    bpl .chan
+    rts
+
+    MAC STEP                    ; ticks, AUDC, AUDV, AUDF
+    .byte {1}, [{2} << 4] | {3}, {4}
+    ENDM
+SndData:
+    .byte 0                     ; offset 0: silence
+SdCursor:   STEP 1, 4, 4, 12
+    .byte 0
+SdSelect:   STEP 1, 12, 6, 8
+            STEP 1, 12, 6, 6
+    .byte 0
+SdPlace:    STEP 2, 4, 7, 15
+            STEP 2, 4, 7, 11
+            STEP 3, 4, 6, 8
+    .byte 0
+SdPick:     STEP 2, 4, 6, 8
+            STEP 3, 4, 6, 14
+    .byte 0
+SdNoBatt:   STEP 6, 6, 6, 28
+    .byte 0
+SdWave:     STEP 4, 4, 8, 17
+            STEP 4, 4, 8, 14
+            STEP 4, 4, 8, 11
+            STEP 8, 4, 8, 8
+    .byte 0
+SdOver:     STEP 8, 12, 8, 10
+            STEP 8, 12, 8, 13
+            STEP 8, 12, 8, 17
+            STEP 16, 12, 7, 23
+    .byte 0
+SdPop:      STEP 1, 8, 5, 3
+            STEP 1, 8, 3, 5
+    .byte 0
+SdBoom:     STEP 2, 8, 12, 18
+            STEP 3, 8, 9, 22
+            STEP 4, 8, 5, 26
+    .byte 0
+SdThump:    STEP 2, 15, 10, 20
+            STEP 3, 15, 6, 24
+    .byte 0
+SdLasso:    STEP 1, 4, 6, 20
+            STEP 1, 4, 6, 15
+            STEP 1, 4, 6, 10
+            STEP 2, 4, 5, 6
+    .byte 0
+SdHit:      STEP 1, 8, 7, 6
+    .byte 0
+SdKill:     STEP 2, 12, 8, 8
+            STEP 2, 12, 7, 12
+            STEP 2, 12, 6, 16
+            STEP 3, 12, 4, 22
+    .byte 0
+SdChew:     STEP 1, 3, 4, 28
+    .byte 0
+SdSlam:     STEP 3, 8, 15, 30
+            STEP 4, 8, 12, 31
+            STEP 6, 8, 8, 31
+            STEP 8, 8, 4, 31
+    .byte 0
+SdJet:      STEP 2, 8, 12, 4
+            STEP 2, 8, 12, 8
+            STEP 2, 8, 12, 12
+            STEP 2, 8, 12, 16
+            STEP 2, 8, 10, 20
+            STEP 3, 8, 8, 24
+            STEP 4, 8, 5, 28
+    .byte 0
+SND_END = .
+    IF SND_END - SndData > 255
+        ERR                     ; positions are one byte
+    ENDIF
+SndStart:   .byte SdCursor-SndData, SdSelect-SndData, SdPlace-SndData, SdPick-SndData
+            .byte SdNoBatt-SndData, SdWave-SndData, SdOver-SndData, SdPop-SndData
+            .byte SdBoom-SndData, SdThump-SndData, SdLasso-SndData, SdHit-SndData
+            .byte SdKill-SndData, SdChew-SndData, SdSlam-SndData, SdJet-SndData
+SndChan:    .byte 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1
+SndPri:     .byte 1, 2, 3, 3, 3, 4, 5, 1, 3, 3, 2, 2, 3, 1, 5, 5
+ToySound:   .byte 0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
 
 ;-------------------------------------------------------------------------------
 ; tables (toy and enemy types index from 1)

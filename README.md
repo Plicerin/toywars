@@ -35,9 +35,10 @@ fourth wave they get tougher; after wave 12 the waves repeat, faster.
 ## Status
 
 Playable: placing toys, batteries, the six toys, three monster kinds, waves
-with unlocks, lid slams, game over. Still to come (see [DESIGN.md](DESIGN.md)):
-the other monsters (mouse, knight, balloon clown, pogo frog, T-Rex boss), the
-jet flying its strike in green, sound, and Game Select.
+with unlocks, lid slams, game over, sound effects (TIA: your actions and the
+jingles on one channel, the fighting on the other). Still to come (see
+[DESIGN.md](DESIGN.md)): the other monsters (mouse, knight, balloon clown,
+pogo frog, T-Rex boss), the jet flying its strike in green, Game Select.
 
 How the screen is drawn:
 
