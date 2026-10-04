@@ -1512,10 +1512,10 @@
     955  19df		       85 14		      sta	RESBL	; 70-72  ball at 155
     956  19e1		       85 02		      sta	WSYNC	; s28
     957  19e3		       85 02		      sta	WSYNC	; s29
-    958  19e5		       a9 00		      lda	#COL_BG	; the panel ends: black below
-    959  19e7		       85 09		      sta	COLUBK
-    960  19e9		       85 02		      sta	WSYNC	; s30: rule
-    961  19eb		       85 2a		      sta	HMOVE	; 0-2
+    958  19e5		       85 2a		      sta	HMOVE	; 0-2: here, so its 8-pixel black comb falls on
+    959  19e7		       a9 00		      lda	#COL_BG	; a black line, not the rule; the panel ends
+    960  19e9		       85 09		      sta	COLUBK
+    961  19eb		       85 02		      sta	WSYNC	; s30: rule
     962  19ed		       a9 f0		      lda	#$F0
     963  19ef		       85 0d		      sta	PF0
     964  19f1		       a9 ff		      lda	#$FF

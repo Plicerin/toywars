@@ -955,10 +955,10 @@ PreKernel:                      ; arrives early in s26
     sta RESBL                   ; 70-72  ball at 155
     sta WSYNC                   ; s28
     sta WSYNC                   ; s29
-    lda #COL_BG                 ; the panel ends: black below
+    sta HMOVE                   ; 0-2: here, so its 8-pixel black comb falls on
+    lda #COL_BG                 ; a black line, not the rule; the panel ends
     sta COLUBK
     sta WSYNC                   ; s30: rule
-    sta HMOVE                   ; 0-2
     lda #$F0
     sta PF0
     lda #$FF

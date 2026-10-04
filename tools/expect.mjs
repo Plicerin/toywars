@@ -58,7 +58,7 @@ export function expectedFrame(scene, frame) {
   text(scene.titleLines, 1, 2, COL.red);
   if (scene.statusLines) text(scene.statusLines, 16, 2, COL.gold);
   const pf = scene.pfColor ?? COL.gold; // shelves, box and rule (white while flashing)
-  for (let x = 8; x < 160; x += 1) put(30, x, pf); // rule (HMOVE blanks x 0-7)
+  for (let x = 0; x < 160; x += 1) put(30, x, pf); // the rule, edge to edge
   // box: PF1 bits for x 16-47
   layout.boxTab.forEach((v, y) => { const r = 79 - y; for (let b = 0; b < 8; b += 1) if (v & (0x80 >> b)) for (let d = 0; d < 4; d += 1) row2(r, 16 + 4 * b + d, pf); });
   // shelves: row 20k+j at x 149-6j, 4 wide, both lines
