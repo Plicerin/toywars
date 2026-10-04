@@ -1,0 +1,280 @@
+--- Symbol List (sorted by symbol)
+0.clear                  f105              (R )
+0.clearSC                f10e              (R )
+0.osWait                 f252              (R )
+0.status                 f206              (R )
+0.statusDone             f238              (R )
+0.title                  f1be              (R )
+0.titleDone              f1f0              (R )
+0.vbWait                 f1ab              (R )
+1.divide                 f25d              (R )
+13.ev                    f837              (R )
+16.ev                    f871              (R )
+19.ev                    f8ab              (R )
+2.cell                   f271              (R )
+2.row                    f291              (R )
+2.wave                   f2bb              (R )
+22.ev                    f8e5              (R )
+25.ev                    f91f              (R )
+3.done                   f309              (R )
+3.enemy                  f2da              (R )
+3.nextEnemy              f2ee              (R )
+3.nextShot               f306              (R )
+3.shot                   f2f3              (R )
+3.stepped                f2eb              (R )
+3.store                  f304              (R )
+31.ev                    f990              (R )
+34.ev                    f9ca              (R )
+37.ev                    fa04              (R )
+4.enemies                f32f              (R )
+4.shots                  f346              (R )
+4.slots                  f321              (R )
+40.ev                    fa3e              (R )
+46.ev                    faaf              (R )
+49.ev                    fae9              (R )
+5.cand                   f3d0              (R )
+5.count                  f3b0              (R )
+5.counted                f3be              (R )
+5.findE                  f36c              (R )
+5.gotE                   f374              (R )
+5.mod                    f3c8              (R )
+5.next                   f37e              (R )
+5.none                   f37a              (R )
+5.noWrap                 f418              (R )
+5.place                  f3a2              (R )
+5.reject                 f40c              (R )
+5.selDone                f41c              (R )
+5.si                     f391              (R )
+5.so                     f383              (R )
+5.tf                     f351              (R )
+5.vs                     f3e5              (R )
+5.vsNext                 f3ff              (R )
+52.ev                    fb23              (R )
+6.done                   f4bf              (R )
+6.link                   f464              (R )
+6.q                      f429              (R )
+6.qDec                   f43e              (R )
+6.qNext                  f4b4              (R )
+6.qTaken                 f433              (R )
+6.rec                    f466              (R )
+7.divide                 f6ed              (R )
+AUDC0                    0015                  
+AUDC1                    0016                  
+AUDF0                    0017                  
+AUDF1                    0018                  
+AUDV0                    0019                  
+AUDV1                    001a                  
+BallTab                  f2a0              (R )
+BoxTab                   f1a0              (R )
+BuildStatus              f26c              (R )
+cellS0                   009d              (R )
+cellS1                   00a2              (R )
+cellS2                   00a7              (R )
+cellS5                   00ac              (R )
+COL_BG                   0000              (R )
+COL_GOLD                 00f8              (R )
+COL_GREEN                00c8              (R )
+COL_RED                  0046              (R )
+ColArr                   f200              (R )
+COLUBK                   0009              (R )
+COLUP0                   0006              (R )
+COLUP1                   0007              (R )
+COLUPF                   0008              (R )
+CTRLPF                   000a              (R )
+CXBLPF                   0006                  
+CXCLR                    002c                  
+CXM0FB                   0004                  
+CXM0P                    0000                  
+CXM1FB                   0005                  
+CXM1P                    0001                  
+CXP0FB                   0002                  
+CXP1FB                   0003                  
+CXPPMM                   0007                  
+D_EMPTY                  f391                  
+D_SOLDIER                f33a                  
+D_TANK                   f357                  
+D_TEDDY                  f374                  
+DefPage                  f300              (R )
+DigitHi                  f539              (R )
+DigitLo                  f56b              (R )
+DigitR                   f59d              (R )
+E_CROUCH                 f5b8                  
+E_CROUCH2                f612                  
+E_DINO                   f450                  
+E_DINO2                  f4aa                  
+E_HELI                   f504                  
+E_HELI2                  f55e                  
+EBaseHi                  f80a              (R )
+EBaseLo                  f802              (R )
+eFeet                    00a2              (R )
+ENABL                    001f              (R )
+ENAM0                    001d              (R )
+ENAM1                    001e              (R )
+EnemyGfx                 f400              (R )
+eOrder                   00a7              (R )
+eTop                     009d              (R )
+EvA0                     fb5e              (R )
+EvA1                     fb8f              (R )
+EvA2                     fbc0              (R )
+EvA3                     fbf1              (R )
+EvA4                     fc22              (R )
+EvA5                     fc53              (R )
+EvA6                     fc84              (R )
+EvA7                     fcb5              (R )
+EvB0                     fb66                  
+EvB1                     fb97                  
+EvB2                     fbc8                  
+EvB3                     fbf9                  
+EvB4                     fc2a                  
+EvB5                     fc5b                  
+EvB6                     fc8c                  
+EvB7                     fcbd                  
+evPrevF                  00b3              (R )
+EvRowA                   f74b              (R )
+FeetX                    f5cf              (R )
+frame                    009c              (R )
+GRP0                     001b              (R )
+GRP1                     001c              (R )
+HMBL                     0024              (R )
+HMCLR                    002b              (R )
+HMM0                     0022              (R )
+HMM1                     0023              (R )
+HMOVE                    002a              (R )
+HMP0                     0020              (R )
+HMP1                     0021              (R )
+InitScene                f310              (R )
+INPT0                    0008                  
+INPT1                    0009                  
+INPT2                    000a                  
+INPT3                    000b                  
+INPT4                    000c                  
+INPT5                    000d                  
+INTIM                    0284              (R )
+LaneBase                 f7ff              (R )
+lineCnt                  00b4              (R )
+m1ptr                    0086              (R )
+MainLoop                 f11a              (R )
+Motion                   f2cb              (R )
+NENEMY                   0005              (R )
+nextEv                   008e              (R )
+nextSt                   008f              (R )
+NUSIZ0                   0004              (R )
+NUSIZ1                   0005              (R )
+Overscan                 f247              (R )
+OVERSCAN_TIME            0023              (R )
+p1col                    008a              (R )
+p1ptr                    0088              (R )
+pc0                      0080              (R )
+pc1                      0082              (R )
+pc2                      0084              (R )
+PF0                      000d              (R )
+PF1                      000e              (R )
+PF2                      000f              (R )
+PosObject                f25a              (R )
+PosObject1               f6ea                  
+PreKernel                f66c              (R )
+QUEUE                    00b5              (R )
+R_eLane                  f085              (R )
+R_eType                  f08a              (R )
+R_eX                     f080              (R )
+R_score                  f08f              (R )
+R_wave                   f092              (R )
+REFP0                    000b                  
+REFP1                    000c                  
+RESBL                    0014              (R )
+Reset0                   fff0              (R )
+Reset1                   fff0              (R )
+Reset2                   fff0              (R )
+Reset3                   fff0              (R )
+RESM0                    0012                  
+RESM1                    0013              (R )
+RESMP0                   0028                  
+RESMP1                   0029                  
+RESP0                    0010              (R )
+RESP1                    0011              (R )
+RowA                     f700              (R )
+RowAH                    f702              (R )
+RowB                     f722                  
+RowBad                   f7af              (R )
+RSYNC                    0003                  
+SC_END                   f013              (R )
+SceneELane               f839              (R )
+SceneEType               f83e              (R )
+SceneEX                  f834              (R )
+SceneShot                f843              (R )
+SceneSlot                f82b              (R )
+Schedule                 f41d              (R )
+SelectEnemies            f34f              (R )
+ShotArr                  f100              (R )
+ShotFirst                f30a              (R )
+ShotLast                 f30d              (R )
+shotPtr                  0099              (R )
+SlotOfs                  f822              (R )
+slotPtr                  0090              (R )
+St12                     f83a              (R )
+St17                     f874              (R )
+St19                     f8ae              (R )
+St28                     f8e8              (R )
+St30                     f922              (R )
+St33                     f959              (R )
+St37                     f993              (R )
+St39                     f9cd              (R )
+St48                     fa07              (R )
+St50                     fa41              (R )
+St53                     fa78              (R )
+St57                     fab2              (R )
+St59                     faec              (R )
+St7                      f800              (R )
+STACKTOP                 00ff              (R )
+Start0                   f100              (R )
+Status3                  f52a              (R )
+Status4                  f52f              (R )
+Status5E                 f534              (R )
+StEnd                    fb26              (R )
+StRowA                   f76c              (R )
+stVec                    008c              (R )
+SWACNT                   0281                  
+SWBCNT                   0283                  
+SWCHA                    0280                  
+SWCHB                    0282              (R )
+T1024I                   029f                  
+T1024T                   0297                  
+temp                     00b1              (R )
+TIA_BASE_ADDRESS         0000              (R )
+TIA_BASE_READ_ADDRESS    0000              (R )
+TIA_BASE_WRITE_ADDRESS   0000              (R )
+TIM1I                    029c                  
+TIM1T                    0294                  
+TIM64I                   029e                  
+TIM64T                   0296              (R )
+TIM8I                    029d                  
+TIM8T                    0295                  
+TIMINT                   0285                  
+Title0                   f500              (R )
+Title1                   f507              (R )
+Title2                   f50e              (R )
+Title3                   f515              (R )
+Title4                   f51c              (R )
+Title5                   f523              (R )
+ToBank0                  ffe6              (R )
+ToBank1                  ffe0              (R )
+VarHi                    f81a              (R )
+VarLo                    f812              (R )
+VBLANK                   0001              (R )
+VBLANK_TIME              002c              (R )
+vcs.h                    0000 ????         (R )
+VDELBL                   0027                  
+VDELP0                   0025              (R )
+VDELP1                   0026              (R )
+VERSION_VCS              006b                  
+VSYNC                    0000              (R )
+W_eLane                  f005              (R )
+W_eType                  f00a              (R )
+W_eX                     f000              (R )
+W_score                  f00f              (R )
+W_wave                   f012              (R )
+WSYNC                    0002              (R )
+XHm                      f70f              (R )
+XVar                     f66f              (R )
+Zeros                    f400                  
+--- End of Symbol List.

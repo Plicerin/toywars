@@ -1,0 +1,6 @@
+# third-party assembler (install DASM 2.20.x: tools/dasm/dasm.exe and vcs.h)
+tools/dasm/
+# scratch renders and one-off dev scripts
+tools/out/
+# design reference images (kept local)
+ref/

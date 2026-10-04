@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toy Wars 2600</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0c0a10; --panel: #17131d; --fg: #efe9f4; --muted: #a399ae; --accent: #d2b04a; --border: rgba(255, 255, 255, 0.12); }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; display: grid; place-items: center; padding: 16px; }
+    main { width: min(800px, 100%); display: grid; gap: 12px; }
+    canvas { display: block; width: 100%; aspect-ratio: 4 / 3; image-rendering: pixelated; background: #000; border-radius: 8px; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button[aria-pressed="true"] { color: var(--accent); }
+    p { color: var(--muted); margin: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <canvas width="160" height="192" aria-label="Toy Wars still screen running on the 2600 emulator"></canvas>
+    <div class="bar">
+      <button type="button" id="pause" aria-pressed="false">Pause</button>
+      <button type="button" id="step">Step one frame</button>
+      <span id="frame" style="color: var(--muted)"></span>
+    </div>
+    <p>Milestone 1: the still screen. toywars.bin (16K, F6 bank switching) runs on the 6502 core and TIA model at 60 frames a second. Overlapping enemies take turns on alternate frames; pause and step to see each frame.</p>
+  </main>
+  <script type="module">
+    import { RomMachine } from './src/romMachine.mjs';
+    import { NTSC_PALETTE_RGB } from './src/palette.mjs';
+    const rom = new Uint8Array(await (await fetch('./toywars.bin', { cache: 'no-store' })).arrayBuffer());
+    const game = new RomMachine(rom);
+    const canvas = document.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const image = ctx.createImageData(160, 192);
+    const label = document.getElementById('frame');
+    const pauseButton = document.getElementById('pause');
+    let paused = false, last = 0, acc = 0;
+    function draw() {
+      const rows = game.bus.tia.lastFrame;
+      for (let y = 0; y < 192; y += 1) for (let x = 0; x < 160; x += 1) {
+        const rgb = NTSC_PALETTE_RGB[(rows[40 + y][x] >> 1) & 0x7f], o = (y * 160 + x) * 4;
+        image.data[o] = rgb >> 16; image.data[o + 1] = (rgb >> 8) & 255; image.data[o + 2] = rgb & 255; image.data[o + 3] = 255;
+      }
+      ctx.putImageData(image, 0, 0);
+      label.textContent = `frame ${game.bus.frame}`;
+    }
+    function tick(now) {
+      acc = Math.min(acc + (last ? now - last : 0), 100);
+      last = now;
+      if (!paused) while (acc >= 1000 / 60) { game.runFrame(); acc -= 1000 / 60; }
+      draw();
+      requestAnimationFrame(tick);
+    }
+    for (let i = 0; i < 3; i += 1) game.runFrame();
+    pauseButton.onclick = () => { paused = !paused; pauseButton.setAttribute('aria-pressed', String(paused)); pauseButton.textContent = paused ? 'Resume' : 'Pause'; };
+    document.getElementById('step').onclick = () => { if (!paused) pauseButton.onclick(); game.runFrame(); draw(); };
+    window.__toywars = game;
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
