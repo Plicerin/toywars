@@ -32,6 +32,9 @@ COL_GOLD    = $F8
 COL_RED     = $46
 COL_GREEN   = $C8
 COL_ORANGE  = $38
+COL_RED_DK  = $42                ; enemies' bottom rows
+COL_ORANGE_DK = $34
+COL_HEADER  = $A0                ; dark navy behind the title and status line
 COL_BG      = $00
 
 VBLANK_TIME   = 44
@@ -266,7 +269,7 @@ MainLoop:
     lda #COL_RED
     sta COLUP0
     sta COLUP1
-    lda #COL_BG
+    lda #COL_HEADER             ; the header panel (s0-s28)
     sta COLUBK
     lda #0
     sta GRP0
@@ -952,6 +955,8 @@ PreKernel:                      ; arrives early in s26
     sta RESBL                   ; 70-72  ball at 155
     sta WSYNC                   ; s28
     sta WSYNC                   ; s29
+    lda #COL_BG                 ; the panel ends: black below
+    sta COLUBK
     sta WSYNC                   ; s30: rule
     sta HMOVE                   ; 0-2
     lda #$F0

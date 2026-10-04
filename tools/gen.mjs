@@ -18,6 +18,7 @@ export const feetRow = (L, c) => Math.round(20 * (L + 1) + (149 - c) / 6) - 3;
 export const COLUMN_X = [48, 80, 112];                 // player 0, three copies 32 apart
 export const EH = 11;                                  // enemy rows (sprites bottom-aligned)
 export const DH = 11;                                  // defender rows
+export const DARK_ROWS = 3;                            // an enemy's bottom rows in the darker shade
 // static kernel rows (special code at fixed rows)
 export const STATIC = {
   swaps: [ // [row, column, lane]: point column k at lane L's defender
@@ -200,17 +201,19 @@ export function build() {
   const boxTab = Array.from({ length: ROWS }, (_, y) => box[79 - y]);
   out1.push('    ALIGN 256', 'ShotArr:', bytes(shotArr), 'BoxTab:', bytes(boxTab), '    ALIGN 256');
   // page B: ColArr (COLUP1 per y+f: red on an enemy's rows) + BallTab
-  const colArr = Array.from({ length: 160 }, (_, k) => (k >= 79 && k < 79 + EH ? 'COL_RED' : 'COL_GOLD'));
+  // player 1's color per row: gold away from an enemy (for the shots), on an
+  // enemy's 11 rows its color, the bottom three (legs, skids, spring) darker
+  const colArr = Array.from({ length: 160 }, (_, k) => (k >= 79 && k < 79 + EH ? (k < 79 + DARK_ROWS ? 'COL_RED_DK' : 'COL_RED') : 'COL_GOLD'));
   const ballTab = Array.from({ length: ROWS }, (_, y) => { const r = 79 - y; return [0, 1, 2, 3].some((k) => r >= 20 * k && r <= 20 * k + 18) ? 2 : 0; });
   out1.push('ColArr:');
   for (let i = 0; i < 160; i += 16) out1.push(`    .byte ${colArr.slice(i, i + 16).join(',')}`);
   out1.push('BallTab:', bytes(ballTab), '    ALIGN 256');
   // page B2: the same for green objects (the jet)
   out1.push('ColGreen:');
-  for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => (c === 'COL_RED' ? 'COL_GREEN' : c)).join(',')}`);
+  for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => (c.startsWith('COL_RED') ? 'COL_GREEN' : c)).join(',')}`); // the jet: one green, like the toys
   out1.push('    ALIGN 256');
   out1.push('ColOrange:');
-  for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => (c === 'COL_RED' ? 'COL_ORANGE' : c)).join(',')}`);
+  for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => c.replace('COL_RED', 'COL_ORANGE')).join(',')}`);
   out1.push('    ALIGN 256');
 
   // page C: toys, bottom row first, 29 apart from offset 58 (each needs 18

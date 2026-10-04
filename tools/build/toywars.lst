@@ -249,879 +249,882 @@
      32  0000 ????	       00 46	   COL_RED    =	$46
      33  0000 ????	       00 c8	   COL_GREEN  =	$C8
      34  0000 ????	       00 38	   COL_ORANGE =	$38
-     35  0000 ????	       00 00	   COL_BG     =	$00
-     36  0000 ????
-     37  0000 ????	       00 2c	   VBLANK_TIME =	44
-     38  0000 ????	       00 23	   OVERSCAN_TIME =	35
-     39  0000 ????	       00 05	   NENEMY     =	5
-     40  0000 ????
-     41  0000 ????						;===============================================================================
-     42 U00ea ????				      SEG.U	vars
-     43 U0080					      ORG	$80
-     44 U0080		       00 00	   pc0	      ds	2	; defender copy pointers (columns 0-2)
-     45 U0082		       00 00	   pc1	      ds	2
-     46 U0084		       00 00	   pc2	      ds	2
-     47 U0086		       00 00	   m1ptr      ds	2	; shot (ENAM1) pointer
-     48 U0088		       00 00	   p1ptr      ds	2	; enemy graphics pointer
-     49 U008a		       00 00	   p1col      ds	2	; enemy color pointer (ColArr + feet row)
-     50 U008c		       00 00	   stVec      ds	2	; next static row routine
-     51 U008e		       00	   nextEv     ds	1	; y of the next event row
-     52 U008f		       00	   nextSt     ds	1	; y of the next static row
-     53 U0090		       00 00 00 00*slotPtr    ds	9	; defender pointer (low byte) per lane*3+column
-     54 U0099		       00 00 00    shotPtr    ds	3	; shot pointer (low byte) per lane
-     55 U009c		       00	   frame      ds	1
-     56 U009d		       00	   pfColor    ds	1	; shelves and box (flashes white on a lid slam or air strike)
-     57 U009e							; scheduler scratch: SelectEnemies (overscan) fills it, Schedule (VBLANK) reads it
-     58 U009e		       00 00 00 00*eTop       ds	NENEMY	; event row
-     59 U00a3		       00 00 00 00*eFeet      ds	NENEMY	; feet row
-     60 U00a8		       00 00 00 00*eOrder     ds	NENEMY	; sorted order, bit 7 = drawn this frame
-     61 U00ad		       00 00 00 00 temp       ds	4
-     62 U00b1		       00	   lt0	      ds	1	; game logic scratch (bank 2)
-     63 U00b2		       00	   lt1	      ds	1
-     64 U00b3		       00	   lt2	      ds	1
-     65 U00b4		       00	   lt3	      ds	1
-     66 U00b5		       00	   lt4	      ds	1
-     67 U00b6		       00	   lt5	      ds	1
-     68 U00b7		       00	   sndX       ds	1	; SndPlay keeps X and Y here
-     69 U00b8		       00	   sndY       ds	1
-     70 U00b9		       00	   fast       ds	1	; bit 7: enemies at second-lap pace (wave 13+ or left difficulty A)
-     71 U00ba		       00 00 00 00*QUEUE      ds	48	; event records, 8 bytes: return lo, hi, gfx lo, hi, color lo, hi, HMP1, next y
-     72 U00ba		       00 ff	   STACKTOP   =	$FF
-     73 U00ea
-     74 U00ea		       00 b0	   lineCnt    =	temp+3	; header loops
-     75 U00ea		       00 af	   evPrevF    =	temp+2	; scheduler
+     35  0000 ????	       00 42	   COL_RED_DK =	$42	; enemies' bottom rows
+     36  0000 ????	       00 34	   COL_ORANGE_DK =	$34
+     37  0000 ????	       00 a0	   COL_HEADER =	$A0	; dark navy behind the title and status line
+     38  0000 ????	       00 00	   COL_BG     =	$00
+     39  0000 ????
+     40  0000 ????	       00 2c	   VBLANK_TIME =	44
+     41  0000 ????	       00 23	   OVERSCAN_TIME =	35
+     42  0000 ????	       00 05	   NENEMY     =	5
+     43  0000 ????
+     44  0000 ????						;===============================================================================
+     45 U00ea ????				      SEG.U	vars
+     46 U0080					      ORG	$80
+     47 U0080		       00 00	   pc0	      ds	2	; defender copy pointers (columns 0-2)
+     48 U0082		       00 00	   pc1	      ds	2
+     49 U0084		       00 00	   pc2	      ds	2
+     50 U0086		       00 00	   m1ptr      ds	2	; shot (ENAM1) pointer
+     51 U0088		       00 00	   p1ptr      ds	2	; enemy graphics pointer
+     52 U008a		       00 00	   p1col      ds	2	; enemy color pointer (ColArr + feet row)
+     53 U008c		       00 00	   stVec      ds	2	; next static row routine
+     54 U008e		       00	   nextEv     ds	1	; y of the next event row
+     55 U008f		       00	   nextSt     ds	1	; y of the next static row
+     56 U0090		       00 00 00 00*slotPtr    ds	9	; defender pointer (low byte) per lane*3+column
+     57 U0099		       00 00 00    shotPtr    ds	3	; shot pointer (low byte) per lane
+     58 U009c		       00	   frame      ds	1
+     59 U009d		       00	   pfColor    ds	1	; shelves and box (flashes white on a lid slam or air strike)
+     60 U009e							; scheduler scratch: SelectEnemies (overscan) fills it, Schedule (VBLANK) reads it
+     61 U009e		       00 00 00 00*eTop       ds	NENEMY	; event row
+     62 U00a3		       00 00 00 00*eFeet      ds	NENEMY	; feet row
+     63 U00a8		       00 00 00 00*eOrder     ds	NENEMY	; sorted order, bit 7 = drawn this frame
+     64 U00ad		       00 00 00 00 temp       ds	4
+     65 U00b1		       00	   lt0	      ds	1	; game logic scratch (bank 2)
+     66 U00b2		       00	   lt1	      ds	1
+     67 U00b3		       00	   lt2	      ds	1
+     68 U00b4		       00	   lt3	      ds	1
+     69 U00b5		       00	   lt4	      ds	1
+     70 U00b6		       00	   lt5	      ds	1
+     71 U00b7		       00	   sndX       ds	1	; SndPlay keeps X and Y here
+     72 U00b8		       00	   sndY       ds	1
+     73 U00b9		       00	   fast       ds	1	; bit 7: enemies at second-lap pace (wave 13+ or left difficulty A)
+     74 U00ba		       00 00 00 00*QUEUE      ds	48	; event records, 8 bytes: return lo, hi, gfx lo, hi, color lo, hi, HMP1, next y
+     75 U00ba		       00 ff	   STACKTOP   =	$FF
      76 U00ea
+     77 U00ea		       00 b0	   lineCnt    =	temp+3	; header loops
+     78 U00ea		       00 af	   evPrevF    =	temp+2	; scheduler
+     79 U00ea
  RAM used:  106  bytes (stack above)
-     77 U00ea					      echo	"RAM used: ", (QUEUE + 48 - $80)d, " bytes (stack above)"
-     78 U00ea
-     79 U00ea							; Super Chip RAM (cartridge, 128 bytes): write at W_name, read at R_name
-     80 U00ea							; ($80 higher). Game state that the kernel doesn't need lives here.
-     81 Uf07c ????				      SEG.U	scram
-     82 Uf000					      ORG	$F000
-     83 Uf000		       00 00 00 00*W_eX       ds	NENEMY	; enemies: left x
-     84 Uf005		       00 00 00 00*W_eLane    ds	NENEMY	;   shelf 0-2
-     85 Uf00a		       00 00 00 00*W_eType    ds	NENEMY	;   0 none, 1 dino, 2 helicopter, 3 crawler
-     86 Uf00f		       00 00 00 00*W_eHP      ds	NENEMY	;   health
-     87 Uf014		       00 00 00 00*W_eState   ds	NENEMY	;   bit 7 chewing, bit 6 hopped, bits 0-5 lasso frames left
-     88 Uf019		       00 00 00 00*W_slotType ds	9	; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
-     89 Uf022		       00 00 00 00*W_slotHP   ds	9
-     90 Uf02b		       00 00 00 00*W_slotCool ds	9	; visits (6 frames) until the toy acts again
-     91 Uf034		       00	   W_toyShelf ds	1	; the shelf whose toys act next
-     92 Uf035		       00 00	   W_sndPos   ds	2	; per channel: position in SndData
-     93 Uf037		       00 00	   W_sndTimer ds	2	;   ticks left in the step
-     94 Uf039		       00 00	   W_sndPri   ds	2	;   priority of what's playing (0 = quiet)
-     95 Uf03b		       00	   W_bossLeft ds	1	; T-Rexes still to come this wave
-     96 Uf03c		       00	   W_packLeft ds	1	; wind-up mice still to come in the pack
-     97 Uf03d		       00	   W_packTimer ds	1
-     98 Uf03e		       00	   W_packLane ds	1
-     99 Uf03f		       00	   W_game     ds	1	; game 1-3 (Game Select): starts at wave 1, 5 or 9
-    100 Uf040		       00	   W_selPrev  ds	1	; Game Select held last frame
-    101 Uf041		       00	   W_musPos   ds	1	; music: eighth note 0-63 of the theme
-    102 Uf042		       00	   W_musTimer ds	1	;   frames into it (0-11)
-    103 Uf043		       00 00 00    W_shotDmg  ds	3	; per shelf: damage of the shot in flight, 0 = none
-    104 Uf046		       00 00 00    W_shotKind ds	3	;   1 = an army man's bullet (passes over a chewing crawler)
-    105 Uf049		       00 00 00    W_score    ds	3	; BCD, most significant first
-    106 Uf04c		       00	   W_wave     ds	1	; binary, from 1
-    107 Uf04d		       00	   W_batt     ds	1	; batteries, binary 0-99
-    108 Uf04e		       00	   W_battTimer ds	1
-    109 Uf04f		       00	   W_cursor   ds	1	; slot 0-8
-    110 Uf050		       00	   W_toy      ds	1	; toy type chosen for placing
-    111 Uf051		       00	   W_unlock   ds	1	; highest toy type unlocked
-    112 Uf052		       00	   W_input    ds	1	; last frame's joystick (bits 3-0 right left down up) and fire (bit 7)
-    113 Uf053		       00	   W_repeat   ds	1	; cursor auto-repeat countdown
-    114 Uf054		       00	   W_fireState ds	1	; 1 = fire pressed (act on release), 2 = used to change toy
-    115 Uf055		       00	   W_swPrev   ds	1	; Game Reset held last frame
-    116 Uf056		       00	   W_lids     ds	1	; bits 0-2: shelf's lid slam used
-    117 Uf057		       00	   W_state    ds	1	; 0 attract, 1 playing, 2 game over
-    118 Uf058		       00	   W_overTimer ds	1
-    119 Uf059		       00	   W_spawnLeft ds	1
-    120 Uf05a		       00	   W_spawnTimer ds	1
-    121 Uf05b		       00	   W_rand     ds	1
-    122 Uf05c		       00	   W_flash    ds	1
-    123 Uf05d		       00	   W_dirty    ds	1	; status line parts to rebuild: 1/8/16 score cells, 2 batteries, 4 wave,
-    124 Uf05e							; 32 the whole line as GAME n (game selection)
-    125 Uf05e		       00 00 00 00*W_cells    ds	30	; status line, 6 cells x 5 rows (bottom row first)
-    126 Uf05e		       f0 7c	   SC_END     =	.
-    127 Uf05e		       f0 80	   R_eX       =	W_eX + $80
-    128 Uf05e		       f0 85	   R_eLane    =	W_eLane + $80
-    129 Uf05e		       f0 8a	   R_eType    =	W_eType + $80
-    130 Uf05e		       f0 8f	   R_eHP      =	W_eHP + $80
-    131 Uf05e		       f0 94	   R_eState   =	W_eState + $80
-    132 Uf05e		       f0 99	   R_slotType =	W_slotType + $80
-    133 Uf05e		       f0 a2	   R_slotHP   =	W_slotHP + $80
-    134 Uf05e		       f0 ab	   R_slotCool =	W_slotCool + $80
-    135 Uf05e		       f0 c3	   R_shotDmg  =	W_shotDmg + $80
-    136 Uf05e		       f0 c6	   R_shotKind =	W_shotKind + $80
-    137 Uf05e		       f0 c9	   R_score    =	W_score + $80
-    138 Uf05e		       f0 cc	   R_wave     =	W_wave + $80
-    139 Uf05e		       f0 cd	   R_batt     =	W_batt + $80
-    140 Uf05e		       f0 ce	   R_battTimer =	W_battTimer + $80
-    141 Uf05e		       f0 cf	   R_cursor   =	W_cursor + $80
-    142 Uf05e		       f0 d0	   R_toy      =	W_toy + $80
-    143 Uf05e		       f0 d1	   R_unlock   =	W_unlock + $80
-    144 Uf05e		       f0 d2	   R_input    =	W_input + $80
-    145 Uf05e		       f0 d3	   R_repeat   =	W_repeat + $80
-    146 Uf05e		       f0 d4	   R_fireState =	W_fireState + $80
-    147 Uf05e		       f0 d5	   R_swPrev   =	W_swPrev + $80
-    148 Uf05e		       f0 d6	   R_lids     =	W_lids + $80
-    149 Uf05e		       f0 d7	   R_state    =	W_state + $80
-    150 Uf05e		       f0 d8	   R_overTimer =	W_overTimer + $80
-    151 Uf05e		       f0 d9	   R_spawnLeft =	W_spawnLeft + $80
-    152 Uf05e		       f0 da	   R_spawnTimer =	W_spawnTimer + $80
-    153 Uf05e		       f0 db	   R_rand     =	W_rand + $80
-    154 Uf05e		       f0 dc	   R_flash    =	W_flash + $80
-    155 Uf05e		       f0 dd	   R_dirty    =	W_dirty + $80
-    156 Uf05e		       f0 b4	   R_toyShelf =	W_toyShelf + $80
-    157 Uf05e		       f0 b5	   R_sndPos   =	W_sndPos + $80
-    158 Uf05e		       f0 b7	   R_sndTimer =	W_sndTimer + $80
-    159 Uf05e		       f0 b9	   R_sndPri   =	W_sndPri + $80
-    160 Uf05e		       f0 bb	   R_bossLeft =	W_bossLeft + $80
-    161 Uf05e		       f0 bc	   R_packLeft =	W_packLeft + $80
-    162 Uf05e		       f0 bd	   R_packTimer =	W_packTimer + $80
-    163 Uf05e		       f0 be	   R_packLane =	W_packLane + $80
-    164 Uf05e		       f0 bf	   R_game     =	W_game + $80
-    165 Uf05e		       f0 c0	   R_selPrev  =	W_selPrev + $80
-    166 Uf05e		       f0 c1	   R_musPos   =	W_musPos + $80
-    167 Uf05e		       f0 c2	   R_musTimer =	W_musTimer + $80
-    168 Uf05e		       f0 de	   R_cells    =	W_cells + $80
+     80 U00ea					      echo	"RAM used: ", (QUEUE + 48 - $80)d, " bytes (stack above)"
+     81 U00ea
+     82 U00ea							; Super Chip RAM (cartridge, 128 bytes): write at W_name, read at R_name
+     83 U00ea							; ($80 higher). Game state that the kernel doesn't need lives here.
+     84 Uf07c ????				      SEG.U	scram
+     85 Uf000					      ORG	$F000
+     86 Uf000		       00 00 00 00*W_eX       ds	NENEMY	; enemies: left x
+     87 Uf005		       00 00 00 00*W_eLane    ds	NENEMY	;   shelf 0-2
+     88 Uf00a		       00 00 00 00*W_eType    ds	NENEMY	;   0 none, 1 dino, 2 helicopter, 3 crawler
+     89 Uf00f		       00 00 00 00*W_eHP      ds	NENEMY	;   health
+     90 Uf014		       00 00 00 00*W_eState   ds	NENEMY	;   bit 7 chewing, bit 6 hopped, bits 0-5 lasso frames left
+     91 Uf019		       00 00 00 00*W_slotType ds	9	; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
+     92 Uf022		       00 00 00 00*W_slotHP   ds	9
+     93 Uf02b		       00 00 00 00*W_slotCool ds	9	; visits (6 frames) until the toy acts again
+     94 Uf034		       00	   W_toyShelf ds	1	; the shelf whose toys act next
+     95 Uf035		       00 00	   W_sndPos   ds	2	; per channel: position in SndData
+     96 Uf037		       00 00	   W_sndTimer ds	2	;   ticks left in the step
+     97 Uf039		       00 00	   W_sndPri   ds	2	;   priority of what's playing (0 = quiet)
+     98 Uf03b		       00	   W_bossLeft ds	1	; T-Rexes still to come this wave
+     99 Uf03c		       00	   W_packLeft ds	1	; wind-up mice still to come in the pack
+    100 Uf03d		       00	   W_packTimer ds	1
+    101 Uf03e		       00	   W_packLane ds	1
+    102 Uf03f		       00	   W_game     ds	1	; game 1-3 (Game Select): starts at wave 1, 5 or 9
+    103 Uf040		       00	   W_selPrev  ds	1	; Game Select held last frame
+    104 Uf041		       00	   W_musPos   ds	1	; music: eighth note 0-63 of the theme
+    105 Uf042		       00	   W_musTimer ds	1	;   frames into it (0-11)
+    106 Uf043		       00 00 00    W_shotDmg  ds	3	; per shelf: damage of the shot in flight, 0 = none
+    107 Uf046		       00 00 00    W_shotKind ds	3	;   1 = an army man's bullet (passes over a chewing crawler)
+    108 Uf049		       00 00 00    W_score    ds	3	; BCD, most significant first
+    109 Uf04c		       00	   W_wave     ds	1	; binary, from 1
+    110 Uf04d		       00	   W_batt     ds	1	; batteries, binary 0-99
+    111 Uf04e		       00	   W_battTimer ds	1
+    112 Uf04f		       00	   W_cursor   ds	1	; slot 0-8
+    113 Uf050		       00	   W_toy      ds	1	; toy type chosen for placing
+    114 Uf051		       00	   W_unlock   ds	1	; highest toy type unlocked
+    115 Uf052		       00	   W_input    ds	1	; last frame's joystick (bits 3-0 right left down up) and fire (bit 7)
+    116 Uf053		       00	   W_repeat   ds	1	; cursor auto-repeat countdown
+    117 Uf054		       00	   W_fireState ds	1	; 1 = fire pressed (act on release), 2 = used to change toy
+    118 Uf055		       00	   W_swPrev   ds	1	; Game Reset held last frame
+    119 Uf056		       00	   W_lids     ds	1	; bits 0-2: shelf's lid slam used
+    120 Uf057		       00	   W_state    ds	1	; 0 attract, 1 playing, 2 game over
+    121 Uf058		       00	   W_overTimer ds	1
+    122 Uf059		       00	   W_spawnLeft ds	1
+    123 Uf05a		       00	   W_spawnTimer ds	1
+    124 Uf05b		       00	   W_rand     ds	1
+    125 Uf05c		       00	   W_flash    ds	1
+    126 Uf05d		       00	   W_dirty    ds	1	; status line parts to rebuild: 1/8/16 score cells, 2 batteries, 4 wave,
+    127 Uf05e							; 32 the whole line as GAME n (game selection)
+    128 Uf05e		       00 00 00 00*W_cells    ds	30	; status line, 6 cells x 5 rows (bottom row first)
+    129 Uf05e		       f0 7c	   SC_END     =	.
+    130 Uf05e		       f0 80	   R_eX       =	W_eX + $80
+    131 Uf05e		       f0 85	   R_eLane    =	W_eLane + $80
+    132 Uf05e		       f0 8a	   R_eType    =	W_eType + $80
+    133 Uf05e		       f0 8f	   R_eHP      =	W_eHP + $80
+    134 Uf05e		       f0 94	   R_eState   =	W_eState + $80
+    135 Uf05e		       f0 99	   R_slotType =	W_slotType + $80
+    136 Uf05e		       f0 a2	   R_slotHP   =	W_slotHP + $80
+    137 Uf05e		       f0 ab	   R_slotCool =	W_slotCool + $80
+    138 Uf05e		       f0 c3	   R_shotDmg  =	W_shotDmg + $80
+    139 Uf05e		       f0 c6	   R_shotKind =	W_shotKind + $80
+    140 Uf05e		       f0 c9	   R_score    =	W_score + $80
+    141 Uf05e		       f0 cc	   R_wave     =	W_wave + $80
+    142 Uf05e		       f0 cd	   R_batt     =	W_batt + $80
+    143 Uf05e		       f0 ce	   R_battTimer =	W_battTimer + $80
+    144 Uf05e		       f0 cf	   R_cursor   =	W_cursor + $80
+    145 Uf05e		       f0 d0	   R_toy      =	W_toy + $80
+    146 Uf05e		       f0 d1	   R_unlock   =	W_unlock + $80
+    147 Uf05e		       f0 d2	   R_input    =	W_input + $80
+    148 Uf05e		       f0 d3	   R_repeat   =	W_repeat + $80
+    149 Uf05e		       f0 d4	   R_fireState =	W_fireState + $80
+    150 Uf05e		       f0 d5	   R_swPrev   =	W_swPrev + $80
+    151 Uf05e		       f0 d6	   R_lids     =	W_lids + $80
+    152 Uf05e		       f0 d7	   R_state    =	W_state + $80
+    153 Uf05e		       f0 d8	   R_overTimer =	W_overTimer + $80
+    154 Uf05e		       f0 d9	   R_spawnLeft =	W_spawnLeft + $80
+    155 Uf05e		       f0 da	   R_spawnTimer =	W_spawnTimer + $80
+    156 Uf05e		       f0 db	   R_rand     =	W_rand + $80
+    157 Uf05e		       f0 dc	   R_flash    =	W_flash + $80
+    158 Uf05e		       f0 dd	   R_dirty    =	W_dirty + $80
+    159 Uf05e		       f0 b4	   R_toyShelf =	W_toyShelf + $80
+    160 Uf05e		       f0 b5	   R_sndPos   =	W_sndPos + $80
+    161 Uf05e		       f0 b7	   R_sndTimer =	W_sndTimer + $80
+    162 Uf05e		       f0 b9	   R_sndPri   =	W_sndPri + $80
+    163 Uf05e		       f0 bb	   R_bossLeft =	W_bossLeft + $80
+    164 Uf05e		       f0 bc	   R_packLeft =	W_packLeft + $80
+    165 Uf05e		       f0 bd	   R_packTimer =	W_packTimer + $80
+    166 Uf05e		       f0 be	   R_packLane =	W_packLane + $80
+    167 Uf05e		       f0 bf	   R_game     =	W_game + $80
+    168 Uf05e		       f0 c0	   R_selPrev  =	W_selPrev + $80
+    169 Uf05e		       f0 c1	   R_musPos   =	W_musPos + $80
+    170 Uf05e		       f0 c2	   R_musTimer =	W_musTimer + $80
+    171 Uf05e		       f0 de	   R_cells    =	W_cells + $80
  Super Chip RAM used:  124  bytes
-    169 Uf05e					      echo	"Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
-    170 Uf07c
-    171 Uf07c							;===============================================================================
-    172 Uf07c							; BANK 0
-    173 Uf07c							;===============================================================================
-    174  1000 ????				      SEG	bank0
-    175  0000					      ORG	$0000
-    176  0000					      RORG	$F000
-    177  0000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
-    178  0100
-    179  0100				   Start0
-    180  0100		       78		      sei
-    181  0101		       d8		      cld
-    182  0102		       a2 00		      ldx	#0
-    183  0104		       8a		      txa
-    184  0105				   .clear
-    185  0105		       ca		      dex
-    186  0106		       9a		      txs
-    187  0107		       48		      pha
-    188  0108		       d0 fb		      bne	.clear
-    189  010a		       a2 7f		      ldx	#127
-    190  010c		       a9 00		      lda	#0
-    191  010e				   .clearSC
-    192  010e		       9d 00 f0 	      sta	W_eX,x	; W_eX = $F000: the whole write port
-    193  0111		       ca		      dex
-    194  0112		       10 fa		      bpl	.clearSC
-    195  0114		       a2 04		      ldx	#NENEMY-1	; the enemy sort order persists from frame to frame
-    196  0116				   .order
-    197  0116		       8a		      txa
-    198  0117		       95 a8		      sta	eOrder,x
-    199  0119		       ca		      dex
-    200  011a		       10 fa		      bpl	.order
-    201  011c		       20 c0 ff 	      jsr	CallInit	; bank 2: power-on state (attract mode)
-    202  011f
-    203  011f				   MainLoop
-    204  011f		       a9 02		      lda	#2
-    205  0121		       85 01		      sta	VBLANK
-    206  0123		       85 02		      sta	WSYNC
-    207  0125		       85 00		      sta	VSYNC
-    208  0127		       85 02		      sta	WSYNC
-    209  0129		       85 02		      sta	WSYNC
-    210  012b		       85 02		      sta	WSYNC
-    211  012d		       a9 00		      lda	#0
-    212  012f		       85 00		      sta	VSYNC
-    213  0131		       a9 2c		      lda	#VBLANK_TIME
-    214  0133		       8d 96 02 	      sta	TIM64T
-    215  0136
-    216  0136		       e6 9c		      inc	frame
-    217  0138		       20 cf f3 	      jsr	SelectEnemies
-    218  013b		       20 94 f4 	      jsr	Schedule
-    219  013e		       20 bd f2 	      jsr	BuildStatus
-    220  0141		       a9 a1		      lda	#161	; defenders: rows 0-16 read the page's zero tail
-    221  0143		       85 80		      sta	pc0
-    222  0145		       85 82		      sta	pc1
-    223  0147		       85 84		      sta	pc2
-    224  0149		       a9 f5		      lda	#>DefPage
-    225  014b		       85 81		      sta	pc0+1
-    226  014d		       85 83		      sta	pc1+1
-    227  014f		       85 85		      sta	pc2+1
-    228  0151		       a9 00		      lda	#<Zeros
-    229  0153		       85 88		      sta	p1ptr
-    230  0155		       a9 f6		      lda	#>Zeros
-    231  0157		       85 89		      sta	p1ptr+1
-    232  0159		       a9 00		      lda	#0
-    233  015b		       85 8a		      sta	p1col
-    234  015d		       a9 f2		      lda	#>ColArr
-    235  015f		       85 8b		      sta	p1col+1
-    236  0161		       a5 99		      lda	shotPtr
-    237  0163		       85 86		      sta	m1ptr
-    238  0165		       a9 f1		      lda	#>ShotArr
-    239  0167		       85 87		      sta	m1ptr+1
-    240  0169		       a9 48		      lda	#72	; first static row: row 7
-    241  016b		       85 8f		      sta	nextSt
-    242  016d		       a9 d2		      lda	#<St7
-    243  016f		       85 8c		      sta	stVec
-    244  0171		       a9 fa		      lda	#>St7
-    245  0173		       85 8d		      sta	stVec+1
-    246  0175
-    247  0175							; header: 48-pixel text, player 0 at x 54 and player 1 at x 62
-    248  0175		       85 02		      sta	WSYNC	; RESPx lands on its last cycle w: x = 3w - 60
-    249  0177		       a9 10		      lda	#$10	; 0-1
-    250  0179		       85 21		      sta	HMP1	; 2-4	  player 1: 63 - 1 = 62 at the HMOVE
-    251  017b		       a9 00		      lda	#0	; 5-6
-    252  017d		       85 20		      sta	HMP0	; 7-9
-    253  017f					      REPEAT	13
-    254  017f		       ea		      nop		; 10-35
-    253  017f					      REPEND
-    254  0180		       ea		      nop		; 10-35
-    253  0180					      REPEND
-    254  0181		       ea		      nop		; 10-35
-    253  0181					      REPEND
-    254  0182		       ea		      nop		; 10-35
-    253  0182					      REPEND
-    254  0183		       ea		      nop		; 10-35
-    253  0183					      REPEND
-    254  0184		       ea		      nop		; 10-35
-    253  0184					      REPEND
-    254  0185		       ea		      nop		; 10-35
-    253  0185					      REPEND
-    254  0186		       ea		      nop		; 10-35
-    253  0186					      REPEND
-    254  0187		       ea		      nop		; 10-35
-    253  0187					      REPEND
-    254  0188		       ea		      nop		; 10-35
-    253  0188					      REPEND
-    254  0189		       ea		      nop		; 10-35
-    253  0189					      REPEND
-    254  018a		       ea		      nop		; 10-35
-    253  018a					      REPEND
-    254  018b		       ea		      nop		; 10-35
-    255  018c					      REPEND
-    256  018c		       85 10		      sta	RESP0	; 36-38  player 0 at 54
-    257  018e		       85 11		      sta	RESP1	; 39-41  player 1 at 63
-    258  0190		       85 02		      sta	WSYNC
-    259  0192		       85 2a		      sta	HMOVE
-    260  0194		       a9 03		      lda	#3	; three copies, close
-    261  0196		       85 04		      sta	NUSIZ0
-    262  0198		       85 05		      sta	NUSIZ1
-    263  019a		       a9 01		      lda	#1
-    264  019c		       85 25		      sta	VDELP0
-    265  019e		       85 26		      sta	VDELP1
-    266  01a0		       a9 46		      lda	#COL_RED
-    267  01a2		       85 06		      sta	COLUP0
-    268  01a4		       85 07		      sta	COLUP1
-    269  01a6		       a9 00		      lda	#COL_BG
-    270  01a8		       85 09		      sta	COLUBK
-    271  01aa		       a9 00		      lda	#0
-    272  01ac		       85 1b		      sta	GRP0
-    273  01ae		       85 1c		      sta	GRP1
-    274  01b0		       85 1b		      sta	GRP0
-    275  01b2		       85 0d		      sta	PF0
-    276  01b4		       85 0e		      sta	PF1
-    277  01b6		       85 0f		      sta	PF2
-    278  01b8		       85 1f		      sta	ENABL
-    279  01ba		       85 1d		      sta	ENAM0
-    280  01bc		       85 1e		      sta	ENAM1
-    281  01be		       85 0a		      sta	CTRLPF
-    282  01c0
-    283  01c0				   .vbWait
-    284  01c0		       ad 84 02 	      lda	INTIM
-    285  01c3		       d0 fb		      bne	.vbWait
-    286  01c5		       85 02		      sta	WSYNC	; s0 starts
-    287  01c7		       85 2b		      sta	HMCLR
-    288  01c9		       a9 00		      lda	#0
-    289  01cb		       85 01		      sta	VBLANK
-    290  01cd		       a9 0d		      lda	#13
-    291  01cf		       85 b0		      sta	lineCnt
-    292  01d1		       a0 06		      ldy	#6
-    293  01d3		       ad d7 f0 	      lda	R_state
-    294  01d6		       c9 02		      cmp	#2
-    295  01d8		       d0 03		      bne	.title
-    296  01da		       4c 12 f2 	      jmp	.over
-    297  01dd
-    298  01dd							; s1-14: title, seven font rows of two lines
-    299  01dd				   .title
-    300  01dd		       85 02		      sta	WSYNC
-    301  01df		       b9 00 f6 	      lda	Title0,y
-    302  01e2		       85 1b		      sta	GRP0
-    303  01e4		       b9 07 f6 	      lda	Title1,y
-    304  01e7		       85 1c		      sta	GRP1
-    305  01e9		       b9 0e f6 	      lda	Title2,y
-    306  01ec		       85 1b		      sta	GRP0
-    307  01ee		       b9 1c f6 	      lda	Title4,y
-    308  01f1		       aa		      tax
-    309  01f2		       b9 23 f6 	      lda	Title5,y
-    310  01f5		       85 ad		      sta	temp
-    311  01f7		       b9 15 f6 	      lda	Title3,y
-    312  01fa		       a4 ad		      ldy	temp
-    313  01fc		       85 1c		      sta	GRP1	; lands on cycle 43
-    314  01fe		       86 1b		      stx	GRP0
-    315  0200		       84 1c		      sty	GRP1
-    316  0202		       85 1b		      sta	GRP0
-    317  0204		       c6 b0		      dec	lineCnt
-    318  0206		       30 07		      bmi	.titleDone
-    319  0208		       a5 b0		      lda	lineCnt
-    320  020a		       4a		      lsr
-    321  020b		       a8		      tay
-    322  020c		       4c dd f1 	      jmp	.title
-    323  020f				   .titleDone
-    324  020f		       4c 44 f2 	      jmp	.header2
-    325  0212
-    326  0212				   .over		; the same with GAME OVER
-    327  0212		       85 02		      sta	WSYNC
-    328  0214		       b9 2a f6 	      lda	Over0,y
-    329  0217		       85 1b		      sta	GRP0
-    330  0219		       b9 31 f6 	      lda	Over1,y
-    331  021c		       85 1c		      sta	GRP1
-    332  021e		       b9 38 f6 	      lda	Over2,y
-    333  0221		       85 1b		      sta	GRP0
-    334  0223		       b9 46 f6 	      lda	Over4,y
-    335  0226		       aa		      tax
-    336  0227		       b9 4d f6 	      lda	Over5,y
-    337  022a		       85 ad		      sta	temp
-    338  022c		       b9 3f f6 	      lda	Over3,y
-    339  022f		       a4 ad		      ldy	temp
-    340  0231		       85 1c		      sta	GRP1
-    341  0233		       86 1b		      stx	GRP0
-    342  0235		       84 1c		      sty	GRP1
-    343  0237		       85 1b		      sta	GRP0
-    344  0239		       c6 b0		      dec	lineCnt
-    345  023b		       30 07		      bmi	.header2
-    346  023d		       a5 b0		      lda	lineCnt
-    347  023f		       4a		      lsr
-    348  0240		       a8		      tay
-    349  0241		       4c 12 f2 	      jmp	.over
-    350  0244
-    351  0244				   .header2
-    352  0244		       85 02		      sta	WSYNC	; s15
-    353  0246		       a9 00		      lda	#0
-    354  0248		       85 1b		      sta	GRP0
-    355  024a		       85 1c		      sta	GRP1
-    356  024c		       85 1b		      sta	GRP0
-    357  024e		       a9 f8		      lda	#COL_GOLD
-    358  0250		       85 06		      sta	COLUP0
-    359  0252		       85 07		      sta	COLUP1
-    360  0254		       a9 09		      lda	#9
-    361  0256		       85 b0		      sta	lineCnt
-    362  0258		       a0 04		      ldy	#4
-    363  025a
-    364  025a							; s16-25: status line, five font rows of two lines
-    365  025a				   .status
-    366  025a		       85 02		      sta	WSYNC
-    367  025c		       b9 de f0 	      lda	R_cells,y
-    368  025f		       85 1b		      sta	GRP0
-    369  0261		       b9 e3 f0 	      lda	R_cells+5,y
-    370  0264		       85 1c		      sta	GRP1
-    371  0266		       b9 e8 f0 	      lda	R_cells+10,y
-    372  0269		       85 1b		      sta	GRP0
-    373  026b		       b9 f2 f0 	      lda	R_cells+20,y
-    374  026e		       aa		      tax
-    375  026f		       b9 f7 f0 	      lda	R_cells+25,y
-    376  0272		       85 ad		      sta	temp
-    377  0274		       b9 ed f0 	      lda	R_cells+15,y
-    378  0277		       a4 ad		      ldy	temp
-    379  0279		       85 1c		      sta	GRP1
-    380  027b		       86 1b		      stx	GRP0
-    381  027d		       84 1c		      sty	GRP1
-    382  027f		       85 1b		      sta	GRP0
-    383  0281		       c6 b0		      dec	lineCnt
-    384  0283		       30 07		      bmi	.statusDone
-    385  0285		       a5 b0		      lda	lineCnt
-    386  0287		       4a		      lsr
-    387  0288		       a8		      tay
-    388  0289		       4c 5a f2 	      jmp	.status
-    389  028c				   .statusDone		; still s25, past the text
-    390  028c		       a9 00		      lda	#0
-    391  028e		       85 1b		      sta	GRP0
-    392  0290		       85 1c		      sta	GRP1
-    393  0292		       85 1b		      sta	GRP0
-    394  0294		       85 25		      sta	VDELP0
-    395  0296		       85 26		      sta	VDELP1
-    396  0298		       4c e0 ff 	      jmp	ToBank1
-    397  029b
-    398  029b							;-------------------------------------------------------------------------------
-    399  029b				   Overscan		; from bank 1, the line after s191
-    400  029b		       a9 23		      lda	#OVERSCAN_TIME
-    401  029d		       8d 96 02 	      sta	TIM64T
-    402  02a0		       20 d0 ff 	      jsr	CallLogic	; bank 2: the game
-    403  02a3				   .osWait
-    404  02a3		       ad 84 02 	      lda	INTIM
-    405  02a6		       d0 fb		      bne	.osWait
-    406  02a8		       4c 1f f1 	      jmp	MainLoop
-    407  02ab
-    408  02ab							;-------------------------------------------------------------------------------
-    409  02ab				   PosObject		; A = x, X = object (0 P0, 1 P1, 2 M0, 3 M1, 4 BL)
-    410  02ab					      SUBROUTINE
-    411  02ab		       85 02		      sta	WSYNC
-    412  02ad		       38		      sec
-    413  02ae				   .divide
-    414  02ae		       e9 0f		      sbc	#15
-    415  02b0		       b0 fc		      bcs	.divide
-    416  02b2		       49 07		      eor	#7
-    417  02b4		       0a		      asl
-    418  02b5		       0a		      asl
-    419  02b6		       0a		      asl
-    420  02b7		       0a		      asl
-    421  02b8		       95 20		      sta	HMP0,x
-    422  02ba		       95 10		      sta	RESP0,x
-    423  02bc		       60		      rts
-    424  02bd
-    425  02bd							;-------------------------------------------------------------------------------
-    426  02bd							; BuildStatus: rebuild the parts of the status line that changed (W_dirty).
-    427  02bd							; Cells (narrow 3x5 font, two characters per 8-pixel cell): 0-2 the score,
-    428  02bd							; 3 battery icon + tens, 4 ones + "W", 5 the wave's two digits (cells 4-5
-    429  02bd							; start with a blank column).
-    430  02bd				   BuildStatus		; (one part per frame, to keep VBLANK short)
-    431  02bd					      SUBROUTINE
-    432  02bd		       ad dd f0 	      lda	R_dirty	; game selection: the line reads GAME n
-    433  02c0		       29 20		      and	#$20
-    434  02c2		       f0 1e		      beq	.notGame
-    435  02c4		       ae bf f0 	      ldx	R_game
-    436  02c7		       bd 80 f7 	      lda	GameTextAt,x
-    437  02ca		       aa		      tax
-    438  02cb		       a0 00		      ldy	#0
-    439  02cd				   .game
-    440  02cd		       bd 26 f7 	      lda	GameText,x
-    441  02d0		       99 5e f0 	      sta	W_cells,y
-    442  02d3		       e8		      inx
-    443  02d4		       c8		      iny
-    444  02d5		       c0 1e		      cpy	#30
-    445  02d7		       d0 f4		      bne	.game
-    446  02d9		       ad dd f0 	      lda	R_dirty
-    447  02dc		       29 df		      and	#$DF
-    448  02de		       8d 5d f0 	      sta	W_dirty
-    449  02e1		       60		      rts
-    450  02e2				   .notGame
-    451  02e2							; the score's three cells one per frame: dirty bit 0, then 3, then 4
-    452  02e2		       ad dd f0 	      lda	R_dirty
-    453  02e5		       29 19		      and	#$19
-    454  02e7		       f0 61		      beq	.noScore
-    455  02e9		       a2 00		      ldx	#0
-    456  02eb		       4a		      lsr
-    457  02ec		       b0 07		      bcs	.cell
-    458  02ee		       e8		      inx
-    459  02ef		       4a		      lsr
-    460  02f0		       4a		      lsr
-    461  02f1		       4a		      lsr
-    462  02f2		       b0 01		      bcs	.cell
-    463  02f4		       e8		      inx
-    464  02f5				   .cell
-    465  02f5		       86 b0		      stx	temp+3
-    466  02f7		       bd c9 f0 	      lda	R_score,x
-    467  02fa		       4a		      lsr
-    468  02fb		       4a		      lsr
-    469  02fc		       4a		      lsr
-    470  02fd		       4a		      lsr
-    471  02fe		       85 ad		      sta	temp
-    472  0300		       0a		      asl
-    473  0301		       0a		      asl
-    474  0302		       65 ad		      adc	temp
-    475  0304		       85 ad		      sta	temp	; high digit * 5
-    476  0306		       bd c9 f0 	      lda	R_score,x
-    477  0309		       29 0f		      and	#$0F
-    478  030b		       85 ae		      sta	temp+1
-    479  030d		       0a		      asl
-    480  030e		       0a		      asl
-    481  030f		       65 ae		      adc	temp+1
-    482  0311		       85 ae		      sta	temp+1	; low digit * 5
-    483  0313		       a5 b0		      lda	temp+3
-    484  0315		       0a		      asl
-    485  0316		       0a		      asl
-    486  0317		       65 b0		      adc	temp+3
-    487  0319		       85 af		      sta	temp+2	; destination: cell * 5
-    488  031b		       a0 04		      ldy	#4
-    489  031d				   .row
-    490  031d		       a6 ad		      ldx	temp
-    491  031f		       bd 54 f6 	      lda	DigitHi,x
-    492  0322		       a6 ae		      ldx	temp+1
-    493  0324		       1d 86 f6 	      ora	DigitLo,x
-    494  0327		       a6 af		      ldx	temp+2
-    495  0329		       9d 5e f0 	      sta	W_cells,x
-    496  032c		       e6 ad		      inc	temp
-    497  032e		       e6 ae		      inc	temp+1
-    498  0330		       e6 af		      inc	temp+2
-    499  0332		       88		      dey
-    500  0333		       10 e8		      bpl	.row
-    501  0335		       a6 b0		      ldx	temp+3
-    502  0337		       ad dd f0 	      lda	R_dirty
-    503  033a		       3d 44 f3 	      and	ScoreDone,x
-    504  033d		       1d 47 f3 	      ora	ScoreNext,x
-    505  0340		       8d 5d f0 	      sta	W_dirty
-    506  0343		       60		      rts
-    507  0344		       fe f7 ef    ScoreDone  .byte.b	$FE, $F7, $EF	; clear this cell's bit ...
-    508  0347		       08 10 00    ScoreNext  .byte.b	$08, $10, $00	; ... and ask for the next
-    509  034a				   .noScore
-    510  034a		       ad dd f0 	      lda	R_dirty
-    511  034d		       29 02		      and	#2
-    512  034f		       f0 30		      beq	.noBatt
-    513  0351		       ae cd f0 	      ldx	R_batt
-    514  0354		       20 b2 f3 	      jsr	TwoDigits	; temp = tens*5, temp+1 = ones*5
-    515  0357		       a0 00		      ldy	#0
-    516  0359				   .batt
-    517  0359		       a6 ad		      ldx	temp
-    518  035b		       bd b8 f6 	      lda	DigitR,x
-    519  035e		       19 1c f7 	      ora	IconW,y
-    520  0361		       99 6d f0 	      sta	W_cells+15,y
-    521  0364		       a6 ae		      ldx	temp+1
-    522  0366		       bd ea f6 	      lda	DigitM,x
-    523  0369		       19 21 f7 	      ora	GlyphW,y
-    524  036c		       99 72 f0 	      sta	W_cells+20,y
-    525  036f		       e6 ad		      inc	temp
-    526  0371		       e6 ae		      inc	temp+1
-    527  0373		       c8		      iny
-    528  0374		       c0 05		      cpy	#5
-    529  0376		       d0 e1		      bne	.batt
-    530  0378		       ad dd f0 	      lda	R_dirty
-    531  037b		       29 fd		      and	#$FD
-    532  037d		       8d 5d f0 	      sta	W_dirty
-    533  0380		       60		      rts
-    534  0381				   .noBatt
-    535  0381		       ad dd f0 	      lda	R_dirty
-    536  0384		       29 04		      and	#4
-    537  0386		       f0 24		      beq	.done
-    538  0388		       ae cc f0 	      ldx	R_wave
-    539  038b		       e0 64		      cpx	#100
-    540  038d		       90 02		      bcc	.w
-    541  038f		       a2 63		      ldx	#99
-    542  0391				   .w
-    543  0391		       20 b2 f3 	      jsr	TwoDigits
-    544  0394		       a0 00		      ldy	#0
-    545  0396				   .wave
-    546  0396		       a6 ad		      ldx	temp
-    547  0398		       bd ea f6 	      lda	DigitM,x
-    548  039b		       a6 ae		      ldx	temp+1
-    549  039d		       1d b8 f6 	      ora	DigitR,x
-    550  03a0		       99 77 f0 	      sta	W_cells+25,y
-    551  03a3		       e6 ad		      inc	temp
-    552  03a5		       e6 ae		      inc	temp+1
-    553  03a7		       c8		      iny
-    554  03a8		       c0 05		      cpy	#5
-    555  03aa		       d0 ea		      bne	.wave
-    556  03ac				   .done
-    557  03ac		       a9 00		      lda	#0
-    558  03ae		       8d 5d f0 	      sta	W_dirty
-    559  03b1		       60		      rts
-    560  03b2
-    561  03b2				   TwoDigits		; X = 0-99 -> temp = tens*5, temp+1 = ones*5
-    562  03b2		       bd 84 f7 	      lda	Bin2BCD,x
-    563  03b5		       4a		      lsr
-    564  03b6		       4a		      lsr
-    565  03b7		       4a		      lsr
-    566  03b8		       4a		      lsr
-    567  03b9		       85 ad		      sta	temp
-    568  03bb		       0a		      asl
-    569  03bc		       0a		      asl
-    570  03bd		       65 ad		      adc	temp
-    571  03bf		       85 ad		      sta	temp
-    572  03c1		       bd 84 f7 	      lda	Bin2BCD,x
-    573  03c4		       29 0f		      and	#$0F
-    574  03c6		       85 ae		      sta	temp+1
-    575  03c8		       0a		      asl
-    576  03c9		       0a		      asl
-    577  03ca		       65 ae		      adc	temp+1
-    578  03cc		       85 ae		      sta	temp+1
-    579  03ce		       60		      rts
-    580  03cf
-    581  03cf							;-------------------------------------------------------------------------------
-    582  03cf							; SelectEnemies (VBLANK): decide which enemies player 1 draws this frame. Each enemy needs rows E-1 .. feet, where E is its event row (the
-    583  03cf							; first row at or above top-1 that the kernel allows) and E-1 is blank. They
-    584  03cf							; are sorted by E; one that overlaps an enemy already taken waits.
-    585  03cf				   SelectEnemies
-    586  03cf					      SUBROUTINE
-    587  03cf		       a2 04		      ldx	#NENEMY-1	; (eFeet/eTop come from EnemyRows in bank 2)
-    588  03d1				   .clear
-    589  03d1		       b5 a8		      lda	eOrder,x	; forget last frame's choice, keep the order
-    590  03d3		       29 7f		      and	#$7F
-    591  03d5		       95 a8		      sta	eOrder,x
-    592  03d7		       ca		      dex
-    593  03d8		       10 f7		      bpl	.clear
-    594  03da							; insertion sort of eOrder by eTop (nearly sorted already: cheap)
-    595  03da		       a2 01		      ldx	#1
-    596  03dc				   .so
-    597  03dc		       86 b0		      stx	temp+3
-    598  03de		       b5 a8		      lda	eOrder,x
-    599  03e0		       85 ad		      sta	temp
-    600  03e2		       a8		      tay
-    601  03e3		       b9 9e 00 	      lda	eTop,y
-    602  03e6		       85 ae		      sta	temp+1
-    603  03e8		       a4 b0		      ldy	temp+3
-    604  03ea				   .si
-    605  03ea		       b6 a7		      ldx	eOrder-1,y
-    606  03ec		       b5 9e		      lda	eTop,x
-    607  03ee		       c5 ae		      cmp	temp+1
-    608  03f0		       90 0d		      bcc	.place
-    609  03f2		       d0 04		      bne	.shift
-    610  03f4		       e4 ad		      cpx	temp	; same event row: the lower enemy number first
-    611  03f6		       90 07		      bcc	.place
-    612  03f8				   .shift
-    613  03f8		       8a		      txa
-    614  03f9		       99 a8 00 	      sta	eOrder,y
-    615  03fc		       88		      dey
-    616  03fd		       d0 eb		      bne	.si
-    617  03ff				   .place
-    618  03ff		       a5 ad		      lda	temp
-    619  0401		       99 a8 00 	      sta	eOrder,y
-    620  0404		       a6 b0		      ldx	temp+3
-    621  0406		       e8		      inx
-    622  0407		       e0 05		      cpx	#NENEMY
-    623  0409		       d0 d1		      bne	.so
-    624  040b							; choose: walk the sorted list from position (frame & 7) mod n, wrapping,
-    625  040b							; and take each enemy whose rows (event row - 1 .. feet) miss every enemy
-    626  040b							; taken so far. The start moves every frame, so overlapping ones take turns.
-    627  040b		       a2 00		      ldx	#0
-    628  040d				   .count
-    629  040d		       b4 a8		      ldy	eOrder,x
-    630  040f		       b9 9e 00 	      lda	eTop,y
-    631  0412		       c9 ff		      cmp	#$FF
-    632  0414		       f0 05		      beq	.counted
-    633  0416		       e8		      inx
-    634  0417		       e0 05		      cpx	#NENEMY
-    635  0419		       d0 f2		      bne	.count
-    636  041b				   .counted
-    637  041b		       86 b0		      stx	temp+3	; n
-    638  041d		       8a		      txa
-    639  041e		       f0 73		      beq	.selDone
-    640  0420		       85 ae		      sta	temp+1	; candidates left
-    641  0422		       a5 9c		      lda	frame
-    642  0424		       29 07		      and	#7	; start: (frame & 7) mod n, so it visits every position
-    643  0426		       38		      sec
-    644  0427				   .mod
-    645  0427		       e5 b0		      sbc	temp+3
-    646  0429		       b0 fc		      bcs	.mod
-    647  042b		       65 b0		      adc	temp+3
-    648  042d		       85 af		      sta	temp+2
-    649  042f							;   The list is sorted by event row, so within each run (start..n-1, then
-    650  042f							;   0..start-1) a candidate can only overlap the last enemy taken in that
-    651  042f							;   run; in the second run it must also end above the first enemy taken in
-    652  042f							;   the first. QUEUE+0..3 (free until Schedule): last taken feet, any taken
-    653  042f							;   in this run, first run's first event row, in the second run.
-    654  042f		       a9 00		      lda	#0
-    655  0431		       85 bb		      sta	QUEUE+1
-    656  0433		       85 bd		      sta	QUEUE+3
-    657  0435		       a9 ff		      lda	#$FF
-    658  0437		       85 bc		      sta	QUEUE+2
-    659  0439				   .cand
-    660  0439		       a6 af		      ldx	temp+2
-    661  043b		       b4 a8		      ldy	eOrder,x
-    662  043d		       b9 9e 00 	      lda	eTop,y
-    663  0440		       f0 3b		      beq	.reject	; no usable event row
-    664  0442		       38		      sec
-    665  0443		       e9 01		      sbc	#1
-    666  0445		       85 ad		      sta	temp	; candidate event row - 1
-    667  0447		       a5 bb		      lda	QUEUE+1
-    668  0449		       f0 06		      beq	.noPrev
-    669  044b		       a5 ba		      lda	QUEUE
-    670  044d		       c5 ad		      cmp	temp
-    671  044f		       b0 2c		      bcs	.reject	; the last one taken ends at or below it
-    672  0451				   .noPrev
-    673  0451		       a5 bd		      lda	QUEUE+3
-    674  0453		       f0 0a		      beq	.take
-    675  0455		       b9 a3 00 	      lda	eFeet,y
-    676  0458		       18		      clc
-    677  0459		       69 01		      adc	#1
-    678  045b		       c5 bc		      cmp	QUEUE+2
-    679  045d		       b0 1e		      bcs	.reject	; second run: must end above the first run's first
-    680  045f				   .take
-    681  045f		       b9 a3 00 	      lda	eFeet,y
-    682  0462		       85 ba		      sta	QUEUE
-    683  0464		       a9 01		      lda	#1
-    684  0466		       85 bb		      sta	QUEUE+1
-    685  0468		       a5 bd		      lda	QUEUE+3
-    686  046a		       d0 0b		      bne	.mark
-    687  046c		       a5 bc		      lda	QUEUE+2
-    688  046e		       c9 ff		      cmp	#$FF
-    689  0470		       d0 05		      bne	.mark
-    690  0472		       b9 9e 00 	      lda	eTop,y
-    691  0475		       85 bc		      sta	QUEUE+2
-    692  0477				   .mark
-    693  0477		       b5 a8		      lda	eOrder,x
-    694  0479		       09 80		      ora	#$80
-    695  047b		       95 a8		      sta	eOrder,x
-    696  047d				   .reject
-    697  047d		       e6 af		      inc	temp+2
-    698  047f		       a5 af		      lda	temp+2
-    699  0481		       c5 b0		      cmp	temp+3
-    700  0483		       d0 0a		      bne	.noWrap
-    701  0485		       a9 00		      lda	#0
-    702  0487		       85 af		      sta	temp+2
-    703  0489		       85 bb		      sta	QUEUE+1
-    704  048b		       a9 01		      lda	#1
-    705  048d		       85 bd		      sta	QUEUE+3
-    706  048f				   .noWrap
-    707  048f		       c6 ae		      dec	temp+1
-    708  0491		       d0 a6		      bne	.cand
-    709  0493				   .selDone
-    710  0493		       60		      rts
-    711  0494
-    712  0494							;-------------------------------------------------------------------------------
-    713  0494							; Schedule (VBLANK): the event queue for the enemies SelectEnemies took, one
-    714  0494							; 8-byte record per enemy in row order. Each enemy's graphics are padded with
-    715  0494							; only 40 zeros, so its pointer must be replaced within 40 rows of it: an
-    716  0494							; event row comes at most 41 rows after the previous enemy's feet, and after
-    717  0494							; the last enemy a park record points player 1 at zeros.
-    718  0494				   Schedule
-    719  0494					      SUBROUTINE
-    720  0494		       a9 00		      lda	#0
-    721  0496		       85 af		      sta	evPrevF
-    722  0498		       85 b0		      sta	temp+3
-    723  049a		       a9 ff		      lda	#$FF
-    724  049c		       85 8e		      sta	nextEv
-    725  049e		       a2 00		      ldx	#0
-    726  04a0				   .q
-    727  04a0		       a4 b0		      ldy	temp+3
-    728  04a2		       b9 a8 00 	      lda	eOrder,y
-    729  04a5		       30 03		      bmi	.qTaken
-    730  04a7		       4c 6a f5 	      jmp	.qNext
-    731  04aa				   .qTaken
-    732  04aa		       29 7f		      and	#$7F
-    733  04ac		       a8		      tay
-    734  04ad		       b9 9e 00 	      lda	eTop,y
-    735  04b0		       85 ad		      sta	temp	; the latest usable event row
-    736  04b2		       e0 00		      cpx	#0
-    737  04b4		       f0 2a		      beq	.qRow	; the first enemy: no limit
-    738  04b6		       a5 af		      lda	evPrevF
-    739  04b8		       18		      clc
-    740  04b9		       69 29		      adc	#41
-    741  04bb		       c5 ad		      cmp	temp
-    742  04bd		       b0 21		      bcs	.qRow
-    743  04bf		       85 ad		      sta	temp	; at most 41 rows after the previous feet ...
-    744  04c1		       e6 ad		      inc	temp
-    745  04c3				   .qDec
-    746  04c3		       c6 ad		      dec	temp	; ... on a row the kernel allows ...
-    747  04c5		       b9 a3 00 	      lda	eFeet,y
-    748  04c8		       38		      sec
-    749  04c9		       e9 33		      sbc	#51
-    750  04cb		       90 06		      bcc	.qBad
-    751  04cd		       c5 ad		      cmp	temp
-    752  04cf		       f0 02		      beq	.qBad
-    753  04d1		       b0 16		      bcs	.qSkip	; ... and at most 41 rows above its top
-    754  04d3				   .qBad
-    755  04d3		       84 ae		      sty	temp+1
-    756  04d5		       a4 ad		      ldy	temp
-    757  04d7		       b9 c8 f9 	      lda	RowBad,y
-    758  04da		       a4 ae		      ldy	temp+1
-    759  04dc		       c9 00		      cmp	#0
-    760  04de		       d0 e3		      bne	.qDec
-    761  04e0				   .qRow
-    762  04e0		       a5 af		      lda	evPrevF
-    763  04e2		       18		      clc
-    764  04e3		       69 01		      adc	#1
-    765  04e5		       c5 ad		      cmp	temp
-    766  04e7		       90 03		      bcc	.qOk
-    767  04e9				   .qSkip
-    768  04e9		       4c 6a f5 	      jmp	.qNext	; needs event row > previous feet + 1
-    769  04ec				   .qOk
-    770  04ec		       a9 4f		      lda	#79
-    771  04ee		       38		      sec
-    772  04ef		       e5 ad		      sbc	temp	; y of the event row
-    773  04f1		       e0 00		      cpx	#0
-    774  04f3		       d0 05		      bne	.link
-    775  04f5		       85 8e		      sta	nextEv
-    776  04f7		       4c fc f4 	      jmp	.rec
-    777  04fa				   .link
-    778  04fa		       95 b9		      sta	QUEUE-1,x
-    779  04fc				   .rec
-    780  04fc		       b9 80 f0 	      lda	R_eX,y
-    781  04ff		       84 ae		      sty	temp+1
-    782  0501		       a8		      tay
-    783  0502		       b9 28 f9 	      lda	XHm,y
-    784  0505		       95 c0		      sta	QUEUE+6,x
-    785  0507		       b9 88 f8 	      lda	XVar,y
-    786  050a		       a8		      tay
-    787  050b		       b9 45 fa 	      lda	VarLo,y
-    788  050e		       95 ba		      sta	QUEUE,x
-    789  0510		       b9 4d fa 	      lda	VarHi,y
-    790  0513		       95 bb		      sta	QUEUE+1,x
-    791  0515		       a4 ae		      ldy	temp+1
-    792  0517		       b9 a3 00 	      lda	eFeet,y
-    793  051a		       95 be		      sta	QUEUE+4,x
-    794  051c		       85 af		      sta	evPrevF
-    795  051e		       b9 8a f0 	      lda	R_eType,y
-    796  0521		       a8		      tay
-    797  0522		       b9 55 fa 	      lda	EnColHi,y	; color page for this kind of enemy
-    798  0525		       95 bf		      sta	QUEUE+5,x
-    799  0527		       a4 ae		      ldy	temp+1
-    800  0529		       b9 80 f0 	      lda	R_eX,y	; walking frame: (x >> 2) & 1
-    801  052c		       4a		      lsr
-    802  052d		       4a		      lsr
-    803  052e		       29 01		      and	#1
-    804  0530		       95 c1		      sta	QUEUE+7,x	; (scratch until the next record links here)
-    805  0532		       b9 8a f0 	      lda	R_eType,y
-    806  0535		       0a		      asl
-    807  0536		       15 c1		      ora	QUEUE+7,x
-    808  0538		       95 c1		      sta	QUEUE+7,x
-    809  053a		       b9 8a f0 	      lda	R_eType,y
-    810  053d		       c9 05		      cmp	#5	; a knight without its shield: the charge frame
-    811  053f		       d0 0b		      bne	.frame
-    812  0541		       b9 94 f0 	      lda	R_eState,y
-    813  0544		       29 40		      and	#$40
-    814  0546		       f0 04		      beq	.frame
-    815  0548		       a9 14		      lda	#20	; (index 20 of EBase: the charge frame)
-    816  054a		       95 c1		      sta	QUEUE+7,x
-    817  054c				   .frame
-    818  054c		       b4 c1		      ldy	QUEUE+7,x
-    819  054e		       b5 be		      lda	QUEUE+4,x
-    820  0550		       18		      clc
-    821  0551		       79 1b fa 	      adc	EBaseLo,y
-    822  0554		       95 bc		      sta	QUEUE+2,x
-    823  0556		       b9 30 fa 	      lda	EBaseHi,y
-    824  0559		       69 00		      adc	#0
-    825  055b		       95 bd		      sta	QUEUE+3,x
-    826  055d		       a9 ff		      lda	#$FF
-    827  055f		       95 c1		      sta	QUEUE+7,x
-    828  0561		       8a		      txa
-    829  0562		       18		      clc
-    830  0563		       69 08		      adc	#8
-    831  0565		       aa		      tax
-    832  0566		       e0 28		      cpx	#40
-    833  0568		       b0 0b		      bcs	.park
-    834  056a				   .qNext
-    835  056a		       e6 b0		      inc	temp+3
-    836  056c		       a5 b0		      lda	temp+3
-    837  056e		       c9 05		      cmp	#NENEMY
-    838  0570		       f0 03		      beq	.park
-    839  0572		       4c a0 f4 	      jmp	.q
-    840  0575				   .park		; after the last enemy: point player 1 at zeros
-    841  0575		       e0 00		      cpx	#0
-    842  0577		       f0 44		      beq	.done
-    843  0579		       a5 af		      lda	evPrevF
-    844  057b		       c9 27		      cmp	#39
-    845  057d		       b0 3e		      bcs	.done	; rows below it to the end: 40 at most
-    846  057f		       18		      clc
-    847  0580		       69 29		      adc	#41
-    848  0582		       c9 4e		      cmp	#78
-    849  0584		       90 02		      bcc	.pRow
-    850  0586		       a9 4d		      lda	#77
-    851  0588				   .pRow
-    852  0588		       85 ad		      sta	temp
-    853  058a				   .pDec
-    854  058a		       a4 ad		      ldy	temp
-    855  058c		       b9 c8 f9 	      lda	RowBad,y
-    856  058f		       f0 05		      beq	.pOk
-    857  0591		       c6 ad		      dec	temp
-    858  0593		       4c 8a f5 	      jmp	.pDec
-    859  0596				   .pOk
-    860  0596		       a9 4f		      lda	#79
-    861  0598		       38		      sec
-    862  0599		       e5 ad		      sbc	temp
-    863  059b		       95 b9		      sta	QUEUE-1,x
-    864  059d		       ad 45 fa 	      lda	VarLo
-    865  05a0		       95 ba		      sta	QUEUE,x
-    866  05a2		       ad 4d fa 	      lda	VarHi
-    867  05a5		       95 bb		      sta	QUEUE+1,x
-    868  05a7		       a9 00		      lda	#<Zeros
-    869  05a9		       95 bc		      sta	QUEUE+2,x
-    870  05ab		       a9 f6		      lda	#>Zeros
-    871  05ad		       95 bd		      sta	QUEUE+3,x
-    872  05af		       a9 00		      lda	#0
-    873  05b1		       95 be		      sta	QUEUE+4,x
-    874  05b3		       95 c0		      sta	QUEUE+6,x
-    875  05b5		       a9 f2		      lda	#>ColArr
-    876  05b7		       95 bf		      sta	QUEUE+5,x
-    877  05b9		       a9 ff		      lda	#$FF
-    878  05bb		       95 c1		      sta	QUEUE+7,x
-    879  05bd				   .done
-    880  05bd		       60		      rts
-    881  05be
+    172 Uf05e					      echo	"Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
+    173 Uf07c
+    174 Uf07c							;===============================================================================
+    175 Uf07c							; BANK 0
+    176 Uf07c							;===============================================================================
+    177  1000 ????				      SEG	bank0
+    178  0000					      ORG	$0000
+    179  0000					      RORG	$F000
+    180  0000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
+    181  0100
+    182  0100				   Start0
+    183  0100		       78		      sei
+    184  0101		       d8		      cld
+    185  0102		       a2 00		      ldx	#0
+    186  0104		       8a		      txa
+    187  0105				   .clear
+    188  0105		       ca		      dex
+    189  0106		       9a		      txs
+    190  0107		       48		      pha
+    191  0108		       d0 fb		      bne	.clear
+    192  010a		       a2 7f		      ldx	#127
+    193  010c		       a9 00		      lda	#0
+    194  010e				   .clearSC
+    195  010e		       9d 00 f0 	      sta	W_eX,x	; W_eX = $F000: the whole write port
+    196  0111		       ca		      dex
+    197  0112		       10 fa		      bpl	.clearSC
+    198  0114		       a2 04		      ldx	#NENEMY-1	; the enemy sort order persists from frame to frame
+    199  0116				   .order
+    200  0116		       8a		      txa
+    201  0117		       95 a8		      sta	eOrder,x
+    202  0119		       ca		      dex
+    203  011a		       10 fa		      bpl	.order
+    204  011c		       20 c0 ff 	      jsr	CallInit	; bank 2: power-on state (attract mode)
+    205  011f
+    206  011f				   MainLoop
+    207  011f		       a9 02		      lda	#2
+    208  0121		       85 01		      sta	VBLANK
+    209  0123		       85 02		      sta	WSYNC
+    210  0125		       85 00		      sta	VSYNC
+    211  0127		       85 02		      sta	WSYNC
+    212  0129		       85 02		      sta	WSYNC
+    213  012b		       85 02		      sta	WSYNC
+    214  012d		       a9 00		      lda	#0
+    215  012f		       85 00		      sta	VSYNC
+    216  0131		       a9 2c		      lda	#VBLANK_TIME
+    217  0133		       8d 96 02 	      sta	TIM64T
+    218  0136
+    219  0136		       e6 9c		      inc	frame
+    220  0138		       20 cf f3 	      jsr	SelectEnemies
+    221  013b		       20 94 f4 	      jsr	Schedule
+    222  013e		       20 bd f2 	      jsr	BuildStatus
+    223  0141		       a9 a1		      lda	#161	; defenders: rows 0-16 read the page's zero tail
+    224  0143		       85 80		      sta	pc0
+    225  0145		       85 82		      sta	pc1
+    226  0147		       85 84		      sta	pc2
+    227  0149		       a9 f5		      lda	#>DefPage
+    228  014b		       85 81		      sta	pc0+1
+    229  014d		       85 83		      sta	pc1+1
+    230  014f		       85 85		      sta	pc2+1
+    231  0151		       a9 00		      lda	#<Zeros
+    232  0153		       85 88		      sta	p1ptr
+    233  0155		       a9 f6		      lda	#>Zeros
+    234  0157		       85 89		      sta	p1ptr+1
+    235  0159		       a9 00		      lda	#0
+    236  015b		       85 8a		      sta	p1col
+    237  015d		       a9 f2		      lda	#>ColArr
+    238  015f		       85 8b		      sta	p1col+1
+    239  0161		       a5 99		      lda	shotPtr
+    240  0163		       85 86		      sta	m1ptr
+    241  0165		       a9 f1		      lda	#>ShotArr
+    242  0167		       85 87		      sta	m1ptr+1
+    243  0169		       a9 48		      lda	#72	; first static row: row 7
+    244  016b		       85 8f		      sta	nextSt
+    245  016d		       a9 d6		      lda	#<St7
+    246  016f		       85 8c		      sta	stVec
+    247  0171		       a9 fa		      lda	#>St7
+    248  0173		       85 8d		      sta	stVec+1
+    249  0175
+    250  0175							; header: 48-pixel text, player 0 at x 54 and player 1 at x 62
+    251  0175		       85 02		      sta	WSYNC	; RESPx lands on its last cycle w: x = 3w - 60
+    252  0177		       a9 10		      lda	#$10	; 0-1
+    253  0179		       85 21		      sta	HMP1	; 2-4	  player 1: 63 - 1 = 62 at the HMOVE
+    254  017b		       a9 00		      lda	#0	; 5-6
+    255  017d		       85 20		      sta	HMP0	; 7-9
+    256  017f					      REPEAT	13
+    257  017f		       ea		      nop		; 10-35
+    256  017f					      REPEND
+    257  0180		       ea		      nop		; 10-35
+    256  0180					      REPEND
+    257  0181		       ea		      nop		; 10-35
+    256  0181					      REPEND
+    257  0182		       ea		      nop		; 10-35
+    256  0182					      REPEND
+    257  0183		       ea		      nop		; 10-35
+    256  0183					      REPEND
+    257  0184		       ea		      nop		; 10-35
+    256  0184					      REPEND
+    257  0185		       ea		      nop		; 10-35
+    256  0185					      REPEND
+    257  0186		       ea		      nop		; 10-35
+    256  0186					      REPEND
+    257  0187		       ea		      nop		; 10-35
+    256  0187					      REPEND
+    257  0188		       ea		      nop		; 10-35
+    256  0188					      REPEND
+    257  0189		       ea		      nop		; 10-35
+    256  0189					      REPEND
+    257  018a		       ea		      nop		; 10-35
+    256  018a					      REPEND
+    257  018b		       ea		      nop		; 10-35
+    258  018c					      REPEND
+    259  018c		       85 10		      sta	RESP0	; 36-38  player 0 at 54
+    260  018e		       85 11		      sta	RESP1	; 39-41  player 1 at 63
+    261  0190		       85 02		      sta	WSYNC
+    262  0192		       85 2a		      sta	HMOVE
+    263  0194		       a9 03		      lda	#3	; three copies, close
+    264  0196		       85 04		      sta	NUSIZ0
+    265  0198		       85 05		      sta	NUSIZ1
+    266  019a		       a9 01		      lda	#1
+    267  019c		       85 25		      sta	VDELP0
+    268  019e		       85 26		      sta	VDELP1
+    269  01a0		       a9 46		      lda	#COL_RED
+    270  01a2		       85 06		      sta	COLUP0
+    271  01a4		       85 07		      sta	COLUP1
+    272  01a6		       a9 a0		      lda	#COL_HEADER	; the header panel (s0-s28)
+    273  01a8		       85 09		      sta	COLUBK
+    274  01aa		       a9 00		      lda	#0
+    275  01ac		       85 1b		      sta	GRP0
+    276  01ae		       85 1c		      sta	GRP1
+    277  01b0		       85 1b		      sta	GRP0
+    278  01b2		       85 0d		      sta	PF0
+    279  01b4		       85 0e		      sta	PF1
+    280  01b6		       85 0f		      sta	PF2
+    281  01b8		       85 1f		      sta	ENABL
+    282  01ba		       85 1d		      sta	ENAM0
+    283  01bc		       85 1e		      sta	ENAM1
+    284  01be		       85 0a		      sta	CTRLPF
+    285  01c0
+    286  01c0				   .vbWait
+    287  01c0		       ad 84 02 	      lda	INTIM
+    288  01c3		       d0 fb		      bne	.vbWait
+    289  01c5		       85 02		      sta	WSYNC	; s0 starts
+    290  01c7		       85 2b		      sta	HMCLR
+    291  01c9		       a9 00		      lda	#0
+    292  01cb		       85 01		      sta	VBLANK
+    293  01cd		       a9 0d		      lda	#13
+    294  01cf		       85 b0		      sta	lineCnt
+    295  01d1		       a0 06		      ldy	#6
+    296  01d3		       ad d7 f0 	      lda	R_state
+    297  01d6		       c9 02		      cmp	#2
+    298  01d8		       d0 03		      bne	.title
+    299  01da		       4c 12 f2 	      jmp	.over
+    300  01dd
+    301  01dd							; s1-14: title, seven font rows of two lines
+    302  01dd				   .title
+    303  01dd		       85 02		      sta	WSYNC
+    304  01df		       b9 00 f6 	      lda	Title0,y
+    305  01e2		       85 1b		      sta	GRP0
+    306  01e4		       b9 07 f6 	      lda	Title1,y
+    307  01e7		       85 1c		      sta	GRP1
+    308  01e9		       b9 0e f6 	      lda	Title2,y
+    309  01ec		       85 1b		      sta	GRP0
+    310  01ee		       b9 1c f6 	      lda	Title4,y
+    311  01f1		       aa		      tax
+    312  01f2		       b9 23 f6 	      lda	Title5,y
+    313  01f5		       85 ad		      sta	temp
+    314  01f7		       b9 15 f6 	      lda	Title3,y
+    315  01fa		       a4 ad		      ldy	temp
+    316  01fc		       85 1c		      sta	GRP1	; lands on cycle 43
+    317  01fe		       86 1b		      stx	GRP0
+    318  0200		       84 1c		      sty	GRP1
+    319  0202		       85 1b		      sta	GRP0
+    320  0204		       c6 b0		      dec	lineCnt
+    321  0206		       30 07		      bmi	.titleDone
+    322  0208		       a5 b0		      lda	lineCnt
+    323  020a		       4a		      lsr
+    324  020b		       a8		      tay
+    325  020c		       4c dd f1 	      jmp	.title
+    326  020f				   .titleDone
+    327  020f		       4c 44 f2 	      jmp	.header2
+    328  0212
+    329  0212				   .over		; the same with GAME OVER
+    330  0212		       85 02		      sta	WSYNC
+    331  0214		       b9 2a f6 	      lda	Over0,y
+    332  0217		       85 1b		      sta	GRP0
+    333  0219		       b9 31 f6 	      lda	Over1,y
+    334  021c		       85 1c		      sta	GRP1
+    335  021e		       b9 38 f6 	      lda	Over2,y
+    336  0221		       85 1b		      sta	GRP0
+    337  0223		       b9 46 f6 	      lda	Over4,y
+    338  0226		       aa		      tax
+    339  0227		       b9 4d f6 	      lda	Over5,y
+    340  022a		       85 ad		      sta	temp
+    341  022c		       b9 3f f6 	      lda	Over3,y
+    342  022f		       a4 ad		      ldy	temp
+    343  0231		       85 1c		      sta	GRP1
+    344  0233		       86 1b		      stx	GRP0
+    345  0235		       84 1c		      sty	GRP1
+    346  0237		       85 1b		      sta	GRP0
+    347  0239		       c6 b0		      dec	lineCnt
+    348  023b		       30 07		      bmi	.header2
+    349  023d		       a5 b0		      lda	lineCnt
+    350  023f		       4a		      lsr
+    351  0240		       a8		      tay
+    352  0241		       4c 12 f2 	      jmp	.over
+    353  0244
+    354  0244				   .header2
+    355  0244		       85 02		      sta	WSYNC	; s15
+    356  0246		       a9 00		      lda	#0
+    357  0248		       85 1b		      sta	GRP0
+    358  024a		       85 1c		      sta	GRP1
+    359  024c		       85 1b		      sta	GRP0
+    360  024e		       a9 f8		      lda	#COL_GOLD
+    361  0250		       85 06		      sta	COLUP0
+    362  0252		       85 07		      sta	COLUP1
+    363  0254		       a9 09		      lda	#9
+    364  0256		       85 b0		      sta	lineCnt
+    365  0258		       a0 04		      ldy	#4
+    366  025a
+    367  025a							; s16-25: status line, five font rows of two lines
+    368  025a				   .status
+    369  025a		       85 02		      sta	WSYNC
+    370  025c		       b9 de f0 	      lda	R_cells,y
+    371  025f		       85 1b		      sta	GRP0
+    372  0261		       b9 e3 f0 	      lda	R_cells+5,y
+    373  0264		       85 1c		      sta	GRP1
+    374  0266		       b9 e8 f0 	      lda	R_cells+10,y
+    375  0269		       85 1b		      sta	GRP0
+    376  026b		       b9 f2 f0 	      lda	R_cells+20,y
+    377  026e		       aa		      tax
+    378  026f		       b9 f7 f0 	      lda	R_cells+25,y
+    379  0272		       85 ad		      sta	temp
+    380  0274		       b9 ed f0 	      lda	R_cells+15,y
+    381  0277		       a4 ad		      ldy	temp
+    382  0279		       85 1c		      sta	GRP1
+    383  027b		       86 1b		      stx	GRP0
+    384  027d		       84 1c		      sty	GRP1
+    385  027f		       85 1b		      sta	GRP0
+    386  0281		       c6 b0		      dec	lineCnt
+    387  0283		       30 07		      bmi	.statusDone
+    388  0285		       a5 b0		      lda	lineCnt
+    389  0287		       4a		      lsr
+    390  0288		       a8		      tay
+    391  0289		       4c 5a f2 	      jmp	.status
+    392  028c				   .statusDone		; still s25, past the text
+    393  028c		       a9 00		      lda	#0
+    394  028e		       85 1b		      sta	GRP0
+    395  0290		       85 1c		      sta	GRP1
+    396  0292		       85 1b		      sta	GRP0
+    397  0294		       85 25		      sta	VDELP0
+    398  0296		       85 26		      sta	VDELP1
+    399  0298		       4c e0 ff 	      jmp	ToBank1
+    400  029b
+    401  029b							;-------------------------------------------------------------------------------
+    402  029b				   Overscan		; from bank 1, the line after s191
+    403  029b		       a9 23		      lda	#OVERSCAN_TIME
+    404  029d		       8d 96 02 	      sta	TIM64T
+    405  02a0		       20 d0 ff 	      jsr	CallLogic	; bank 2: the game
+    406  02a3				   .osWait
+    407  02a3		       ad 84 02 	      lda	INTIM
+    408  02a6		       d0 fb		      bne	.osWait
+    409  02a8		       4c 1f f1 	      jmp	MainLoop
+    410  02ab
+    411  02ab							;-------------------------------------------------------------------------------
+    412  02ab				   PosObject		; A = x, X = object (0 P0, 1 P1, 2 M0, 3 M1, 4 BL)
+    413  02ab					      SUBROUTINE
+    414  02ab		       85 02		      sta	WSYNC
+    415  02ad		       38		      sec
+    416  02ae				   .divide
+    417  02ae		       e9 0f		      sbc	#15
+    418  02b0		       b0 fc		      bcs	.divide
+    419  02b2		       49 07		      eor	#7
+    420  02b4		       0a		      asl
+    421  02b5		       0a		      asl
+    422  02b6		       0a		      asl
+    423  02b7		       0a		      asl
+    424  02b8		       95 20		      sta	HMP0,x
+    425  02ba		       95 10		      sta	RESP0,x
+    426  02bc		       60		      rts
+    427  02bd
+    428  02bd							;-------------------------------------------------------------------------------
+    429  02bd							; BuildStatus: rebuild the parts of the status line that changed (W_dirty).
+    430  02bd							; Cells (narrow 3x5 font, two characters per 8-pixel cell): 0-2 the score,
+    431  02bd							; 3 battery icon + tens, 4 ones + "W", 5 the wave's two digits (cells 4-5
+    432  02bd							; start with a blank column).
+    433  02bd				   BuildStatus		; (one part per frame, to keep VBLANK short)
+    434  02bd					      SUBROUTINE
+    435  02bd		       ad dd f0 	      lda	R_dirty	; game selection: the line reads GAME n
+    436  02c0		       29 20		      and	#$20
+    437  02c2		       f0 1e		      beq	.notGame
+    438  02c4		       ae bf f0 	      ldx	R_game
+    439  02c7		       bd 80 f7 	      lda	GameTextAt,x
+    440  02ca		       aa		      tax
+    441  02cb		       a0 00		      ldy	#0
+    442  02cd				   .game
+    443  02cd		       bd 26 f7 	      lda	GameText,x
+    444  02d0		       99 5e f0 	      sta	W_cells,y
+    445  02d3		       e8		      inx
+    446  02d4		       c8		      iny
+    447  02d5		       c0 1e		      cpy	#30
+    448  02d7		       d0 f4		      bne	.game
+    449  02d9		       ad dd f0 	      lda	R_dirty
+    450  02dc		       29 df		      and	#$DF
+    451  02de		       8d 5d f0 	      sta	W_dirty
+    452  02e1		       60		      rts
+    453  02e2				   .notGame
+    454  02e2							; the score's three cells one per frame: dirty bit 0, then 3, then 4
+    455  02e2		       ad dd f0 	      lda	R_dirty
+    456  02e5		       29 19		      and	#$19
+    457  02e7		       f0 61		      beq	.noScore
+    458  02e9		       a2 00		      ldx	#0
+    459  02eb		       4a		      lsr
+    460  02ec		       b0 07		      bcs	.cell
+    461  02ee		       e8		      inx
+    462  02ef		       4a		      lsr
+    463  02f0		       4a		      lsr
+    464  02f1		       4a		      lsr
+    465  02f2		       b0 01		      bcs	.cell
+    466  02f4		       e8		      inx
+    467  02f5				   .cell
+    468  02f5		       86 b0		      stx	temp+3
+    469  02f7		       bd c9 f0 	      lda	R_score,x
+    470  02fa		       4a		      lsr
+    471  02fb		       4a		      lsr
+    472  02fc		       4a		      lsr
+    473  02fd		       4a		      lsr
+    474  02fe		       85 ad		      sta	temp
+    475  0300		       0a		      asl
+    476  0301		       0a		      asl
+    477  0302		       65 ad		      adc	temp
+    478  0304		       85 ad		      sta	temp	; high digit * 5
+    479  0306		       bd c9 f0 	      lda	R_score,x
+    480  0309		       29 0f		      and	#$0F
+    481  030b		       85 ae		      sta	temp+1
+    482  030d		       0a		      asl
+    483  030e		       0a		      asl
+    484  030f		       65 ae		      adc	temp+1
+    485  0311		       85 ae		      sta	temp+1	; low digit * 5
+    486  0313		       a5 b0		      lda	temp+3
+    487  0315		       0a		      asl
+    488  0316		       0a		      asl
+    489  0317		       65 b0		      adc	temp+3
+    490  0319		       85 af		      sta	temp+2	; destination: cell * 5
+    491  031b		       a0 04		      ldy	#4
+    492  031d				   .row
+    493  031d		       a6 ad		      ldx	temp
+    494  031f		       bd 54 f6 	      lda	DigitHi,x
+    495  0322		       a6 ae		      ldx	temp+1
+    496  0324		       1d 86 f6 	      ora	DigitLo,x
+    497  0327		       a6 af		      ldx	temp+2
+    498  0329		       9d 5e f0 	      sta	W_cells,x
+    499  032c		       e6 ad		      inc	temp
+    500  032e		       e6 ae		      inc	temp+1
+    501  0330		       e6 af		      inc	temp+2
+    502  0332		       88		      dey
+    503  0333		       10 e8		      bpl	.row
+    504  0335		       a6 b0		      ldx	temp+3
+    505  0337		       ad dd f0 	      lda	R_dirty
+    506  033a		       3d 44 f3 	      and	ScoreDone,x
+    507  033d		       1d 47 f3 	      ora	ScoreNext,x
+    508  0340		       8d 5d f0 	      sta	W_dirty
+    509  0343		       60		      rts
+    510  0344		       fe f7 ef    ScoreDone  .byte.b	$FE, $F7, $EF	; clear this cell's bit ...
+    511  0347		       08 10 00    ScoreNext  .byte.b	$08, $10, $00	; ... and ask for the next
+    512  034a				   .noScore
+    513  034a		       ad dd f0 	      lda	R_dirty
+    514  034d		       29 02		      and	#2
+    515  034f		       f0 30		      beq	.noBatt
+    516  0351		       ae cd f0 	      ldx	R_batt
+    517  0354		       20 b2 f3 	      jsr	TwoDigits	; temp = tens*5, temp+1 = ones*5
+    518  0357		       a0 00		      ldy	#0
+    519  0359				   .batt
+    520  0359		       a6 ad		      ldx	temp
+    521  035b		       bd b8 f6 	      lda	DigitR,x
+    522  035e		       19 1c f7 	      ora	IconW,y
+    523  0361		       99 6d f0 	      sta	W_cells+15,y
+    524  0364		       a6 ae		      ldx	temp+1
+    525  0366		       bd ea f6 	      lda	DigitM,x
+    526  0369		       19 21 f7 	      ora	GlyphW,y
+    527  036c		       99 72 f0 	      sta	W_cells+20,y
+    528  036f		       e6 ad		      inc	temp
+    529  0371		       e6 ae		      inc	temp+1
+    530  0373		       c8		      iny
+    531  0374		       c0 05		      cpy	#5
+    532  0376		       d0 e1		      bne	.batt
+    533  0378		       ad dd f0 	      lda	R_dirty
+    534  037b		       29 fd		      and	#$FD
+    535  037d		       8d 5d f0 	      sta	W_dirty
+    536  0380		       60		      rts
+    537  0381				   .noBatt
+    538  0381		       ad dd f0 	      lda	R_dirty
+    539  0384		       29 04		      and	#4
+    540  0386		       f0 24		      beq	.done
+    541  0388		       ae cc f0 	      ldx	R_wave
+    542  038b		       e0 64		      cpx	#100
+    543  038d		       90 02		      bcc	.w
+    544  038f		       a2 63		      ldx	#99
+    545  0391				   .w
+    546  0391		       20 b2 f3 	      jsr	TwoDigits
+    547  0394		       a0 00		      ldy	#0
+    548  0396				   .wave
+    549  0396		       a6 ad		      ldx	temp
+    550  0398		       bd ea f6 	      lda	DigitM,x
+    551  039b		       a6 ae		      ldx	temp+1
+    552  039d		       1d b8 f6 	      ora	DigitR,x
+    553  03a0		       99 77 f0 	      sta	W_cells+25,y
+    554  03a3		       e6 ad		      inc	temp
+    555  03a5		       e6 ae		      inc	temp+1
+    556  03a7		       c8		      iny
+    557  03a8		       c0 05		      cpy	#5
+    558  03aa		       d0 ea		      bne	.wave
+    559  03ac				   .done
+    560  03ac		       a9 00		      lda	#0
+    561  03ae		       8d 5d f0 	      sta	W_dirty
+    562  03b1		       60		      rts
+    563  03b2
+    564  03b2				   TwoDigits		; X = 0-99 -> temp = tens*5, temp+1 = ones*5
+    565  03b2		       bd 84 f7 	      lda	Bin2BCD,x
+    566  03b5		       4a		      lsr
+    567  03b6		       4a		      lsr
+    568  03b7		       4a		      lsr
+    569  03b8		       4a		      lsr
+    570  03b9		       85 ad		      sta	temp
+    571  03bb		       0a		      asl
+    572  03bc		       0a		      asl
+    573  03bd		       65 ad		      adc	temp
+    574  03bf		       85 ad		      sta	temp
+    575  03c1		       bd 84 f7 	      lda	Bin2BCD,x
+    576  03c4		       29 0f		      and	#$0F
+    577  03c6		       85 ae		      sta	temp+1
+    578  03c8		       0a		      asl
+    579  03c9		       0a		      asl
+    580  03ca		       65 ae		      adc	temp+1
+    581  03cc		       85 ae		      sta	temp+1
+    582  03ce		       60		      rts
+    583  03cf
+    584  03cf							;-------------------------------------------------------------------------------
+    585  03cf							; SelectEnemies (VBLANK): decide which enemies player 1 draws this frame. Each enemy needs rows E-1 .. feet, where E is its event row (the
+    586  03cf							; first row at or above top-1 that the kernel allows) and E-1 is blank. They
+    587  03cf							; are sorted by E; one that overlaps an enemy already taken waits.
+    588  03cf				   SelectEnemies
+    589  03cf					      SUBROUTINE
+    590  03cf		       a2 04		      ldx	#NENEMY-1	; (eFeet/eTop come from EnemyRows in bank 2)
+    591  03d1				   .clear
+    592  03d1		       b5 a8		      lda	eOrder,x	; forget last frame's choice, keep the order
+    593  03d3		       29 7f		      and	#$7F
+    594  03d5		       95 a8		      sta	eOrder,x
+    595  03d7		       ca		      dex
+    596  03d8		       10 f7		      bpl	.clear
+    597  03da							; insertion sort of eOrder by eTop (nearly sorted already: cheap)
+    598  03da		       a2 01		      ldx	#1
+    599  03dc				   .so
+    600  03dc		       86 b0		      stx	temp+3
+    601  03de		       b5 a8		      lda	eOrder,x
+    602  03e0		       85 ad		      sta	temp
+    603  03e2		       a8		      tay
+    604  03e3		       b9 9e 00 	      lda	eTop,y
+    605  03e6		       85 ae		      sta	temp+1
+    606  03e8		       a4 b0		      ldy	temp+3
+    607  03ea				   .si
+    608  03ea		       b6 a7		      ldx	eOrder-1,y
+    609  03ec		       b5 9e		      lda	eTop,x
+    610  03ee		       c5 ae		      cmp	temp+1
+    611  03f0		       90 0d		      bcc	.place
+    612  03f2		       d0 04		      bne	.shift
+    613  03f4		       e4 ad		      cpx	temp	; same event row: the lower enemy number first
+    614  03f6		       90 07		      bcc	.place
+    615  03f8				   .shift
+    616  03f8		       8a		      txa
+    617  03f9		       99 a8 00 	      sta	eOrder,y
+    618  03fc		       88		      dey
+    619  03fd		       d0 eb		      bne	.si
+    620  03ff				   .place
+    621  03ff		       a5 ad		      lda	temp
+    622  0401		       99 a8 00 	      sta	eOrder,y
+    623  0404		       a6 b0		      ldx	temp+3
+    624  0406		       e8		      inx
+    625  0407		       e0 05		      cpx	#NENEMY
+    626  0409		       d0 d1		      bne	.so
+    627  040b							; choose: walk the sorted list from position (frame & 7) mod n, wrapping,
+    628  040b							; and take each enemy whose rows (event row - 1 .. feet) miss every enemy
+    629  040b							; taken so far. The start moves every frame, so overlapping ones take turns.
+    630  040b		       a2 00		      ldx	#0
+    631  040d				   .count
+    632  040d		       b4 a8		      ldy	eOrder,x
+    633  040f		       b9 9e 00 	      lda	eTop,y
+    634  0412		       c9 ff		      cmp	#$FF
+    635  0414		       f0 05		      beq	.counted
+    636  0416		       e8		      inx
+    637  0417		       e0 05		      cpx	#NENEMY
+    638  0419		       d0 f2		      bne	.count
+    639  041b				   .counted
+    640  041b		       86 b0		      stx	temp+3	; n
+    641  041d		       8a		      txa
+    642  041e		       f0 73		      beq	.selDone
+    643  0420		       85 ae		      sta	temp+1	; candidates left
+    644  0422		       a5 9c		      lda	frame
+    645  0424		       29 07		      and	#7	; start: (frame & 7) mod n, so it visits every position
+    646  0426		       38		      sec
+    647  0427				   .mod
+    648  0427		       e5 b0		      sbc	temp+3
+    649  0429		       b0 fc		      bcs	.mod
+    650  042b		       65 b0		      adc	temp+3
+    651  042d		       85 af		      sta	temp+2
+    652  042f							;   The list is sorted by event row, so within each run (start..n-1, then
+    653  042f							;   0..start-1) a candidate can only overlap the last enemy taken in that
+    654  042f							;   run; in the second run it must also end above the first enemy taken in
+    655  042f							;   the first. QUEUE+0..3 (free until Schedule): last taken feet, any taken
+    656  042f							;   in this run, first run's first event row, in the second run.
+    657  042f		       a9 00		      lda	#0
+    658  0431		       85 bb		      sta	QUEUE+1
+    659  0433		       85 bd		      sta	QUEUE+3
+    660  0435		       a9 ff		      lda	#$FF
+    661  0437		       85 bc		      sta	QUEUE+2
+    662  0439				   .cand
+    663  0439		       a6 af		      ldx	temp+2
+    664  043b		       b4 a8		      ldy	eOrder,x
+    665  043d		       b9 9e 00 	      lda	eTop,y
+    666  0440		       f0 3b		      beq	.reject	; no usable event row
+    667  0442		       38		      sec
+    668  0443		       e9 01		      sbc	#1
+    669  0445		       85 ad		      sta	temp	; candidate event row - 1
+    670  0447		       a5 bb		      lda	QUEUE+1
+    671  0449		       f0 06		      beq	.noPrev
+    672  044b		       a5 ba		      lda	QUEUE
+    673  044d		       c5 ad		      cmp	temp
+    674  044f		       b0 2c		      bcs	.reject	; the last one taken ends at or below it
+    675  0451				   .noPrev
+    676  0451		       a5 bd		      lda	QUEUE+3
+    677  0453		       f0 0a		      beq	.take
+    678  0455		       b9 a3 00 	      lda	eFeet,y
+    679  0458		       18		      clc
+    680  0459		       69 01		      adc	#1
+    681  045b		       c5 bc		      cmp	QUEUE+2
+    682  045d		       b0 1e		      bcs	.reject	; second run: must end above the first run's first
+    683  045f				   .take
+    684  045f		       b9 a3 00 	      lda	eFeet,y
+    685  0462		       85 ba		      sta	QUEUE
+    686  0464		       a9 01		      lda	#1
+    687  0466		       85 bb		      sta	QUEUE+1
+    688  0468		       a5 bd		      lda	QUEUE+3
+    689  046a		       d0 0b		      bne	.mark
+    690  046c		       a5 bc		      lda	QUEUE+2
+    691  046e		       c9 ff		      cmp	#$FF
+    692  0470		       d0 05		      bne	.mark
+    693  0472		       b9 9e 00 	      lda	eTop,y
+    694  0475		       85 bc		      sta	QUEUE+2
+    695  0477				   .mark
+    696  0477		       b5 a8		      lda	eOrder,x
+    697  0479		       09 80		      ora	#$80
+    698  047b		       95 a8		      sta	eOrder,x
+    699  047d				   .reject
+    700  047d		       e6 af		      inc	temp+2
+    701  047f		       a5 af		      lda	temp+2
+    702  0481		       c5 b0		      cmp	temp+3
+    703  0483		       d0 0a		      bne	.noWrap
+    704  0485		       a9 00		      lda	#0
+    705  0487		       85 af		      sta	temp+2
+    706  0489		       85 bb		      sta	QUEUE+1
+    707  048b		       a9 01		      lda	#1
+    708  048d		       85 bd		      sta	QUEUE+3
+    709  048f				   .noWrap
+    710  048f		       c6 ae		      dec	temp+1
+    711  0491		       d0 a6		      bne	.cand
+    712  0493				   .selDone
+    713  0493		       60		      rts
+    714  0494
+    715  0494							;-------------------------------------------------------------------------------
+    716  0494							; Schedule (VBLANK): the event queue for the enemies SelectEnemies took, one
+    717  0494							; 8-byte record per enemy in row order. Each enemy's graphics are padded with
+    718  0494							; only 40 zeros, so its pointer must be replaced within 40 rows of it: an
+    719  0494							; event row comes at most 41 rows after the previous enemy's feet, and after
+    720  0494							; the last enemy a park record points player 1 at zeros.
+    721  0494				   Schedule
+    722  0494					      SUBROUTINE
+    723  0494		       a9 00		      lda	#0
+    724  0496		       85 af		      sta	evPrevF
+    725  0498		       85 b0		      sta	temp+3
+    726  049a		       a9 ff		      lda	#$FF
+    727  049c		       85 8e		      sta	nextEv
+    728  049e		       a2 00		      ldx	#0
+    729  04a0				   .q
+    730  04a0		       a4 b0		      ldy	temp+3
+    731  04a2		       b9 a8 00 	      lda	eOrder,y
+    732  04a5		       30 03		      bmi	.qTaken
+    733  04a7		       4c 6a f5 	      jmp	.qNext
+    734  04aa				   .qTaken
+    735  04aa		       29 7f		      and	#$7F
+    736  04ac		       a8		      tay
+    737  04ad		       b9 9e 00 	      lda	eTop,y
+    738  04b0		       85 ad		      sta	temp	; the latest usable event row
+    739  04b2		       e0 00		      cpx	#0
+    740  04b4		       f0 2a		      beq	.qRow	; the first enemy: no limit
+    741  04b6		       a5 af		      lda	evPrevF
+    742  04b8		       18		      clc
+    743  04b9		       69 29		      adc	#41
+    744  04bb		       c5 ad		      cmp	temp
+    745  04bd		       b0 21		      bcs	.qRow
+    746  04bf		       85 ad		      sta	temp	; at most 41 rows after the previous feet ...
+    747  04c1		       e6 ad		      inc	temp
+    748  04c3				   .qDec
+    749  04c3		       c6 ad		      dec	temp	; ... on a row the kernel allows ...
+    750  04c5		       b9 a3 00 	      lda	eFeet,y
+    751  04c8		       38		      sec
+    752  04c9		       e9 33		      sbc	#51
+    753  04cb		       90 06		      bcc	.qBad
+    754  04cd		       c5 ad		      cmp	temp
+    755  04cf		       f0 02		      beq	.qBad
+    756  04d1		       b0 16		      bcs	.qSkip	; ... and at most 41 rows above its top
+    757  04d3				   .qBad
+    758  04d3		       84 ae		      sty	temp+1
+    759  04d5		       a4 ad		      ldy	temp
+    760  04d7		       b9 c8 f9 	      lda	RowBad,y
+    761  04da		       a4 ae		      ldy	temp+1
+    762  04dc		       c9 00		      cmp	#0
+    763  04de		       d0 e3		      bne	.qDec
+    764  04e0				   .qRow
+    765  04e0		       a5 af		      lda	evPrevF
+    766  04e2		       18		      clc
+    767  04e3		       69 01		      adc	#1
+    768  04e5		       c5 ad		      cmp	temp
+    769  04e7		       90 03		      bcc	.qOk
+    770  04e9				   .qSkip
+    771  04e9		       4c 6a f5 	      jmp	.qNext	; needs event row > previous feet + 1
+    772  04ec				   .qOk
+    773  04ec		       a9 4f		      lda	#79
+    774  04ee		       38		      sec
+    775  04ef		       e5 ad		      sbc	temp	; y of the event row
+    776  04f1		       e0 00		      cpx	#0
+    777  04f3		       d0 05		      bne	.link
+    778  04f5		       85 8e		      sta	nextEv
+    779  04f7		       4c fc f4 	      jmp	.rec
+    780  04fa				   .link
+    781  04fa		       95 b9		      sta	QUEUE-1,x
+    782  04fc				   .rec
+    783  04fc		       b9 80 f0 	      lda	R_eX,y
+    784  04ff		       84 ae		      sty	temp+1
+    785  0501		       a8		      tay
+    786  0502		       b9 28 f9 	      lda	XHm,y
+    787  0505		       95 c0		      sta	QUEUE+6,x
+    788  0507		       b9 88 f8 	      lda	XVar,y
+    789  050a		       a8		      tay
+    790  050b		       b9 45 fa 	      lda	VarLo,y
+    791  050e		       95 ba		      sta	QUEUE,x
+    792  0510		       b9 4d fa 	      lda	VarHi,y
+    793  0513		       95 bb		      sta	QUEUE+1,x
+    794  0515		       a4 ae		      ldy	temp+1
+    795  0517		       b9 a3 00 	      lda	eFeet,y
+    796  051a		       95 be		      sta	QUEUE+4,x
+    797  051c		       85 af		      sta	evPrevF
+    798  051e		       b9 8a f0 	      lda	R_eType,y
+    799  0521		       a8		      tay
+    800  0522		       b9 55 fa 	      lda	EnColHi,y	; color page for this kind of enemy
+    801  0525		       95 bf		      sta	QUEUE+5,x
+    802  0527		       a4 ae		      ldy	temp+1
+    803  0529		       b9 80 f0 	      lda	R_eX,y	; walking frame: (x >> 2) & 1
+    804  052c		       4a		      lsr
+    805  052d		       4a		      lsr
+    806  052e		       29 01		      and	#1
+    807  0530		       95 c1		      sta	QUEUE+7,x	; (scratch until the next record links here)
+    808  0532		       b9 8a f0 	      lda	R_eType,y
+    809  0535		       0a		      asl
+    810  0536		       15 c1		      ora	QUEUE+7,x
+    811  0538		       95 c1		      sta	QUEUE+7,x
+    812  053a		       b9 8a f0 	      lda	R_eType,y
+    813  053d		       c9 05		      cmp	#5	; a knight without its shield: the charge frame
+    814  053f		       d0 0b		      bne	.frame
+    815  0541		       b9 94 f0 	      lda	R_eState,y
+    816  0544		       29 40		      and	#$40
+    817  0546		       f0 04		      beq	.frame
+    818  0548		       a9 14		      lda	#20	; (index 20 of EBase: the charge frame)
+    819  054a		       95 c1		      sta	QUEUE+7,x
+    820  054c				   .frame
+    821  054c		       b4 c1		      ldy	QUEUE+7,x
+    822  054e		       b5 be		      lda	QUEUE+4,x
+    823  0550		       18		      clc
+    824  0551		       79 1b fa 	      adc	EBaseLo,y
+    825  0554		       95 bc		      sta	QUEUE+2,x
+    826  0556		       b9 30 fa 	      lda	EBaseHi,y
+    827  0559		       69 00		      adc	#0
+    828  055b		       95 bd		      sta	QUEUE+3,x
+    829  055d		       a9 ff		      lda	#$FF
+    830  055f		       95 c1		      sta	QUEUE+7,x
+    831  0561		       8a		      txa
+    832  0562		       18		      clc
+    833  0563		       69 08		      adc	#8
+    834  0565		       aa		      tax
+    835  0566		       e0 28		      cpx	#40
+    836  0568		       b0 0b		      bcs	.park
+    837  056a				   .qNext
+    838  056a		       e6 b0		      inc	temp+3
+    839  056c		       a5 b0		      lda	temp+3
+    840  056e		       c9 05		      cmp	#NENEMY
+    841  0570		       f0 03		      beq	.park
+    842  0572		       4c a0 f4 	      jmp	.q
+    843  0575				   .park		; after the last enemy: point player 1 at zeros
+    844  0575		       e0 00		      cpx	#0
+    845  0577		       f0 44		      beq	.done
+    846  0579		       a5 af		      lda	evPrevF
+    847  057b		       c9 27		      cmp	#39
+    848  057d		       b0 3e		      bcs	.done	; rows below it to the end: 40 at most
+    849  057f		       18		      clc
+    850  0580		       69 29		      adc	#41
+    851  0582		       c9 4e		      cmp	#78
+    852  0584		       90 02		      bcc	.pRow
+    853  0586		       a9 4d		      lda	#77
+    854  0588				   .pRow
+    855  0588		       85 ad		      sta	temp
+    856  058a				   .pDec
+    857  058a		       a4 ad		      ldy	temp
+    858  058c		       b9 c8 f9 	      lda	RowBad,y
+    859  058f		       f0 05		      beq	.pOk
+    860  0591		       c6 ad		      dec	temp
+    861  0593		       4c 8a f5 	      jmp	.pDec
+    862  0596				   .pOk
+    863  0596		       a9 4f		      lda	#79
+    864  0598		       38		      sec
+    865  0599		       e5 ad		      sbc	temp
+    866  059b		       95 b9		      sta	QUEUE-1,x
+    867  059d		       ad 45 fa 	      lda	VarLo
+    868  05a0		       95 ba		      sta	QUEUE,x
+    869  05a2		       ad 4d fa 	      lda	VarHi
+    870  05a5		       95 bb		      sta	QUEUE+1,x
+    871  05a7		       a9 00		      lda	#<Zeros
+    872  05a9		       95 bc		      sta	QUEUE+2,x
+    873  05ab		       a9 f6		      lda	#>Zeros
+    874  05ad		       95 bd		      sta	QUEUE+3,x
+    875  05af		       a9 00		      lda	#0
+    876  05b1		       95 be		      sta	QUEUE+4,x
+    877  05b3		       95 c0		      sta	QUEUE+6,x
+    878  05b5		       a9 f2		      lda	#>ColArr
+    879  05b7		       95 bf		      sta	QUEUE+5,x
+    880  05b9		       a9 ff		      lda	#$FF
+    881  05bb		       95 c1		      sta	QUEUE+7,x
+    882  05bd				   .done
+    883  05bd		       60		      rts
+    884  05be
 ------- FILE gen/bank0.inc LEVEL 2 PASS 2
       0  05be					      include	"gen/bank0.inc"
       1  05be							; generated by tools/gen.mjs -- do not edit
@@ -1237,58 +1240,58 @@
     111  0a30				   EBaseHi
     112  0a30		       00 00 f6 f6*	      .byte.b	0,0,>(E_DINO-79),>(E_DINO2-79),>(E_HELI-79),>(E_HELI2-79),>(E_CROUCH-79),>(E_CROUCH2-79),>(E_MOUSE-79),>(E_MOUSE2-79),>(E_KNIGHT-79),>(E_KNIGHT2-79),>(E_BALLOON-79),>(E_BALLOON-79),>(E_POGO-79),>(E_POGO2-79),>(E_TREX-79),>(E_TREX2-79),>(E_JETF-79),>(E_JETF-79),>(E_KNIGHTX-79)
     113  0a45				   VarLo
-    114  0a45		       2f 60 91 c1*	      .byte.b	<(EvA0-1),<(EvA1-1),<(EvA2-1),<(EvA3-1),<(EvA4-1),<(EvA5-1),<(EvA6-1),<(EvA7-1)
+    114  0a45		       33 64 95 c5*	      .byte.b	<(EvA0-1),<(EvA1-1),<(EvA2-1),<(EvA3-1),<(EvA4-1),<(EvA5-1),<(EvA6-1),<(EvA7-1)
     115  0a4d				   VarHi
     116  0a4d		       fe fe fe fe*	      .byte.b	>(EvA0-1),>(EvA1-1),>(EvA2-1),>(EvA3-1),>(EvA4-1),>(EvA5-1),>(EvA6-1),>(EvA7-1)
     117  0a55				   EnColHi
     118  0a55		       00 f2 f2 f2*	      .byte.b	0,>ColArr,>ColArr,>ColArr,>ColArr,>ColArr,>ColArr,>ColArr,>ColOrange,>ColGreen
 ------- FILE toywars.asm
-    883  0a5f
-    884  0a5f							;-------------------------------------------------------------------------------
-    885  0a5f							; F6 hotspots: an access to $FFF6/$FFF7/$FFF8/$FFF9 selects bank 0/1/2/3.
-    886  0a5f							; A switch takes effect on the next fetch, at the same address in the new bank.
-    887  0a5f							; Calls into bank 2: bank 0 switches, bank 2 (at the next address) does the
-    888  0a5f							; JSR and switches back, and bank 0 returns.
-    889  0fc0					      ORG	$0FC0
-    890  0fc0					      RORG	$FFC0
-    891  0fc0				   CallInit
-    892  0fc0		       ad f8 ff 	      lda	$FFF8	; bank 2 runs $FFC3-$FFC8: jsr LogicInit, lda $FFF6
-    893  0fc3		       ea ea ea ea*	      ds	6, $EA
-    894  0fc9		       60		      rts		; $FFC9
-    895  0fd0					      ORG	$0FD0
-    896  0fd0					      RORG	$FFD0
-    897  0fd0				   CallLogic
-    898  0fd0		       ad f8 ff 	      lda	$FFF8	; bank 2 runs $FFD3-$FFD8: jsr Logic, lda $FFF6
-    899  0fd3		       ea ea ea ea*	      ds	6, $EA
-    900  0fd9		       60		      rts		; $FFD9
-    901  0fda
-    902  0fe0					      ORG	$0FE0
-    903  0fe0					      RORG	$FFE0
-    904  0fe0				   ToBank1
-    905  0fe0		       ad f7 ff 	      lda	$FFF7	; bank 1 continues at $FFE3: jmp PreKernel
-    906  0fe3		       ea		      nop
-    907  0fe4		       ea		      nop
-    908  0fe5		       ea		      nop
-    909  0fe6		       ad f6 ff 	      lda	$FFF6	; ($FFE6) bank 1 switches here
-    910  0fe9		       4c 9b f2 	      jmp	Overscan	; ($FFE9)
-    911  0fec
-    912  0ff0					      ORG	$0FF0
-    913  0ff0					      RORG	$FFF0
-    914  0ff0				   Reset0
-    915  0ff0		       ad f6 ff 	      lda	$FFF6	; every bank's reset stub: the cartridge can
-    916  0ff3		       4c 00 f1 	      jmp	Start0	; power up in any bank
-    917  0ffa					      ORG	$0FFA
-    918  0ffa					      RORG	$FFFA
-    919  0ffa		       f0 ff f0 ff*	      .word.w	Reset0, Reset0, Reset0
-    920  1000
-    921  1000							;===============================================================================
-    922  1000							; BANK 1
-    923  1000							;===============================================================================
-    924  2000 ????				      SEG	bank1
-    925  1000					      ORG	$1000
-    926  1000					      RORG	$F000
-    927  1000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
-    928  1100
+    886  0a5f
+    887  0a5f							;-------------------------------------------------------------------------------
+    888  0a5f							; F6 hotspots: an access to $FFF6/$FFF7/$FFF8/$FFF9 selects bank 0/1/2/3.
+    889  0a5f							; A switch takes effect on the next fetch, at the same address in the new bank.
+    890  0a5f							; Calls into bank 2: bank 0 switches, bank 2 (at the next address) does the
+    891  0a5f							; JSR and switches back, and bank 0 returns.
+    892  0fc0					      ORG	$0FC0
+    893  0fc0					      RORG	$FFC0
+    894  0fc0				   CallInit
+    895  0fc0		       ad f8 ff 	      lda	$FFF8	; bank 2 runs $FFC3-$FFC8: jsr LogicInit, lda $FFF6
+    896  0fc3		       ea ea ea ea*	      ds	6, $EA
+    897  0fc9		       60		      rts		; $FFC9
+    898  0fd0					      ORG	$0FD0
+    899  0fd0					      RORG	$FFD0
+    900  0fd0				   CallLogic
+    901  0fd0		       ad f8 ff 	      lda	$FFF8	; bank 2 runs $FFD3-$FFD8: jsr Logic, lda $FFF6
+    902  0fd3		       ea ea ea ea*	      ds	6, $EA
+    903  0fd9		       60		      rts		; $FFD9
+    904  0fda
+    905  0fe0					      ORG	$0FE0
+    906  0fe0					      RORG	$FFE0
+    907  0fe0				   ToBank1
+    908  0fe0		       ad f7 ff 	      lda	$FFF7	; bank 1 continues at $FFE3: jmp PreKernel
+    909  0fe3		       ea		      nop
+    910  0fe4		       ea		      nop
+    911  0fe5		       ea		      nop
+    912  0fe6		       ad f6 ff 	      lda	$FFF6	; ($FFE6) bank 1 switches here
+    913  0fe9		       4c 9b f2 	      jmp	Overscan	; ($FFE9)
+    914  0fec
+    915  0ff0					      ORG	$0FF0
+    916  0ff0					      RORG	$FFF0
+    917  0ff0				   Reset0
+    918  0ff0		       ad f6 ff 	      lda	$FFF6	; every bank's reset stub: the cartridge can
+    919  0ff3		       4c 00 f1 	      jmp	Start0	; power up in any bank
+    920  0ffa					      ORG	$0FFA
+    921  0ffa					      RORG	$FFFA
+    922  0ffa		       f0 ff f0 ff*	      .word.w	Reset0, Reset0, Reset0
+    923  1000
+    924  1000							;===============================================================================
+    925  1000							; BANK 1
+    926  1000							;===============================================================================
+    927  2000 ????				      SEG	bank1
+    928  1000					      ORG	$1000
+    929  1000					      RORG	$F000
+    930  1000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
+    931  1100
 ------- FILE gen/bank1.inc LEVEL 2 PASS 2
       0  1100					      include	"gen/bank1.inc"
       1  1100							; generated by tools/gen.mjs -- do not edit
@@ -1316,8 +1319,8 @@
      23  1210		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      24  1220		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      25  1230		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
-     26  1240		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_RED
-     27  1250		       46 46 46 46*	      .byte.b	COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
+     26  1240		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_RED_DK
+     27  1250		       42 42 46 46*	      .byte.b	COL_RED_DK,COL_RED_DK,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_RED,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      28  1260		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      29  1270		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      30  1280		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
@@ -1346,8 +1349,8 @@
      53  1410		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      54  1420		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      55  1430		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
-     56  1440		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_ORANGE
-     57  1450		       38 38 38 38*	      .byte.b	COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
+     56  1440		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_ORANGE_DK
+     57  1450		       34 34 38 38*	      .byte.b	COL_ORANGE_DK,COL_ORANGE_DK,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_ORANGE,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      58  1460		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      59  1470		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
      60  1480		       f8 f8 f8 f8*	      .byte.b	COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD,COL_GOLD
@@ -1456,1014 +1459,1016 @@
     163  19b0		       f9 80	   E_JETF     =	EnemyGfx + 896
     164  19b0		       f6 00	   Zeros      =	EnemyGfx
 ------- FILE toywars.asm
-    930  19b3
-    931  19b3							;-------------------------------------------------------------------------------
-    932  19b3				   PreKernel		; arrives early in s26
-    933  19b3		       85 02		      sta	WSYNC	; s27: fixed positions. A RESPx write lands on
-    934  19b5		       a9 00		      lda	#0	; 0-1	  its last cycle w: players at 3w-60,
-    935  19b7		       85 25		      sta	VDELP0	; 2-4	  missiles and the ball at 3w-61
-    936  19b9		       85 26		      sta	VDELP1	; 5-7
-    937  19bb		       85 1b		      sta	GRP0	; 8-10
-    938  19bd		       85 1c		      sta	GRP1	; 11-13
-    939  19bf		       85 20		      sta	HMP0	; 14-16
-    940  19c1		       85 24		      sta	HMBL	; 17-19
-    941  19c3		       a9 b0		      lda	#$B0	; 20-21
-    942  19c5		       85 23		      sta	HMM1	; 22-24  missile 1: 56 + 5 = 61 at the s30 HMOVE
-    943  19c7		       ea		      nop		; 25-26
-    944  19c8		       ea		      nop		; 27-28
-    945  19c9		       ea		      nop		; 29-30
-    946  19ca		       24 80		      bit	$80	; 31-33
-    947  19cc		       85 10		      sta	RESP0	; 34-36  player 0 at 48
-    948  19ce		       85 13		      sta	RESM1	; 37-39  missile 1 at 56
-    949  19d0					      REPEAT	15
-    950  19d0		       ea		      nop		; 40-69
-    949  19d0					      REPEND
-    950  19d1		       ea		      nop		; 40-69
-    949  19d1					      REPEND
-    950  19d2		       ea		      nop		; 40-69
-    949  19d2					      REPEND
-    950  19d3		       ea		      nop		; 40-69
-    949  19d3					      REPEND
-    950  19d4		       ea		      nop		; 40-69
-    949  19d4					      REPEND
-    950  19d5		       ea		      nop		; 40-69
-    949  19d5					      REPEND
-    950  19d6		       ea		      nop		; 40-69
-    949  19d6					      REPEND
-    950  19d7		       ea		      nop		; 40-69
-    949  19d7					      REPEND
-    950  19d8		       ea		      nop		; 40-69
-    949  19d8					      REPEND
-    950  19d9		       ea		      nop		; 40-69
-    949  19d9					      REPEND
-    950  19da		       ea		      nop		; 40-69
-    949  19da					      REPEND
-    950  19db		       ea		      nop		; 40-69
-    949  19db					      REPEND
-    950  19dc		       ea		      nop		; 40-69
-    949  19dc					      REPEND
-    950  19dd		       ea		      nop		; 40-69
-    949  19dd					      REPEND
-    950  19de		       ea		      nop		; 40-69
-    951  19df					      REPEND
-    952  19df		       85 14		      sta	RESBL	; 70-72  ball at 155
-    953  19e1		       85 02		      sta	WSYNC	; s28
-    954  19e3		       85 02		      sta	WSYNC	; s29
-    955  19e5		       85 02		      sta	WSYNC	; s30: rule
-    956  19e7		       85 2a		      sta	HMOVE	; 0-2
-    957  19e9		       a9 f0		      lda	#$F0
-    958  19eb		       85 0d		      sta	PF0
-    959  19ed		       a9 ff		      lda	#$FF
-    960  19ef		       85 0e		      sta	PF1
-    961  19f1		       85 0f		      sta	PF2	; by cycle 15
-    962  19f3		       a5 9d		      lda	pfColor
-    963  19f5		       85 08		      sta	COLUPF
-    964  19f7		       a9 c8		      lda	#COL_GREEN
-    965  19f9		       85 06		      sta	COLUP0
-    966  19fb		       a9 f8		      lda	#COL_GOLD
-    967  19fd		       85 07		      sta	COLUP1
-    968  19ff		       a9 06		      lda	#6	; player 0: three copies 32 apart
-    969  1a01		       85 04		      sta	NUSIZ0
-    970  1a03		       a9 20		      lda	#$20	; missile 1: 4 pixels wide
-    971  1a05		       85 05		      sta	NUSIZ1
-    972  1a07		       a9 21		      lda	#$21	; ball 4 wide, reflected playfield
-    973  1a09		       85 0a		      sta	CTRLPF
-    974  1a0b		       a9 00		      lda	#0
-    975  1a0d		       85 1b		      sta	GRP0
-    976  1a0f		       85 1c		      sta	GRP1
-    977  1a11		       85 20		      sta	HMP0
-    978  1a13		       85 21		      sta	HMP1
-    979  1a15		       85 22		      sta	HMM0
-    980  1a17		       a9 60		      lda	#$60	; ball and shot move 6 left per HMOVE
-    981  1a19		       85 24		      sta	HMBL
-    982  1a1b		       85 23		      sta	HMM1
-    983  1a1d		       85 02		      sta	WSYNC	; s31
-    984  1a1f		       a9 00		      lda	#0
-    985  1a21		       85 0d		      sta	PF0
-    986  1a23		       85 0e		      sta	PF1
-    987  1a25		       85 0f		      sta	PF2
-    988  1a27		       a2 b9		      ldx	#QUEUE-1
-    989  1a29		       9a		      txs
-    990  1a2a		       a2 00		      ldx	#0
-    991  1a2c		       a0 4f		      ldy	#79
-    992  1a2e		       4c 43 fa 	      jmp	RowA
-    993  1a31
-    994  1a31				   PosObject1
-    995  1a31					      SUBROUTINE
-    996  1a31		       85 02		      sta	WSYNC
-    997  1a33		       38		      sec
-    998  1a34				   .divide
-    999  1a34		       e9 0f		      sbc	#15
-   1000  1a36		       b0 fc		      bcs	.divide
-   1001  1a38		       49 07		      eor	#7
-   1002  1a3a		       0a		      asl
-   1003  1a3b		       0a		      asl
-   1004  1a3c		       0a		      asl
-   1005  1a3d		       0a		      asl
-   1006  1a3e		       95 20		      sta	HMP0,x
-   1007  1a40		       95 10		      sta	RESP0,x
-   1008  1a42		       60		      rts
-   1009  1a43
-   1010  1a43							;-------------------------------------------------------------------------------
-   1011  1a43							; the kernel rows (a branch that crosses a page costs a cycle; every branch
-   1012  1a43							; here is taken only where the line has cycles to spare)
-   1013  1a43
-   1014  1a43					      MAC	line_a
-   1015  1a43					      sta	HMOVE	; 0-2
-   1016  1a43					      lda	BoxTab,y	; 3-6
-   1017  1a43					      sta	PF1	; 7-9
-   1018  1a43					      lda	BallTab,y	; 10-13
-   1019  1a43					      sta	ENABL	; 14-16
-   1020  1a43					      lda	(m1ptr),y	; 17-21
-   1021  1a43					      sta	ENAM1	; 22-24
-   1022  1a43					      lda	(pc0),y	; 25-29
-   1023  1a43					      sta	GRP0	; 30-32  copy 0 (x 48)
-   1024  1a43					      lda	(pc1),y	; 33-37
-   1025  1a43					      stx	PF1	; 38-40  clear before the reflected copy (x 112)
-   1026  1a43					      sta	GRP0	; 41-43  copy 1 (x 80)
-   1027  1a43					      lda	(pc2),y	; 44-48
-   1028  1a43					      sta	GRP0	; 49-51  copy 2 (x 112)
-   1029  1a43					      ENDM		; cycles 0-51 of a line A
-   1030  1a43
-   1031  1a43					      MAC	line_b
-   1032  1a43					      lda	BoxTab,y	; 0-3
-   1033  1a43					      sta	PF1	; 4-6
-   1034  1a43					      lda	(pc0),y	; 7-11
-   1035  1a43					      sta	GRP0	; 12-14
-   1036  1a43					      stx	HMP1	; 15-17
-   1037  1a43					      lda	(p1ptr),y	; 18-22 (+1 on a page cross)
-   1038  1a43					      sta	GRP1	; 23-25
-   1039  1a43					      lda	(p1col),y	; 26-30
-   1040  1a43					      sta	COLUP1	; 31-33
-   1041  1a43					      lda	(pc1),y	; 34-38
-   1042  1a43					      stx	PF1	; 39-41
-   1043  1a43					      sta	GRP0	; 42-44
-   1044  1a43					      lda	(pc2),y	; 45-49
-   1045  1a43					      sta	GRP0	; 50-52
-   1046  1a43					      dey		; 53-54
-   1047  1a43					      ENDM		; cycles 0-54 of a line B, ends after dey
-   1048  1a43
-   1049  1a43				   RowA
-   1050  1a43		       85 02		      sta	WSYNC
-   1051  1a45				   RowAH
-      0  1a45					      LINE_A
-      1  1a45		       85 2a		      sta	HMOVE
-      2  1a47		       b9 a0 f1 	      lda	BoxTab,y
-      3  1a4a		       85 0e		      sta	PF1
-      4  1a4c		       b9 a0 f2 	      lda	BallTab,y
-      5  1a4f		       85 1f		      sta	ENABL
-      6  1a51		       b1 86		      lda	(m1ptr),y
-      7  1a53		       85 1e		      sta	ENAM1
-      8  1a55		       b1 80		      lda	(pc0),y
-      9  1a57		       85 1b		      sta	GRP0
-     10  1a59		       b1 82		      lda	(pc1),y
-     11  1a5b		       86 0e		      stx	PF1
-     12  1a5d		       85 1b		      sta	GRP0
-     13  1a5f		       b1 84		      lda	(pc2),y
-     14  1a61		       85 1b		      sta	GRP0
-   1053  1a63		       85 02		      sta	WSYNC
-   1054  1a65				   RowB
-      0  1a65					      LINE_B
-      1  1a65		       b9 a0 f1 	      lda	BoxTab,y
-      2  1a68		       85 0e		      sta	PF1
-      3  1a6a		       b1 80		      lda	(pc0),y
-      4  1a6c		       85 1b		      sta	GRP0
-      5  1a6e		       86 21		      stx	HMP1
-      6  1a70		       b1 88		      lda	(p1ptr),y
-      7  1a72		       85 1c		      sta	GRP1
-      8  1a74		       b1 8a		      lda	(p1col),y
-      9  1a76		       85 07		      sta	COLUP1
-     10  1a78		       b1 82		      lda	(pc1),y
-     11  1a7a		       86 0e		      stx	PF1
-     12  1a7c		       85 1b		      sta	GRP0
-     13  1a7e		       b1 84		      lda	(pc2),y
-     14  1a80		       85 1b		      sta	GRP0
-     15  1a82		       88		      dey
-   1056  1a83		       c4 8e		      cpy	nextEv	; 55-57
-   1057  1a85		       f0 07		      beq	EvRowA	; 58-59
-   1058  1a87		       c4 8f		      cpy	nextSt	; 60-62
-   1059  1a89		       f0 24		      beq	StRowA	; 63-64
-   1060  1a8b		       4c 43 fa 	      jmp	RowA	; 65-67
-   1061  1a8e
-   1062  1a8e				   EvRowA
-   1063  1a8e		       85 02		      sta	WSYNC
-      0  1a90					      LINE_A
-      1  1a90		       85 2a		      sta	HMOVE
-      2  1a92		       b9 a0 f1 	      lda	BoxTab,y
-      3  1a95		       85 0e		      sta	PF1
-      4  1a97		       b9 a0 f2 	      lda	BallTab,y
-      5  1a9a		       85 1f		      sta	ENABL
-      6  1a9c		       b1 86		      lda	(m1ptr),y
-      7  1a9e		       85 1e		      sta	ENAM1
-      8  1aa0		       b1 80		      lda	(pc0),y
-      9  1aa2		       85 1b		      sta	GRP0
-     10  1aa4		       b1 82		      lda	(pc1),y
-     11  1aa6		       86 0e		      stx	PF1
-     12  1aa8		       85 1b		      sta	GRP0
-     13  1aaa		       b1 84		      lda	(pc2),y
-     14  1aac		       85 1b		      sta	GRP0
-   1065  1aae		       60		      rts		; 52-57: into the event variant (EvA*)
-   1066  1aaf
-   1067  1aaf				   StRowA
-   1068  1aaf		       85 02		      sta	WSYNC
-      0  1ab1					      LINE_A
-      1  1ab1		       85 2a		      sta	HMOVE
-      2  1ab3		       b9 a0 f1 	      lda	BoxTab,y
-      3  1ab6		       85 0e		      sta	PF1
-      4  1ab8		       b9 a0 f2 	      lda	BallTab,y
-      5  1abb		       85 1f		      sta	ENABL
-      6  1abd		       b1 86		      lda	(m1ptr),y
-      7  1abf		       85 1e		      sta	ENAM1
-      8  1ac1		       b1 80		      lda	(pc0),y
-      9  1ac3		       85 1b		      sta	GRP0
-     10  1ac5		       b1 82		      lda	(pc1),y
-     11  1ac7		       86 0e		      stx	PF1
-     12  1ac9		       85 1b		      sta	GRP0
-     13  1acb		       b1 84		      lda	(pc2),y
-     14  1acd		       85 1b		      sta	GRP0
-   1070  1acf		       6c 8c 00 	      jmp	(stVec)	; 52-56: into the static row routine
-   1071  1ad2
-   1072  1ad2							;-------------------------------------------------------------------------------
-   1073  1ad2							; static rows. Line A tails start on cycle 57.
-   1074  1ad2
-   1075  1ad2					      MAC	st_swap
-   1076  1ad2					      lda	slotPtr+{1}	; 57-59
-   1077  1ad2					      sta	{2}	; 60-62
-   1078  1ad2					      lda	#{3}	; 63-64
-   1079  1ad2					      sta	nextSt	; 65-67
-   1080  1ad2					      lda	#>{4}	; 68-69
-   1081  1ad2					      sta	stVec+1	; 70-72
-   1082  1ad2					      sta	WSYNC	; 73-75
-   1083  1ad2					      LINE_B
-   1084  1ad2					      lda	#<{4}	; 55-56
-   1085  1ad2					      sta	stVec	; 57-59
-   1086  1ad2					      cpy	nextEv	; 60-62
-   1087  1ad2					      beq	.ev	; 63-64
-   1088  1ad2					      jmp	RowA	; 65-67
-   1089  1ad2				   .ev	      jmp	EvRowA
-   1090  1ad2					      ENDM		; {1} slot, {2} pointer, {3} next y, {4} next routine
-   1091  1ad2
-   1092  1ad2					      MAC	st_ball
-   1093  1ad2					      lda	#{1}	; 57-58
-   1094  1ad2					      sta	nextSt	; 59-61
-   1095  1ad2					      lda	#>{2}	; 62-63
-   1096  1ad2					      sta	stVec+1	; 64-66
-   1097  1ad2					      bit	$80	; 67-69
-   1098  1ad2					      sta	RESBL	; 70-72: x 155, 149 after the next HMOVE
-   1099  1ad2					      sta	WSYNC	; 73-75
-   1100  1ad2					      LINE_B
-   1101  1ad2					      lda	#<{2}
-   1102  1ad2					      sta	stVec
-   1103  1ad2					      cpy	nextEv
-   1104  1ad2					      beq	.ev
-   1105  1ad2					      jmp	RowA
-   1106  1ad2				   .ev	      jmp	EvRowA
-   1107  1ad2					      ENDM		; {1} next y, {2} next routine
-   1108  1ad2
-   1109  1ad2					      MAC	st_shot
-   1110  1ad2					      lda	#{2}	; 57-58
-   1111  1ad2					      sta	nextSt	; 59-61
-   1112  1ad2					      lda	#>{3}	; 62-63
-   1113  1ad2					      sta	stVec+1	; 64-66
-   1114  1ad2					      bit	$80	; 67-69
-   1115  1ad2					      sta	RESM1	; 70-72
-   1116  1ad2					      sta	WSYNC	; 73-75
-   1117  1ad2					      LINE_B
-   1118  1ad2					      lda	shotPtr+{1}	; 55-57
-   1119  1ad2					      sta	m1ptr	; 58-60
-   1120  1ad2					      lda	#<{3}	; 61-62
-   1121  1ad2					      sta	stVec	; 63-65
-   1122  1ad2					      jmp	RowA	; 66-68 (no event right after a shot row)
-   1123  1ad2					      ENDM		; {1} lane, {2} next y, {3} next routine
-   1124  1ad2
-   1125  1ad2				   St7	      SUBROUTINE
-      0  1ad2					      ST_SWAP	2, pc2, 67, St12	; row 7: column 2 -> lane 0
-      1  1ad2		       a5 92		      lda	slotPtr+2
-      2  1ad4		       85 84		      sta	pc2
-      3  1ad6		       a9 43		      lda	#67
-      4  1ad8		       85 8f		      sta	nextSt
-      5  1ada		       a9 fb		      lda	#>St12
-      6  1adc		       85 8d		      sta	stVec+1
-      7  1ade		       85 02		      sta	WSYNC
-      0  1ae0					      LINE_B
-      1  1ae0		       b9 a0 f1 	      lda	BoxTab,y
-      2  1ae3		       85 0e		      sta	PF1
-      3  1ae5		       b1 80		      lda	(pc0),y
-      4  1ae7		       85 1b		      sta	GRP0
-      5  1ae9		       86 21		      stx	HMP1
-      6  1aeb		       b1 88		      lda	(p1ptr),y
-      7  1aed		       85 1c		      sta	GRP1
-      8  1aef		       b1 8a		      lda	(p1col),y
-      9  1af1		       85 07		      sta	COLUP1
-     10  1af3		       b1 82		      lda	(pc1),y
-     11  1af5		       86 0e		      stx	PF1
-     12  1af7		       85 1b		      sta	GRP0
-     13  1af9		       b1 84		      lda	(pc2),y
-     14  1afb		       85 1b		      sta	GRP0
-     15  1afd		       88		      dey
-      9  1afe		       a9 0c		      lda	#<St12
-     10  1b00		       85 8c		      sta	stVec
-     11  1b02		       c4 8e		      cpy	nextEv
-     12  1b04		       f0 03		      beq	.ev
-     13  1b06		       4c 43 fa 	      jmp	RowA
-     14  1b09		       4c 8e fa    .ev	      jmp	EvRowA
-   1127  1b0c				   St12       SUBROUTINE
-      0  1b0c					      ST_SWAP	1, pc1, 62, St17
-      1  1b0c		       a5 91		      lda	slotPtr+1
-      2  1b0e		       85 82		      sta	pc1
-      3  1b10		       a9 3e		      lda	#62
-      4  1b12		       85 8f		      sta	nextSt
-      5  1b14		       a9 fb		      lda	#>St17
-      6  1b16		       85 8d		      sta	stVec+1
-      7  1b18		       85 02		      sta	WSYNC
-      0  1b1a					      LINE_B
-      1  1b1a		       b9 a0 f1 	      lda	BoxTab,y
-      2  1b1d		       85 0e		      sta	PF1
-      3  1b1f		       b1 80		      lda	(pc0),y
-      4  1b21		       85 1b		      sta	GRP0
-      5  1b23		       86 21		      stx	HMP1
-      6  1b25		       b1 88		      lda	(p1ptr),y
-      7  1b27		       85 1c		      sta	GRP1
-      8  1b29		       b1 8a		      lda	(p1col),y
-      9  1b2b		       85 07		      sta	COLUP1
-     10  1b2d		       b1 82		      lda	(pc1),y
-     11  1b2f		       86 0e		      stx	PF1
-     12  1b31		       85 1b		      sta	GRP0
-     13  1b33		       b1 84		      lda	(pc2),y
-     14  1b35		       85 1b		      sta	GRP0
-     15  1b37		       88		      dey
-      9  1b38		       a9 46		      lda	#<St17
-     10  1b3a		       85 8c		      sta	stVec
-     11  1b3c		       c4 8e		      cpy	nextEv
-     12  1b3e		       f0 03		      beq	.ev
-     13  1b40		       4c 43 fa 	      jmp	RowA
-     14  1b43		       4c 8e fa    .ev	      jmp	EvRowA
-   1129  1b46				   St17       SUBROUTINE
-      0  1b46					      ST_SWAP	0, pc0, 60, St19
-      1  1b46		       a5 90		      lda	slotPtr+0
-      2  1b48		       85 80		      sta	pc0
-      3  1b4a		       a9 3c		      lda	#60
-      4  1b4c		       85 8f		      sta	nextSt
-      5  1b4e		       a9 fb		      lda	#>St19
-      6  1b50		       85 8d		      sta	stVec+1
-      7  1b52		       85 02		      sta	WSYNC
-      0  1b54					      LINE_B
-      1  1b54		       b9 a0 f1 	      lda	BoxTab,y
-      2  1b57		       85 0e		      sta	PF1
-      3  1b59		       b1 80		      lda	(pc0),y
-      4  1b5b		       85 1b		      sta	GRP0
-      5  1b5d		       86 21		      stx	HMP1
-      6  1b5f		       b1 88		      lda	(p1ptr),y
-      7  1b61		       85 1c		      sta	GRP1
-      8  1b63		       b1 8a		      lda	(p1col),y
-      9  1b65		       85 07		      sta	COLUP1
-     10  1b67		       b1 82		      lda	(pc1),y
-     11  1b69		       86 0e		      stx	PF1
-     12  1b6b		       85 1b		      sta	GRP0
-     13  1b6d		       b1 84		      lda	(pc2),y
-     14  1b6f		       85 1b		      sta	GRP0
-     15  1b71		       88		      dey
-      9  1b72		       a9 80		      lda	#<St19
-     10  1b74		       85 8c		      sta	stVec
-     11  1b76		       c4 8e		      cpy	nextEv
-     12  1b78		       f0 03		      beq	.ev
-     13  1b7a		       4c 43 fa 	      jmp	RowA
-     14  1b7d		       4c 8e fa    .ev	      jmp	EvRowA
-   1131  1b80				   St19       SUBROUTINE
-      0  1b80					      ST_BALL	51, St28	; row 19: shelf 1
-      1  1b80		       a9 33		      lda	#51
-      2  1b82		       85 8f		      sta	nextSt
-      3  1b84		       a9 fb		      lda	#>St28
-      4  1b86		       85 8d		      sta	stVec+1
-      5  1b88		       24 80		      bit	$80
-      6  1b8a		       85 14		      sta	RESBL
-      7  1b8c		       85 02		      sta	WSYNC
-      0  1b8e					      LINE_B
-      1  1b8e		       b9 a0 f1 	      lda	BoxTab,y
-      2  1b91		       85 0e		      sta	PF1
-      3  1b93		       b1 80		      lda	(pc0),y
-      4  1b95		       85 1b		      sta	GRP0
-      5  1b97		       86 21		      stx	HMP1
-      6  1b99		       b1 88		      lda	(p1ptr),y
-      7  1b9b		       85 1c		      sta	GRP1
-      8  1b9d		       b1 8a		      lda	(p1col),y
-      9  1b9f		       85 07		      sta	COLUP1
-     10  1ba1		       b1 82		      lda	(pc1),y
-     11  1ba3		       86 0e		      stx	PF1
-     12  1ba5		       85 1b		      sta	GRP0
-     13  1ba7		       b1 84		      lda	(pc2),y
-     14  1ba9		       85 1b		      sta	GRP0
-     15  1bab		       88		      dey
-      9  1bac		       a9 ba		      lda	#<St28
-     10  1bae		       85 8c		      sta	stVec
-     11  1bb0		       c4 8e		      cpy	nextEv
-     12  1bb2		       f0 03		      beq	.ev
-     13  1bb4		       4c 43 fa 	      jmp	RowA
-     14  1bb7		       4c 8e fa    .ev	      jmp	EvRowA
-   1133  1bba				   St28       SUBROUTINE
-      0  1bba					      ST_SWAP	5, pc2, 49, St30	; row 28: column 2 -> lane 1
-      1  1bba		       a5 95		      lda	slotPtr+5
-      2  1bbc		       85 84		      sta	pc2
-      3  1bbe		       a9 31		      lda	#49
-      4  1bc0		       85 8f		      sta	nextSt
-      5  1bc2		       a9 fb		      lda	#>St30
-      6  1bc4		       85 8d		      sta	stVec+1
-      7  1bc6		       85 02		      sta	WSYNC
-      0  1bc8					      LINE_B
-      1  1bc8		       b9 a0 f1 	      lda	BoxTab,y
-      2  1bcb		       85 0e		      sta	PF1
-      3  1bcd		       b1 80		      lda	(pc0),y
-      4  1bcf		       85 1b		      sta	GRP0
-      5  1bd1		       86 21		      stx	HMP1
-      6  1bd3		       b1 88		      lda	(p1ptr),y
-      7  1bd5		       85 1c		      sta	GRP1
-      8  1bd7		       b1 8a		      lda	(p1col),y
-      9  1bd9		       85 07		      sta	COLUP1
-     10  1bdb		       b1 82		      lda	(pc1),y
-     11  1bdd		       86 0e		      stx	PF1
-     12  1bdf		       85 1b		      sta	GRP0
-     13  1be1		       b1 84		      lda	(pc2),y
-     14  1be3		       85 1b		      sta	GRP0
-     15  1be5		       88		      dey
-      9  1be6		       a9 f4		      lda	#<St30
-     10  1be8		       85 8c		      sta	stVec
-     11  1bea		       c4 8e		      cpy	nextEv
-     12  1bec		       f0 03		      beq	.ev
-     13  1bee		       4c 43 fa 	      jmp	RowA
-     14  1bf1		       4c 8e fa    .ev	      jmp	EvRowA
-   1135  1bf4				   St30       SUBROUTINE
-      0  1bf4					      ST_SHOT	1, 46, St33	; row 30: shots of lane 1
-      1  1bf4		       a9 2e		      lda	#46
-      2  1bf6		       85 8f		      sta	nextSt
-      3  1bf8		       a9 fc		      lda	#>St33
-      4  1bfa		       85 8d		      sta	stVec+1
-      5  1bfc		       24 80		      bit	$80
-      6  1bfe		       85 13		      sta	RESM1
-      7  1c00		       85 02		      sta	WSYNC
-      0  1c02					      LINE_B
-      1  1c02		       b9 a0 f1 	      lda	BoxTab,y
-      2  1c05		       85 0e		      sta	PF1
-      3  1c07		       b1 80		      lda	(pc0),y
-      4  1c09		       85 1b		      sta	GRP0
-      5  1c0b		       86 21		      stx	HMP1
-      6  1c0d		       b1 88		      lda	(p1ptr),y
-      7  1c0f		       85 1c		      sta	GRP1
-      8  1c11		       b1 8a		      lda	(p1col),y
-      9  1c13		       85 07		      sta	COLUP1
-     10  1c15		       b1 82		      lda	(pc1),y
-     11  1c17		       86 0e		      stx	PF1
-     12  1c19		       85 1b		      sta	GRP0
-     13  1c1b		       b1 84		      lda	(pc2),y
-     14  1c1d		       85 1b		      sta	GRP0
-     15  1c1f		       88		      dey
-      9  1c20		       a5 9a		      lda	shotPtr+1
-     10  1c22		       85 86		      sta	m1ptr
-     11  1c24		       a9 2b		      lda	#<St33
-     12  1c26		       85 8c		      sta	stVec
-     13  1c28		       4c 43 fa 	      jmp	RowA
-   1137  1c2b				   St33       SUBROUTINE
-      0  1c2b					      ST_SWAP	4, pc1, 42, St37
-      1  1c2b		       a5 94		      lda	slotPtr+4
-      2  1c2d		       85 82		      sta	pc1
-      3  1c2f		       a9 2a		      lda	#42
-      4  1c31		       85 8f		      sta	nextSt
-      5  1c33		       a9 fc		      lda	#>St37
-      6  1c35		       85 8d		      sta	stVec+1
-      7  1c37		       85 02		      sta	WSYNC
-      0  1c39					      LINE_B
-      1  1c39		       b9 a0 f1 	      lda	BoxTab,y
-      2  1c3c		       85 0e		      sta	PF1
-      3  1c3e		       b1 80		      lda	(pc0),y
-      4  1c40		       85 1b		      sta	GRP0
-      5  1c42		       86 21		      stx	HMP1
-      6  1c44		       b1 88		      lda	(p1ptr),y
-      7  1c46		       85 1c		      sta	GRP1
-      8  1c48		       b1 8a		      lda	(p1col),y
-      9  1c4a		       85 07		      sta	COLUP1
-     10  1c4c		       b1 82		      lda	(pc1),y
-     11  1c4e		       86 0e		      stx	PF1
-     12  1c50		       85 1b		      sta	GRP0
-     13  1c52		       b1 84		      lda	(pc2),y
-     14  1c54		       85 1b		      sta	GRP0
-     15  1c56		       88		      dey
-      9  1c57		       a9 65		      lda	#<St37
-     10  1c59		       85 8c		      sta	stVec
-     11  1c5b		       c4 8e		      cpy	nextEv
-     12  1c5d		       f0 03		      beq	.ev
-     13  1c5f		       4c 43 fa 	      jmp	RowA
-     14  1c62		       4c 8e fa    .ev	      jmp	EvRowA
-   1139  1c65				   St37       SUBROUTINE
-      0  1c65					      ST_SWAP	3, pc0, 40, St39
-      1  1c65		       a5 93		      lda	slotPtr+3
-      2  1c67		       85 80		      sta	pc0
-      3  1c69		       a9 28		      lda	#40
-      4  1c6b		       85 8f		      sta	nextSt
-      5  1c6d		       a9 fc		      lda	#>St39
-      6  1c6f		       85 8d		      sta	stVec+1
-      7  1c71		       85 02		      sta	WSYNC
-      0  1c73					      LINE_B
-      1  1c73		       b9 a0 f1 	      lda	BoxTab,y
-      2  1c76		       85 0e		      sta	PF1
-      3  1c78		       b1 80		      lda	(pc0),y
-      4  1c7a		       85 1b		      sta	GRP0
-      5  1c7c		       86 21		      stx	HMP1
-      6  1c7e		       b1 88		      lda	(p1ptr),y
-      7  1c80		       85 1c		      sta	GRP1
-      8  1c82		       b1 8a		      lda	(p1col),y
-      9  1c84		       85 07		      sta	COLUP1
-     10  1c86		       b1 82		      lda	(pc1),y
-     11  1c88		       86 0e		      stx	PF1
-     12  1c8a		       85 1b		      sta	GRP0
-     13  1c8c		       b1 84		      lda	(pc2),y
-     14  1c8e		       85 1b		      sta	GRP0
-     15  1c90		       88		      dey
-      9  1c91		       a9 9f		      lda	#<St39
-     10  1c93		       85 8c		      sta	stVec
-     11  1c95		       c4 8e		      cpy	nextEv
-     12  1c97		       f0 03		      beq	.ev
-     13  1c99		       4c 43 fa 	      jmp	RowA
-     14  1c9c		       4c 8e fa    .ev	      jmp	EvRowA
-   1141  1c9f				   St39       SUBROUTINE
-      0  1c9f					      ST_BALL	31, St48
-      1  1c9f		       a9 1f		      lda	#31
-      2  1ca1		       85 8f		      sta	nextSt
-      3  1ca3		       a9 fc		      lda	#>St48
-      4  1ca5		       85 8d		      sta	stVec+1
-      5  1ca7		       24 80		      bit	$80
-      6  1ca9		       85 14		      sta	RESBL
-      7  1cab		       85 02		      sta	WSYNC
-      0  1cad					      LINE_B
-      1  1cad		       b9 a0 f1 	      lda	BoxTab,y
-      2  1cb0		       85 0e		      sta	PF1
-      3  1cb2		       b1 80		      lda	(pc0),y
-      4  1cb4		       85 1b		      sta	GRP0
-      5  1cb6		       86 21		      stx	HMP1
-      6  1cb8		       b1 88		      lda	(p1ptr),y
-      7  1cba		       85 1c		      sta	GRP1
-      8  1cbc		       b1 8a		      lda	(p1col),y
-      9  1cbe		       85 07		      sta	COLUP1
-     10  1cc0		       b1 82		      lda	(pc1),y
-     11  1cc2		       86 0e		      stx	PF1
-     12  1cc4		       85 1b		      sta	GRP0
-     13  1cc6		       b1 84		      lda	(pc2),y
-     14  1cc8		       85 1b		      sta	GRP0
-     15  1cca		       88		      dey
-      9  1ccb		       a9 d9		      lda	#<St48
-     10  1ccd		       85 8c		      sta	stVec
-     11  1ccf		       c4 8e		      cpy	nextEv
-     12  1cd1		       f0 03		      beq	.ev
-     13  1cd3		       4c 43 fa 	      jmp	RowA
-     14  1cd6		       4c 8e fa    .ev	      jmp	EvRowA
-   1143  1cd9				   St48       SUBROUTINE
-      0  1cd9					      ST_SWAP	8, pc2, 29, St50
-      1  1cd9		       a5 98		      lda	slotPtr+8
-      2  1cdb		       85 84		      sta	pc2
-      3  1cdd		       a9 1d		      lda	#29
-      4  1cdf		       85 8f		      sta	nextSt
-      5  1ce1		       a9 fd		      lda	#>St50
-      6  1ce3		       85 8d		      sta	stVec+1
-      7  1ce5		       85 02		      sta	WSYNC
-      0  1ce7					      LINE_B
-      1  1ce7		       b9 a0 f1 	      lda	BoxTab,y
-      2  1cea		       85 0e		      sta	PF1
-      3  1cec		       b1 80		      lda	(pc0),y
-      4  1cee		       85 1b		      sta	GRP0
-      5  1cf0		       86 21		      stx	HMP1
-      6  1cf2		       b1 88		      lda	(p1ptr),y
-      7  1cf4		       85 1c		      sta	GRP1
-      8  1cf6		       b1 8a		      lda	(p1col),y
-      9  1cf8		       85 07		      sta	COLUP1
-     10  1cfa		       b1 82		      lda	(pc1),y
-     11  1cfc		       86 0e		      stx	PF1
-     12  1cfe		       85 1b		      sta	GRP0
-     13  1d00		       b1 84		      lda	(pc2),y
-     14  1d02		       85 1b		      sta	GRP0
-     15  1d04		       88		      dey
-      9  1d05		       a9 13		      lda	#<St50
-     10  1d07		       85 8c		      sta	stVec
-     11  1d09		       c4 8e		      cpy	nextEv
-     12  1d0b		       f0 03		      beq	.ev
-     13  1d0d		       4c 43 fa 	      jmp	RowA
-     14  1d10		       4c 8e fa    .ev	      jmp	EvRowA
-   1145  1d13				   St50       SUBROUTINE
-      0  1d13					      ST_SHOT	2, 26, St53
-      1  1d13		       a9 1a		      lda	#26
-      2  1d15		       85 8f		      sta	nextSt
-      3  1d17		       a9 fd		      lda	#>St53
-      4  1d19		       85 8d		      sta	stVec+1
-      5  1d1b		       24 80		      bit	$80
-      6  1d1d		       85 13		      sta	RESM1
-      7  1d1f		       85 02		      sta	WSYNC
-      0  1d21					      LINE_B
-      1  1d21		       b9 a0 f1 	      lda	BoxTab,y
-      2  1d24		       85 0e		      sta	PF1
-      3  1d26		       b1 80		      lda	(pc0),y
-      4  1d28		       85 1b		      sta	GRP0
-      5  1d2a		       86 21		      stx	HMP1
-      6  1d2c		       b1 88		      lda	(p1ptr),y
-      7  1d2e		       85 1c		      sta	GRP1
-      8  1d30		       b1 8a		      lda	(p1col),y
-      9  1d32		       85 07		      sta	COLUP1
-     10  1d34		       b1 82		      lda	(pc1),y
-     11  1d36		       86 0e		      stx	PF1
-     12  1d38		       85 1b		      sta	GRP0
-     13  1d3a		       b1 84		      lda	(pc2),y
-     14  1d3c		       85 1b		      sta	GRP0
-     15  1d3e		       88		      dey
-      9  1d3f		       a5 9b		      lda	shotPtr+2
-     10  1d41		       85 86		      sta	m1ptr
-     11  1d43		       a9 4a		      lda	#<St53
-     12  1d45		       85 8c		      sta	stVec
-     13  1d47		       4c 43 fa 	      jmp	RowA
-   1147  1d4a				   St53       SUBROUTINE
-      0  1d4a					      ST_SWAP	7, pc1, 22, St57
-      1  1d4a		       a5 97		      lda	slotPtr+7
-      2  1d4c		       85 82		      sta	pc1
-      3  1d4e		       a9 16		      lda	#22
-      4  1d50		       85 8f		      sta	nextSt
-      5  1d52		       a9 fd		      lda	#>St57
-      6  1d54		       85 8d		      sta	stVec+1
-      7  1d56		       85 02		      sta	WSYNC
-      0  1d58					      LINE_B
-      1  1d58		       b9 a0 f1 	      lda	BoxTab,y
-      2  1d5b		       85 0e		      sta	PF1
-      3  1d5d		       b1 80		      lda	(pc0),y
-      4  1d5f		       85 1b		      sta	GRP0
-      5  1d61		       86 21		      stx	HMP1
-      6  1d63		       b1 88		      lda	(p1ptr),y
-      7  1d65		       85 1c		      sta	GRP1
-      8  1d67		       b1 8a		      lda	(p1col),y
-      9  1d69		       85 07		      sta	COLUP1
-     10  1d6b		       b1 82		      lda	(pc1),y
-     11  1d6d		       86 0e		      stx	PF1
-     12  1d6f		       85 1b		      sta	GRP0
-     13  1d71		       b1 84		      lda	(pc2),y
-     14  1d73		       85 1b		      sta	GRP0
-     15  1d75		       88		      dey
-      9  1d76		       a9 84		      lda	#<St57
-     10  1d78		       85 8c		      sta	stVec
-     11  1d7a		       c4 8e		      cpy	nextEv
-     12  1d7c		       f0 03		      beq	.ev
-     13  1d7e		       4c 43 fa 	      jmp	RowA
-     14  1d81		       4c 8e fa    .ev	      jmp	EvRowA
-   1149  1d84				   St57       SUBROUTINE
-      0  1d84					      ST_SWAP	6, pc0, 20, St59
-      1  1d84		       a5 96		      lda	slotPtr+6
-      2  1d86		       85 80		      sta	pc0
-      3  1d88		       a9 14		      lda	#20
-      4  1d8a		       85 8f		      sta	nextSt
-      5  1d8c		       a9 fd		      lda	#>St59
-      6  1d8e		       85 8d		      sta	stVec+1
-      7  1d90		       85 02		      sta	WSYNC
-      0  1d92					      LINE_B
-      1  1d92		       b9 a0 f1 	      lda	BoxTab,y
-      2  1d95		       85 0e		      sta	PF1
-      3  1d97		       b1 80		      lda	(pc0),y
-      4  1d99		       85 1b		      sta	GRP0
-      5  1d9b		       86 21		      stx	HMP1
-      6  1d9d		       b1 88		      lda	(p1ptr),y
-      7  1d9f		       85 1c		      sta	GRP1
-      8  1da1		       b1 8a		      lda	(p1col),y
-      9  1da3		       85 07		      sta	COLUP1
-     10  1da5		       b1 82		      lda	(pc1),y
-     11  1da7		       86 0e		      stx	PF1
-     12  1da9		       85 1b		      sta	GRP0
-     13  1dab		       b1 84		      lda	(pc2),y
-     14  1dad		       85 1b		      sta	GRP0
-     15  1daf		       88		      dey
-      9  1db0		       a9 be		      lda	#<St59
-     10  1db2		       85 8c		      sta	stVec
-     11  1db4		       c4 8e		      cpy	nextEv
-     12  1db6		       f0 03		      beq	.ev
-     13  1db8		       4c 43 fa 	      jmp	RowA
-     14  1dbb		       4c 8e fa    .ev	      jmp	EvRowA
-   1151  1dbe				   St59       SUBROUTINE
-      0  1dbe					      ST_BALL	0, StEnd
-      1  1dbe		       a9 00		      lda	#0
-      2  1dc0		       85 8f		      sta	nextSt
-      3  1dc2		       a9 fd		      lda	#>StEnd
-      4  1dc4		       85 8d		      sta	stVec+1
-      5  1dc6		       24 80		      bit	$80
-      6  1dc8		       85 14		      sta	RESBL
-      7  1dca		       85 02		      sta	WSYNC
-      0  1dcc					      LINE_B
-      1  1dcc		       b9 a0 f1 	      lda	BoxTab,y
-      2  1dcf		       85 0e		      sta	PF1
-      3  1dd1		       b1 80		      lda	(pc0),y
-      4  1dd3		       85 1b		      sta	GRP0
-      5  1dd5		       86 21		      stx	HMP1
-      6  1dd7		       b1 88		      lda	(p1ptr),y
-      7  1dd9		       85 1c		      sta	GRP1
-      8  1ddb		       b1 8a		      lda	(p1col),y
-      9  1ddd		       85 07		      sta	COLUP1
-     10  1ddf		       b1 82		      lda	(pc1),y
-     11  1de1		       86 0e		      stx	PF1
-     12  1de3		       85 1b		      sta	GRP0
-     13  1de5		       b1 84		      lda	(pc2),y
-     14  1de7		       85 1b		      sta	GRP0
-     15  1de9		       88		      dey
-      9  1dea		       a9 f8		      lda	#<StEnd
-     10  1dec		       85 8c		      sta	stVec
-     11  1dee		       c4 8e		      cpy	nextEv
-     12  1df0		       f0 03		      beq	.ev
-     13  1df2		       4c 43 fa 	      jmp	RowA
-     14  1df5		       4c 8e fa    .ev	      jmp	EvRowA
-   1153  1df8				   StEnd      SUBROUTINE		; row 79 (y 0): the last line B, then overscan
-   1154  1df8		       85 02		      sta	WSYNC
-      0  1dfa					      LINE_B
-      1  1dfa		       b9 a0 f1 	      lda	BoxTab,y
-      2  1dfd		       85 0e		      sta	PF1
-      3  1dff		       b1 80		      lda	(pc0),y
-      4  1e01		       85 1b		      sta	GRP0
-      5  1e03		       86 21		      stx	HMP1
-      6  1e05		       b1 88		      lda	(p1ptr),y
-      7  1e07		       85 1c		      sta	GRP1
-      8  1e09		       b1 8a		      lda	(p1col),y
-      9  1e0b		       85 07		      sta	COLUP1
-     10  1e0d		       b1 82		      lda	(pc1),y
-     11  1e0f		       86 0e		      stx	PF1
-     12  1e11		       85 1b		      sta	GRP0
-     13  1e13		       b1 84		      lda	(pc2),y
-     14  1e15		       85 1b		      sta	GRP0
-     15  1e17		       88		      dey
-   1156  1e18		       85 02		      sta	WSYNC
-   1157  1e1a		       a9 02		      lda	#2
-   1158  1e1c		       85 01		      sta	VBLANK
-   1159  1e1e		       a9 00		      lda	#0
-   1160  1e20		       85 1b		      sta	GRP0
-   1161  1e22		       85 1c		      sta	GRP1
-   1162  1e24		       85 1f		      sta	ENABL
-   1163  1e26		       85 1e		      sta	ENAM1
-   1164  1e28		       85 0e		      sta	PF1
-   1165  1e2a		       a2 ff		      ldx	#STACKTOP
-   1166  1e2c		       9a		      txs
-   1167  1e2d		       4c e6 ff 	      jmp	ToBank0
-   1168  1e30
-   1169  1e30							;-------------------------------------------------------------------------------
+    933  19b3
+    934  19b3							;-------------------------------------------------------------------------------
+    935  19b3				   PreKernel		; arrives early in s26
+    936  19b3		       85 02		      sta	WSYNC	; s27: fixed positions. A RESPx write lands on
+    937  19b5		       a9 00		      lda	#0	; 0-1	  its last cycle w: players at 3w-60,
+    938  19b7		       85 25		      sta	VDELP0	; 2-4	  missiles and the ball at 3w-61
+    939  19b9		       85 26		      sta	VDELP1	; 5-7
+    940  19bb		       85 1b		      sta	GRP0	; 8-10
+    941  19bd		       85 1c		      sta	GRP1	; 11-13
+    942  19bf		       85 20		      sta	HMP0	; 14-16
+    943  19c1		       85 24		      sta	HMBL	; 17-19
+    944  19c3		       a9 b0		      lda	#$B0	; 20-21
+    945  19c5		       85 23		      sta	HMM1	; 22-24  missile 1: 56 + 5 = 61 at the s30 HMOVE
+    946  19c7		       ea		      nop		; 25-26
+    947  19c8		       ea		      nop		; 27-28
+    948  19c9		       ea		      nop		; 29-30
+    949  19ca		       24 80		      bit	$80	; 31-33
+    950  19cc		       85 10		      sta	RESP0	; 34-36  player 0 at 48
+    951  19ce		       85 13		      sta	RESM1	; 37-39  missile 1 at 56
+    952  19d0					      REPEAT	15
+    953  19d0		       ea		      nop		; 40-69
+    952  19d0					      REPEND
+    953  19d1		       ea		      nop		; 40-69
+    952  19d1					      REPEND
+    953  19d2		       ea		      nop		; 40-69
+    952  19d2					      REPEND
+    953  19d3		       ea		      nop		; 40-69
+    952  19d3					      REPEND
+    953  19d4		       ea		      nop		; 40-69
+    952  19d4					      REPEND
+    953  19d5		       ea		      nop		; 40-69
+    952  19d5					      REPEND
+    953  19d6		       ea		      nop		; 40-69
+    952  19d6					      REPEND
+    953  19d7		       ea		      nop		; 40-69
+    952  19d7					      REPEND
+    953  19d8		       ea		      nop		; 40-69
+    952  19d8					      REPEND
+    953  19d9		       ea		      nop		; 40-69
+    952  19d9					      REPEND
+    953  19da		       ea		      nop		; 40-69
+    952  19da					      REPEND
+    953  19db		       ea		      nop		; 40-69
+    952  19db					      REPEND
+    953  19dc		       ea		      nop		; 40-69
+    952  19dc					      REPEND
+    953  19dd		       ea		      nop		; 40-69
+    952  19dd					      REPEND
+    953  19de		       ea		      nop		; 40-69
+    954  19df					      REPEND
+    955  19df		       85 14		      sta	RESBL	; 70-72  ball at 155
+    956  19e1		       85 02		      sta	WSYNC	; s28
+    957  19e3		       85 02		      sta	WSYNC	; s29
+    958  19e5		       a9 00		      lda	#COL_BG	; the panel ends: black below
+    959  19e7		       85 09		      sta	COLUBK
+    960  19e9		       85 02		      sta	WSYNC	; s30: rule
+    961  19eb		       85 2a		      sta	HMOVE	; 0-2
+    962  19ed		       a9 f0		      lda	#$F0
+    963  19ef		       85 0d		      sta	PF0
+    964  19f1		       a9 ff		      lda	#$FF
+    965  19f3		       85 0e		      sta	PF1
+    966  19f5		       85 0f		      sta	PF2	; by cycle 15
+    967  19f7		       a5 9d		      lda	pfColor
+    968  19f9		       85 08		      sta	COLUPF
+    969  19fb		       a9 c8		      lda	#COL_GREEN
+    970  19fd		       85 06		      sta	COLUP0
+    971  19ff		       a9 f8		      lda	#COL_GOLD
+    972  1a01		       85 07		      sta	COLUP1
+    973  1a03		       a9 06		      lda	#6	; player 0: three copies 32 apart
+    974  1a05		       85 04		      sta	NUSIZ0
+    975  1a07		       a9 20		      lda	#$20	; missile 1: 4 pixels wide
+    976  1a09		       85 05		      sta	NUSIZ1
+    977  1a0b		       a9 21		      lda	#$21	; ball 4 wide, reflected playfield
+    978  1a0d		       85 0a		      sta	CTRLPF
+    979  1a0f		       a9 00		      lda	#0
+    980  1a11		       85 1b		      sta	GRP0
+    981  1a13		       85 1c		      sta	GRP1
+    982  1a15		       85 20		      sta	HMP0
+    983  1a17		       85 21		      sta	HMP1
+    984  1a19		       85 22		      sta	HMM0
+    985  1a1b		       a9 60		      lda	#$60	; ball and shot move 6 left per HMOVE
+    986  1a1d		       85 24		      sta	HMBL
+    987  1a1f		       85 23		      sta	HMM1
+    988  1a21		       85 02		      sta	WSYNC	; s31
+    989  1a23		       a9 00		      lda	#0
+    990  1a25		       85 0d		      sta	PF0
+    991  1a27		       85 0e		      sta	PF1
+    992  1a29		       85 0f		      sta	PF2
+    993  1a2b		       a2 b9		      ldx	#QUEUE-1
+    994  1a2d		       9a		      txs
+    995  1a2e		       a2 00		      ldx	#0
+    996  1a30		       a0 4f		      ldy	#79
+    997  1a32		       4c 47 fa 	      jmp	RowA
+    998  1a35
+    999  1a35				   PosObject1
+   1000  1a35					      SUBROUTINE
+   1001  1a35		       85 02		      sta	WSYNC
+   1002  1a37		       38		      sec
+   1003  1a38				   .divide
+   1004  1a38		       e9 0f		      sbc	#15
+   1005  1a3a		       b0 fc		      bcs	.divide
+   1006  1a3c		       49 07		      eor	#7
+   1007  1a3e		       0a		      asl
+   1008  1a3f		       0a		      asl
+   1009  1a40		       0a		      asl
+   1010  1a41		       0a		      asl
+   1011  1a42		       95 20		      sta	HMP0,x
+   1012  1a44		       95 10		      sta	RESP0,x
+   1013  1a46		       60		      rts
+   1014  1a47
+   1015  1a47							;-------------------------------------------------------------------------------
+   1016  1a47							; the kernel rows (a branch that crosses a page costs a cycle; every branch
+   1017  1a47							; here is taken only where the line has cycles to spare)
+   1018  1a47
+   1019  1a47					      MAC	line_a
+   1020  1a47					      sta	HMOVE	; 0-2
+   1021  1a47					      lda	BoxTab,y	; 3-6
+   1022  1a47					      sta	PF1	; 7-9
+   1023  1a47					      lda	BallTab,y	; 10-13
+   1024  1a47					      sta	ENABL	; 14-16
+   1025  1a47					      lda	(m1ptr),y	; 17-21
+   1026  1a47					      sta	ENAM1	; 22-24
+   1027  1a47					      lda	(pc0),y	; 25-29
+   1028  1a47					      sta	GRP0	; 30-32  copy 0 (x 48)
+   1029  1a47					      lda	(pc1),y	; 33-37
+   1030  1a47					      stx	PF1	; 38-40  clear before the reflected copy (x 112)
+   1031  1a47					      sta	GRP0	; 41-43  copy 1 (x 80)
+   1032  1a47					      lda	(pc2),y	; 44-48
+   1033  1a47					      sta	GRP0	; 49-51  copy 2 (x 112)
+   1034  1a47					      ENDM		; cycles 0-51 of a line A
+   1035  1a47
+   1036  1a47					      MAC	line_b
+   1037  1a47					      lda	BoxTab,y	; 0-3
+   1038  1a47					      sta	PF1	; 4-6
+   1039  1a47					      lda	(pc0),y	; 7-11
+   1040  1a47					      sta	GRP0	; 12-14
+   1041  1a47					      stx	HMP1	; 15-17
+   1042  1a47					      lda	(p1ptr),y	; 18-22 (+1 on a page cross)
+   1043  1a47					      sta	GRP1	; 23-25
+   1044  1a47					      lda	(p1col),y	; 26-30
+   1045  1a47					      sta	COLUP1	; 31-33
+   1046  1a47					      lda	(pc1),y	; 34-38
+   1047  1a47					      stx	PF1	; 39-41
+   1048  1a47					      sta	GRP0	; 42-44
+   1049  1a47					      lda	(pc2),y	; 45-49
+   1050  1a47					      sta	GRP0	; 50-52
+   1051  1a47					      dey		; 53-54
+   1052  1a47					      ENDM		; cycles 0-54 of a line B, ends after dey
+   1053  1a47
+   1054  1a47				   RowA
+   1055  1a47		       85 02		      sta	WSYNC
+   1056  1a49				   RowAH
+      0  1a49					      LINE_A
+      1  1a49		       85 2a		      sta	HMOVE
+      2  1a4b		       b9 a0 f1 	      lda	BoxTab,y
+      3  1a4e		       85 0e		      sta	PF1
+      4  1a50		       b9 a0 f2 	      lda	BallTab,y
+      5  1a53		       85 1f		      sta	ENABL
+      6  1a55		       b1 86		      lda	(m1ptr),y
+      7  1a57		       85 1e		      sta	ENAM1
+      8  1a59		       b1 80		      lda	(pc0),y
+      9  1a5b		       85 1b		      sta	GRP0
+     10  1a5d		       b1 82		      lda	(pc1),y
+     11  1a5f		       86 0e		      stx	PF1
+     12  1a61		       85 1b		      sta	GRP0
+     13  1a63		       b1 84		      lda	(pc2),y
+     14  1a65		       85 1b		      sta	GRP0
+   1058  1a67		       85 02		      sta	WSYNC
+   1059  1a69				   RowB
+      0  1a69					      LINE_B
+      1  1a69		       b9 a0 f1 	      lda	BoxTab,y
+      2  1a6c		       85 0e		      sta	PF1
+      3  1a6e		       b1 80		      lda	(pc0),y
+      4  1a70		       85 1b		      sta	GRP0
+      5  1a72		       86 21		      stx	HMP1
+      6  1a74		       b1 88		      lda	(p1ptr),y
+      7  1a76		       85 1c		      sta	GRP1
+      8  1a78		       b1 8a		      lda	(p1col),y
+      9  1a7a		       85 07		      sta	COLUP1
+     10  1a7c		       b1 82		      lda	(pc1),y
+     11  1a7e		       86 0e		      stx	PF1
+     12  1a80		       85 1b		      sta	GRP0
+     13  1a82		       b1 84		      lda	(pc2),y
+     14  1a84		       85 1b		      sta	GRP0
+     15  1a86		       88		      dey
+   1061  1a87		       c4 8e		      cpy	nextEv	; 55-57
+   1062  1a89		       f0 07		      beq	EvRowA	; 58-59
+   1063  1a8b		       c4 8f		      cpy	nextSt	; 60-62
+   1064  1a8d		       f0 24		      beq	StRowA	; 63-64
+   1065  1a8f		       4c 47 fa 	      jmp	RowA	; 65-67
+   1066  1a92
+   1067  1a92				   EvRowA
+   1068  1a92		       85 02		      sta	WSYNC
+      0  1a94					      LINE_A
+      1  1a94		       85 2a		      sta	HMOVE
+      2  1a96		       b9 a0 f1 	      lda	BoxTab,y
+      3  1a99		       85 0e		      sta	PF1
+      4  1a9b		       b9 a0 f2 	      lda	BallTab,y
+      5  1a9e		       85 1f		      sta	ENABL
+      6  1aa0		       b1 86		      lda	(m1ptr),y
+      7  1aa2		       85 1e		      sta	ENAM1
+      8  1aa4		       b1 80		      lda	(pc0),y
+      9  1aa6		       85 1b		      sta	GRP0
+     10  1aa8		       b1 82		      lda	(pc1),y
+     11  1aaa		       86 0e		      stx	PF1
+     12  1aac		       85 1b		      sta	GRP0
+     13  1aae		       b1 84		      lda	(pc2),y
+     14  1ab0		       85 1b		      sta	GRP0
+   1070  1ab2		       60		      rts		; 52-57: into the event variant (EvA*)
+   1071  1ab3
+   1072  1ab3				   StRowA
+   1073  1ab3		       85 02		      sta	WSYNC
+      0  1ab5					      LINE_A
+      1  1ab5		       85 2a		      sta	HMOVE
+      2  1ab7		       b9 a0 f1 	      lda	BoxTab,y
+      3  1aba		       85 0e		      sta	PF1
+      4  1abc		       b9 a0 f2 	      lda	BallTab,y
+      5  1abf		       85 1f		      sta	ENABL
+      6  1ac1		       b1 86		      lda	(m1ptr),y
+      7  1ac3		       85 1e		      sta	ENAM1
+      8  1ac5		       b1 80		      lda	(pc0),y
+      9  1ac7		       85 1b		      sta	GRP0
+     10  1ac9		       b1 82		      lda	(pc1),y
+     11  1acb		       86 0e		      stx	PF1
+     12  1acd		       85 1b		      sta	GRP0
+     13  1acf		       b1 84		      lda	(pc2),y
+     14  1ad1		       85 1b		      sta	GRP0
+   1075  1ad3		       6c 8c 00 	      jmp	(stVec)	; 52-56: into the static row routine
+   1076  1ad6
+   1077  1ad6							;-------------------------------------------------------------------------------
+   1078  1ad6							; static rows. Line A tails start on cycle 57.
+   1079  1ad6
+   1080  1ad6					      MAC	st_swap
+   1081  1ad6					      lda	slotPtr+{1}	; 57-59
+   1082  1ad6					      sta	{2}	; 60-62
+   1083  1ad6					      lda	#{3}	; 63-64
+   1084  1ad6					      sta	nextSt	; 65-67
+   1085  1ad6					      lda	#>{4}	; 68-69
+   1086  1ad6					      sta	stVec+1	; 70-72
+   1087  1ad6					      sta	WSYNC	; 73-75
+   1088  1ad6					      LINE_B
+   1089  1ad6					      lda	#<{4}	; 55-56
+   1090  1ad6					      sta	stVec	; 57-59
+   1091  1ad6					      cpy	nextEv	; 60-62
+   1092  1ad6					      beq	.ev	; 63-64
+   1093  1ad6					      jmp	RowA	; 65-67
+   1094  1ad6				   .ev	      jmp	EvRowA
+   1095  1ad6					      ENDM		; {1} slot, {2} pointer, {3} next y, {4} next routine
+   1096  1ad6
+   1097  1ad6					      MAC	st_ball
+   1098  1ad6					      lda	#{1}	; 57-58
+   1099  1ad6					      sta	nextSt	; 59-61
+   1100  1ad6					      lda	#>{2}	; 62-63
+   1101  1ad6					      sta	stVec+1	; 64-66
+   1102  1ad6					      bit	$80	; 67-69
+   1103  1ad6					      sta	RESBL	; 70-72: x 155, 149 after the next HMOVE
+   1104  1ad6					      sta	WSYNC	; 73-75
+   1105  1ad6					      LINE_B
+   1106  1ad6					      lda	#<{2}
+   1107  1ad6					      sta	stVec
+   1108  1ad6					      cpy	nextEv
+   1109  1ad6					      beq	.ev
+   1110  1ad6					      jmp	RowA
+   1111  1ad6				   .ev	      jmp	EvRowA
+   1112  1ad6					      ENDM		; {1} next y, {2} next routine
+   1113  1ad6
+   1114  1ad6					      MAC	st_shot
+   1115  1ad6					      lda	#{2}	; 57-58
+   1116  1ad6					      sta	nextSt	; 59-61
+   1117  1ad6					      lda	#>{3}	; 62-63
+   1118  1ad6					      sta	stVec+1	; 64-66
+   1119  1ad6					      bit	$80	; 67-69
+   1120  1ad6					      sta	RESM1	; 70-72
+   1121  1ad6					      sta	WSYNC	; 73-75
+   1122  1ad6					      LINE_B
+   1123  1ad6					      lda	shotPtr+{1}	; 55-57
+   1124  1ad6					      sta	m1ptr	; 58-60
+   1125  1ad6					      lda	#<{3}	; 61-62
+   1126  1ad6					      sta	stVec	; 63-65
+   1127  1ad6					      jmp	RowA	; 66-68 (no event right after a shot row)
+   1128  1ad6					      ENDM		; {1} lane, {2} next y, {3} next routine
+   1129  1ad6
+   1130  1ad6				   St7	      SUBROUTINE
+      0  1ad6					      ST_SWAP	2, pc2, 67, St12	; row 7: column 2 -> lane 0
+      1  1ad6		       a5 92		      lda	slotPtr+2
+      2  1ad8		       85 84		      sta	pc2
+      3  1ada		       a9 43		      lda	#67
+      4  1adc		       85 8f		      sta	nextSt
+      5  1ade		       a9 fb		      lda	#>St12
+      6  1ae0		       85 8d		      sta	stVec+1
+      7  1ae2		       85 02		      sta	WSYNC
+      0  1ae4					      LINE_B
+      1  1ae4		       b9 a0 f1 	      lda	BoxTab,y
+      2  1ae7		       85 0e		      sta	PF1
+      3  1ae9		       b1 80		      lda	(pc0),y
+      4  1aeb		       85 1b		      sta	GRP0
+      5  1aed		       86 21		      stx	HMP1
+      6  1aef		       b1 88		      lda	(p1ptr),y
+      7  1af1		       85 1c		      sta	GRP1
+      8  1af3		       b1 8a		      lda	(p1col),y
+      9  1af5		       85 07		      sta	COLUP1
+     10  1af7		       b1 82		      lda	(pc1),y
+     11  1af9		       86 0e		      stx	PF1
+     12  1afb		       85 1b		      sta	GRP0
+     13  1afd		       b1 84		      lda	(pc2),y
+     14  1aff		       85 1b		      sta	GRP0
+     15  1b01		       88		      dey
+      9  1b02		       a9 10		      lda	#<St12
+     10  1b04		       85 8c		      sta	stVec
+     11  1b06		       c4 8e		      cpy	nextEv
+     12  1b08		       f0 03		      beq	.ev
+     13  1b0a		       4c 47 fa 	      jmp	RowA
+     14  1b0d		       4c 92 fa    .ev	      jmp	EvRowA
+   1132  1b10				   St12       SUBROUTINE
+      0  1b10					      ST_SWAP	1, pc1, 62, St17
+      1  1b10		       a5 91		      lda	slotPtr+1
+      2  1b12		       85 82		      sta	pc1
+      3  1b14		       a9 3e		      lda	#62
+      4  1b16		       85 8f		      sta	nextSt
+      5  1b18		       a9 fb		      lda	#>St17
+      6  1b1a		       85 8d		      sta	stVec+1
+      7  1b1c		       85 02		      sta	WSYNC
+      0  1b1e					      LINE_B
+      1  1b1e		       b9 a0 f1 	      lda	BoxTab,y
+      2  1b21		       85 0e		      sta	PF1
+      3  1b23		       b1 80		      lda	(pc0),y
+      4  1b25		       85 1b		      sta	GRP0
+      5  1b27		       86 21		      stx	HMP1
+      6  1b29		       b1 88		      lda	(p1ptr),y
+      7  1b2b		       85 1c		      sta	GRP1
+      8  1b2d		       b1 8a		      lda	(p1col),y
+      9  1b2f		       85 07		      sta	COLUP1
+     10  1b31		       b1 82		      lda	(pc1),y
+     11  1b33		       86 0e		      stx	PF1
+     12  1b35		       85 1b		      sta	GRP0
+     13  1b37		       b1 84		      lda	(pc2),y
+     14  1b39		       85 1b		      sta	GRP0
+     15  1b3b		       88		      dey
+      9  1b3c		       a9 4a		      lda	#<St17
+     10  1b3e		       85 8c		      sta	stVec
+     11  1b40		       c4 8e		      cpy	nextEv
+     12  1b42		       f0 03		      beq	.ev
+     13  1b44		       4c 47 fa 	      jmp	RowA
+     14  1b47		       4c 92 fa    .ev	      jmp	EvRowA
+   1134  1b4a				   St17       SUBROUTINE
+      0  1b4a					      ST_SWAP	0, pc0, 60, St19
+      1  1b4a		       a5 90		      lda	slotPtr+0
+      2  1b4c		       85 80		      sta	pc0
+      3  1b4e		       a9 3c		      lda	#60
+      4  1b50		       85 8f		      sta	nextSt
+      5  1b52		       a9 fb		      lda	#>St19
+      6  1b54		       85 8d		      sta	stVec+1
+      7  1b56		       85 02		      sta	WSYNC
+      0  1b58					      LINE_B
+      1  1b58		       b9 a0 f1 	      lda	BoxTab,y
+      2  1b5b		       85 0e		      sta	PF1
+      3  1b5d		       b1 80		      lda	(pc0),y
+      4  1b5f		       85 1b		      sta	GRP0
+      5  1b61		       86 21		      stx	HMP1
+      6  1b63		       b1 88		      lda	(p1ptr),y
+      7  1b65		       85 1c		      sta	GRP1
+      8  1b67		       b1 8a		      lda	(p1col),y
+      9  1b69		       85 07		      sta	COLUP1
+     10  1b6b		       b1 82		      lda	(pc1),y
+     11  1b6d		       86 0e		      stx	PF1
+     12  1b6f		       85 1b		      sta	GRP0
+     13  1b71		       b1 84		      lda	(pc2),y
+     14  1b73		       85 1b		      sta	GRP0
+     15  1b75		       88		      dey
+      9  1b76		       a9 84		      lda	#<St19
+     10  1b78		       85 8c		      sta	stVec
+     11  1b7a		       c4 8e		      cpy	nextEv
+     12  1b7c		       f0 03		      beq	.ev
+     13  1b7e		       4c 47 fa 	      jmp	RowA
+     14  1b81		       4c 92 fa    .ev	      jmp	EvRowA
+   1136  1b84				   St19       SUBROUTINE
+      0  1b84					      ST_BALL	51, St28	; row 19: shelf 1
+      1  1b84		       a9 33		      lda	#51
+      2  1b86		       85 8f		      sta	nextSt
+      3  1b88		       a9 fb		      lda	#>St28
+      4  1b8a		       85 8d		      sta	stVec+1
+      5  1b8c		       24 80		      bit	$80
+      6  1b8e		       85 14		      sta	RESBL
+      7  1b90		       85 02		      sta	WSYNC
+      0  1b92					      LINE_B
+      1  1b92		       b9 a0 f1 	      lda	BoxTab,y
+      2  1b95		       85 0e		      sta	PF1
+      3  1b97		       b1 80		      lda	(pc0),y
+      4  1b99		       85 1b		      sta	GRP0
+      5  1b9b		       86 21		      stx	HMP1
+      6  1b9d		       b1 88		      lda	(p1ptr),y
+      7  1b9f		       85 1c		      sta	GRP1
+      8  1ba1		       b1 8a		      lda	(p1col),y
+      9  1ba3		       85 07		      sta	COLUP1
+     10  1ba5		       b1 82		      lda	(pc1),y
+     11  1ba7		       86 0e		      stx	PF1
+     12  1ba9		       85 1b		      sta	GRP0
+     13  1bab		       b1 84		      lda	(pc2),y
+     14  1bad		       85 1b		      sta	GRP0
+     15  1baf		       88		      dey
+      9  1bb0		       a9 be		      lda	#<St28
+     10  1bb2		       85 8c		      sta	stVec
+     11  1bb4		       c4 8e		      cpy	nextEv
+     12  1bb6		       f0 03		      beq	.ev
+     13  1bb8		       4c 47 fa 	      jmp	RowA
+     14  1bbb		       4c 92 fa    .ev	      jmp	EvRowA
+   1138  1bbe				   St28       SUBROUTINE
+      0  1bbe					      ST_SWAP	5, pc2, 49, St30	; row 28: column 2 -> lane 1
+      1  1bbe		       a5 95		      lda	slotPtr+5
+      2  1bc0		       85 84		      sta	pc2
+      3  1bc2		       a9 31		      lda	#49
+      4  1bc4		       85 8f		      sta	nextSt
+      5  1bc6		       a9 fb		      lda	#>St30
+      6  1bc8		       85 8d		      sta	stVec+1
+      7  1bca		       85 02		      sta	WSYNC
+      0  1bcc					      LINE_B
+      1  1bcc		       b9 a0 f1 	      lda	BoxTab,y
+      2  1bcf		       85 0e		      sta	PF1
+      3  1bd1		       b1 80		      lda	(pc0),y
+      4  1bd3		       85 1b		      sta	GRP0
+      5  1bd5		       86 21		      stx	HMP1
+      6  1bd7		       b1 88		      lda	(p1ptr),y
+      7  1bd9		       85 1c		      sta	GRP1
+      8  1bdb		       b1 8a		      lda	(p1col),y
+      9  1bdd		       85 07		      sta	COLUP1
+     10  1bdf		       b1 82		      lda	(pc1),y
+     11  1be1		       86 0e		      stx	PF1
+     12  1be3		       85 1b		      sta	GRP0
+     13  1be5		       b1 84		      lda	(pc2),y
+     14  1be7		       85 1b		      sta	GRP0
+     15  1be9		       88		      dey
+      9  1bea		       a9 f8		      lda	#<St30
+     10  1bec		       85 8c		      sta	stVec
+     11  1bee		       c4 8e		      cpy	nextEv
+     12  1bf0		       f0 03		      beq	.ev
+     13  1bf2		       4c 47 fa 	      jmp	RowA
+     14  1bf5		       4c 92 fa    .ev	      jmp	EvRowA
+   1140  1bf8				   St30       SUBROUTINE
+      0  1bf8					      ST_SHOT	1, 46, St33	; row 30: shots of lane 1
+      1  1bf8		       a9 2e		      lda	#46
+      2  1bfa		       85 8f		      sta	nextSt
+      3  1bfc		       a9 fc		      lda	#>St33
+      4  1bfe		       85 8d		      sta	stVec+1
+      5  1c00		       24 80		      bit	$80
+      6  1c02		       85 13		      sta	RESM1
+      7  1c04		       85 02		      sta	WSYNC
+      0  1c06					      LINE_B
+      1  1c06		       b9 a0 f1 	      lda	BoxTab,y
+      2  1c09		       85 0e		      sta	PF1
+      3  1c0b		       b1 80		      lda	(pc0),y
+      4  1c0d		       85 1b		      sta	GRP0
+      5  1c0f		       86 21		      stx	HMP1
+      6  1c11		       b1 88		      lda	(p1ptr),y
+      7  1c13		       85 1c		      sta	GRP1
+      8  1c15		       b1 8a		      lda	(p1col),y
+      9  1c17		       85 07		      sta	COLUP1
+     10  1c19		       b1 82		      lda	(pc1),y
+     11  1c1b		       86 0e		      stx	PF1
+     12  1c1d		       85 1b		      sta	GRP0
+     13  1c1f		       b1 84		      lda	(pc2),y
+     14  1c21		       85 1b		      sta	GRP0
+     15  1c23		       88		      dey
+      9  1c24		       a5 9a		      lda	shotPtr+1
+     10  1c26		       85 86		      sta	m1ptr
+     11  1c28		       a9 2f		      lda	#<St33
+     12  1c2a		       85 8c		      sta	stVec
+     13  1c2c		       4c 47 fa 	      jmp	RowA
+   1142  1c2f				   St33       SUBROUTINE
+      0  1c2f					      ST_SWAP	4, pc1, 42, St37
+      1  1c2f		       a5 94		      lda	slotPtr+4
+      2  1c31		       85 82		      sta	pc1
+      3  1c33		       a9 2a		      lda	#42
+      4  1c35		       85 8f		      sta	nextSt
+      5  1c37		       a9 fc		      lda	#>St37
+      6  1c39		       85 8d		      sta	stVec+1
+      7  1c3b		       85 02		      sta	WSYNC
+      0  1c3d					      LINE_B
+      1  1c3d		       b9 a0 f1 	      lda	BoxTab,y
+      2  1c40		       85 0e		      sta	PF1
+      3  1c42		       b1 80		      lda	(pc0),y
+      4  1c44		       85 1b		      sta	GRP0
+      5  1c46		       86 21		      stx	HMP1
+      6  1c48		       b1 88		      lda	(p1ptr),y
+      7  1c4a		       85 1c		      sta	GRP1
+      8  1c4c		       b1 8a		      lda	(p1col),y
+      9  1c4e		       85 07		      sta	COLUP1
+     10  1c50		       b1 82		      lda	(pc1),y
+     11  1c52		       86 0e		      stx	PF1
+     12  1c54		       85 1b		      sta	GRP0
+     13  1c56		       b1 84		      lda	(pc2),y
+     14  1c58		       85 1b		      sta	GRP0
+     15  1c5a		       88		      dey
+      9  1c5b		       a9 69		      lda	#<St37
+     10  1c5d		       85 8c		      sta	stVec
+     11  1c5f		       c4 8e		      cpy	nextEv
+     12  1c61		       f0 03		      beq	.ev
+     13  1c63		       4c 47 fa 	      jmp	RowA
+     14  1c66		       4c 92 fa    .ev	      jmp	EvRowA
+   1144  1c69				   St37       SUBROUTINE
+      0  1c69					      ST_SWAP	3, pc0, 40, St39
+      1  1c69		       a5 93		      lda	slotPtr+3
+      2  1c6b		       85 80		      sta	pc0
+      3  1c6d		       a9 28		      lda	#40
+      4  1c6f		       85 8f		      sta	nextSt
+      5  1c71		       a9 fc		      lda	#>St39
+      6  1c73		       85 8d		      sta	stVec+1
+      7  1c75		       85 02		      sta	WSYNC
+      0  1c77					      LINE_B
+      1  1c77		       b9 a0 f1 	      lda	BoxTab,y
+      2  1c7a		       85 0e		      sta	PF1
+      3  1c7c		       b1 80		      lda	(pc0),y
+      4  1c7e		       85 1b		      sta	GRP0
+      5  1c80		       86 21		      stx	HMP1
+      6  1c82		       b1 88		      lda	(p1ptr),y
+      7  1c84		       85 1c		      sta	GRP1
+      8  1c86		       b1 8a		      lda	(p1col),y
+      9  1c88		       85 07		      sta	COLUP1
+     10  1c8a		       b1 82		      lda	(pc1),y
+     11  1c8c		       86 0e		      stx	PF1
+     12  1c8e		       85 1b		      sta	GRP0
+     13  1c90		       b1 84		      lda	(pc2),y
+     14  1c92		       85 1b		      sta	GRP0
+     15  1c94		       88		      dey
+      9  1c95		       a9 a3		      lda	#<St39
+     10  1c97		       85 8c		      sta	stVec
+     11  1c99		       c4 8e		      cpy	nextEv
+     12  1c9b		       f0 03		      beq	.ev
+     13  1c9d		       4c 47 fa 	      jmp	RowA
+     14  1ca0		       4c 92 fa    .ev	      jmp	EvRowA
+   1146  1ca3				   St39       SUBROUTINE
+      0  1ca3					      ST_BALL	31, St48
+      1  1ca3		       a9 1f		      lda	#31
+      2  1ca5		       85 8f		      sta	nextSt
+      3  1ca7		       a9 fc		      lda	#>St48
+      4  1ca9		       85 8d		      sta	stVec+1
+      5  1cab		       24 80		      bit	$80
+      6  1cad		       85 14		      sta	RESBL
+      7  1caf		       85 02		      sta	WSYNC
+      0  1cb1					      LINE_B
+      1  1cb1		       b9 a0 f1 	      lda	BoxTab,y
+      2  1cb4		       85 0e		      sta	PF1
+      3  1cb6		       b1 80		      lda	(pc0),y
+      4  1cb8		       85 1b		      sta	GRP0
+      5  1cba		       86 21		      stx	HMP1
+      6  1cbc		       b1 88		      lda	(p1ptr),y
+      7  1cbe		       85 1c		      sta	GRP1
+      8  1cc0		       b1 8a		      lda	(p1col),y
+      9  1cc2		       85 07		      sta	COLUP1
+     10  1cc4		       b1 82		      lda	(pc1),y
+     11  1cc6		       86 0e		      stx	PF1
+     12  1cc8		       85 1b		      sta	GRP0
+     13  1cca		       b1 84		      lda	(pc2),y
+     14  1ccc		       85 1b		      sta	GRP0
+     15  1cce		       88		      dey
+      9  1ccf		       a9 dd		      lda	#<St48
+     10  1cd1		       85 8c		      sta	stVec
+     11  1cd3		       c4 8e		      cpy	nextEv
+     12  1cd5		       f0 03		      beq	.ev
+     13  1cd7		       4c 47 fa 	      jmp	RowA
+     14  1cda		       4c 92 fa    .ev	      jmp	EvRowA
+   1148  1cdd				   St48       SUBROUTINE
+      0  1cdd					      ST_SWAP	8, pc2, 29, St50
+      1  1cdd		       a5 98		      lda	slotPtr+8
+      2  1cdf		       85 84		      sta	pc2
+      3  1ce1		       a9 1d		      lda	#29
+      4  1ce3		       85 8f		      sta	nextSt
+      5  1ce5		       a9 fd		      lda	#>St50
+      6  1ce7		       85 8d		      sta	stVec+1
+      7  1ce9		       85 02		      sta	WSYNC
+      0  1ceb					      LINE_B
+      1  1ceb		       b9 a0 f1 	      lda	BoxTab,y
+      2  1cee		       85 0e		      sta	PF1
+      3  1cf0		       b1 80		      lda	(pc0),y
+      4  1cf2		       85 1b		      sta	GRP0
+      5  1cf4		       86 21		      stx	HMP1
+      6  1cf6		       b1 88		      lda	(p1ptr),y
+      7  1cf8		       85 1c		      sta	GRP1
+      8  1cfa		       b1 8a		      lda	(p1col),y
+      9  1cfc		       85 07		      sta	COLUP1
+     10  1cfe		       b1 82		      lda	(pc1),y
+     11  1d00		       86 0e		      stx	PF1
+     12  1d02		       85 1b		      sta	GRP0
+     13  1d04		       b1 84		      lda	(pc2),y
+     14  1d06		       85 1b		      sta	GRP0
+     15  1d08		       88		      dey
+      9  1d09		       a9 17		      lda	#<St50
+     10  1d0b		       85 8c		      sta	stVec
+     11  1d0d		       c4 8e		      cpy	nextEv
+     12  1d0f		       f0 03		      beq	.ev
+     13  1d11		       4c 47 fa 	      jmp	RowA
+     14  1d14		       4c 92 fa    .ev	      jmp	EvRowA
+   1150  1d17				   St50       SUBROUTINE
+      0  1d17					      ST_SHOT	2, 26, St53
+      1  1d17		       a9 1a		      lda	#26
+      2  1d19		       85 8f		      sta	nextSt
+      3  1d1b		       a9 fd		      lda	#>St53
+      4  1d1d		       85 8d		      sta	stVec+1
+      5  1d1f		       24 80		      bit	$80
+      6  1d21		       85 13		      sta	RESM1
+      7  1d23		       85 02		      sta	WSYNC
+      0  1d25					      LINE_B
+      1  1d25		       b9 a0 f1 	      lda	BoxTab,y
+      2  1d28		       85 0e		      sta	PF1
+      3  1d2a		       b1 80		      lda	(pc0),y
+      4  1d2c		       85 1b		      sta	GRP0
+      5  1d2e		       86 21		      stx	HMP1
+      6  1d30		       b1 88		      lda	(p1ptr),y
+      7  1d32		       85 1c		      sta	GRP1
+      8  1d34		       b1 8a		      lda	(p1col),y
+      9  1d36		       85 07		      sta	COLUP1
+     10  1d38		       b1 82		      lda	(pc1),y
+     11  1d3a		       86 0e		      stx	PF1
+     12  1d3c		       85 1b		      sta	GRP0
+     13  1d3e		       b1 84		      lda	(pc2),y
+     14  1d40		       85 1b		      sta	GRP0
+     15  1d42		       88		      dey
+      9  1d43		       a5 9b		      lda	shotPtr+2
+     10  1d45		       85 86		      sta	m1ptr
+     11  1d47		       a9 4e		      lda	#<St53
+     12  1d49		       85 8c		      sta	stVec
+     13  1d4b		       4c 47 fa 	      jmp	RowA
+   1152  1d4e				   St53       SUBROUTINE
+      0  1d4e					      ST_SWAP	7, pc1, 22, St57
+      1  1d4e		       a5 97		      lda	slotPtr+7
+      2  1d50		       85 82		      sta	pc1
+      3  1d52		       a9 16		      lda	#22
+      4  1d54		       85 8f		      sta	nextSt
+      5  1d56		       a9 fd		      lda	#>St57
+      6  1d58		       85 8d		      sta	stVec+1
+      7  1d5a		       85 02		      sta	WSYNC
+      0  1d5c					      LINE_B
+      1  1d5c		       b9 a0 f1 	      lda	BoxTab,y
+      2  1d5f		       85 0e		      sta	PF1
+      3  1d61		       b1 80		      lda	(pc0),y
+      4  1d63		       85 1b		      sta	GRP0
+      5  1d65		       86 21		      stx	HMP1
+      6  1d67		       b1 88		      lda	(p1ptr),y
+      7  1d69		       85 1c		      sta	GRP1
+      8  1d6b		       b1 8a		      lda	(p1col),y
+      9  1d6d		       85 07		      sta	COLUP1
+     10  1d6f		       b1 82		      lda	(pc1),y
+     11  1d71		       86 0e		      stx	PF1
+     12  1d73		       85 1b		      sta	GRP0
+     13  1d75		       b1 84		      lda	(pc2),y
+     14  1d77		       85 1b		      sta	GRP0
+     15  1d79		       88		      dey
+      9  1d7a		       a9 88		      lda	#<St57
+     10  1d7c		       85 8c		      sta	stVec
+     11  1d7e		       c4 8e		      cpy	nextEv
+     12  1d80		       f0 03		      beq	.ev
+     13  1d82		       4c 47 fa 	      jmp	RowA
+     14  1d85		       4c 92 fa    .ev	      jmp	EvRowA
+   1154  1d88				   St57       SUBROUTINE
+      0  1d88					      ST_SWAP	6, pc0, 20, St59
+      1  1d88		       a5 96		      lda	slotPtr+6
+      2  1d8a		       85 80		      sta	pc0
+      3  1d8c		       a9 14		      lda	#20
+      4  1d8e		       85 8f		      sta	nextSt
+      5  1d90		       a9 fd		      lda	#>St59
+      6  1d92		       85 8d		      sta	stVec+1
+      7  1d94		       85 02		      sta	WSYNC
+      0  1d96					      LINE_B
+      1  1d96		       b9 a0 f1 	      lda	BoxTab,y
+      2  1d99		       85 0e		      sta	PF1
+      3  1d9b		       b1 80		      lda	(pc0),y
+      4  1d9d		       85 1b		      sta	GRP0
+      5  1d9f		       86 21		      stx	HMP1
+      6  1da1		       b1 88		      lda	(p1ptr),y
+      7  1da3		       85 1c		      sta	GRP1
+      8  1da5		       b1 8a		      lda	(p1col),y
+      9  1da7		       85 07		      sta	COLUP1
+     10  1da9		       b1 82		      lda	(pc1),y
+     11  1dab		       86 0e		      stx	PF1
+     12  1dad		       85 1b		      sta	GRP0
+     13  1daf		       b1 84		      lda	(pc2),y
+     14  1db1		       85 1b		      sta	GRP0
+     15  1db3		       88		      dey
+      9  1db4		       a9 c2		      lda	#<St59
+     10  1db6		       85 8c		      sta	stVec
+     11  1db8		       c4 8e		      cpy	nextEv
+     12  1dba		       f0 03		      beq	.ev
+     13  1dbc		       4c 47 fa 	      jmp	RowA
+     14  1dbf		       4c 92 fa    .ev	      jmp	EvRowA
+   1156  1dc2				   St59       SUBROUTINE
+      0  1dc2					      ST_BALL	0, StEnd
+      1  1dc2		       a9 00		      lda	#0
+      2  1dc4		       85 8f		      sta	nextSt
+      3  1dc6		       a9 fd		      lda	#>StEnd
+      4  1dc8		       85 8d		      sta	stVec+1
+      5  1dca		       24 80		      bit	$80
+      6  1dcc		       85 14		      sta	RESBL
+      7  1dce		       85 02		      sta	WSYNC
+      0  1dd0					      LINE_B
+      1  1dd0		       b9 a0 f1 	      lda	BoxTab,y
+      2  1dd3		       85 0e		      sta	PF1
+      3  1dd5		       b1 80		      lda	(pc0),y
+      4  1dd7		       85 1b		      sta	GRP0
+      5  1dd9		       86 21		      stx	HMP1
+      6  1ddb		       b1 88		      lda	(p1ptr),y
+      7  1ddd		       85 1c		      sta	GRP1
+      8  1ddf		       b1 8a		      lda	(p1col),y
+      9  1de1		       85 07		      sta	COLUP1
+     10  1de3		       b1 82		      lda	(pc1),y
+     11  1de5		       86 0e		      stx	PF1
+     12  1de7		       85 1b		      sta	GRP0
+     13  1de9		       b1 84		      lda	(pc2),y
+     14  1deb		       85 1b		      sta	GRP0
+     15  1ded		       88		      dey
+      9  1dee		       a9 fc		      lda	#<StEnd
+     10  1df0		       85 8c		      sta	stVec
+     11  1df2		       c4 8e		      cpy	nextEv
+     12  1df4		       f0 03		      beq	.ev
+     13  1df6		       4c 47 fa 	      jmp	RowA
+     14  1df9		       4c 92 fa    .ev	      jmp	EvRowA
+   1158  1dfc				   StEnd      SUBROUTINE		; row 79 (y 0): the last line B, then overscan
+   1159  1dfc		       85 02		      sta	WSYNC
+      0  1dfe					      LINE_B
+      1  1dfe		       b9 a0 f1 	      lda	BoxTab,y
+      2  1e01		       85 0e		      sta	PF1
+      3  1e03		       b1 80		      lda	(pc0),y
+      4  1e05		       85 1b		      sta	GRP0
+      5  1e07		       86 21		      stx	HMP1
+      6  1e09		       b1 88		      lda	(p1ptr),y
+      7  1e0b		       85 1c		      sta	GRP1
+      8  1e0d		       b1 8a		      lda	(p1col),y
+      9  1e0f		       85 07		      sta	COLUP1
+     10  1e11		       b1 82		      lda	(pc1),y
+     11  1e13		       86 0e		      stx	PF1
+     12  1e15		       85 1b		      sta	GRP0
+     13  1e17		       b1 84		      lda	(pc2),y
+     14  1e19		       85 1b		      sta	GRP0
+     15  1e1b		       88		      dey
+   1161  1e1c		       85 02		      sta	WSYNC
+   1162  1e1e		       a9 02		      lda	#2
+   1163  1e20		       85 01		      sta	VBLANK
+   1164  1e22		       a9 00		      lda	#0
+   1165  1e24		       85 1b		      sta	GRP0
+   1166  1e26		       85 1c		      sta	GRP1
+   1167  1e28		       85 1f		      sta	ENABL
+   1168  1e2a		       85 1e		      sta	ENAM1
+   1169  1e2c		       85 0e		      sta	PF1
+   1170  1e2e		       a2 ff		      ldx	#STACKTOP
+   1171  1e30		       9a		      txs
+   1172  1e31		       4c e6 ff 	      jmp	ToBank0
+   1173  1e34
+   1174  1e34							;-------------------------------------------------------------------------------
 ------- FILE gen/variants.inc LEVEL 2 PASS 2
-      0  1e30					      include	"gen/variants.inc"
-      1  1e30							; generated by tools/gen.mjs -- do not edit
-      2  1e30				   EvA0 		; line A tail after the rts (cycle 58): enemy graphics pointer
-      3  1e30		       68		      pla
-      4  1e31		       85 88		      sta	p1ptr
-      5  1e33		       68		      pla
-      6  1e34		       85 89		      sta	p1ptr+1
-      7  1e36		       85 02		      sta	WSYNC
-      8  1e38				   EvB0 		; RESP1 lands on cycle 34 (x 42), line B work ends at 70
-      9  1e38		       b9 a0 f1 	      lda	BoxTab,y
-     10  1e3b		       85 0e		      sta	PF1
-     11  1e3d		       b1 80		      lda	(pc0),y
-     12  1e3f		       85 1b		      sta	GRP0
-     13  1e41		       68		      pla
-     14  1e42		       85 8a		      sta	p1col
-     15  1e44		       68		      pla
-     16  1e45		       85 8b		      sta	p1col+1
-     17  1e47		       24 80		      bit	$80
-     18  1e49		       85 11		      sta	RESP1
-     19  1e4b		       b1 82		      lda	(pc1),y
-     20  1e4d		       86 0e		      stx	PF1
-     21  1e4f		       85 1b		      sta	GRP0
-     22  1e51		       b1 84		      lda	(pc2),y
-     23  1e53		       88		      dey
-     24  1e54		       85 1b		      sta	GRP0
-     25  1e56		       68		      pla
-     26  1e57		       85 21		      sta	HMP1
-     27  1e59		       68		      pla
-     28  1e5a		       85 8e		      sta	nextEv
-     29  1e5c		       24 80		      bit	$80
-     30  1e5e		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-     31  1e61				   EvA1 		; line A tail after the rts (cycle 58): enemy graphics pointer
-     32  1e61		       68		      pla
-     33  1e62		       85 88		      sta	p1ptr
-     34  1e64		       68		      pla
-     35  1e65		       85 89		      sta	p1ptr+1
-     36  1e67		       85 02		      sta	WSYNC
-     37  1e69				   EvB1 		; RESP1 lands on cycle 39 (x 57), line B work ends at 70
-     38  1e69		       b9 a0 f1 	      lda	BoxTab,y
-     39  1e6c		       85 0e		      sta	PF1
-     40  1e6e		       b1 80		      lda	(pc0),y
-     41  1e70		       85 1b		      sta	GRP0
-     42  1e72		       68		      pla
-     43  1e73		       85 8a		      sta	p1col
-     44  1e75		       68		      pla
-     45  1e76		       85 8b		      sta	p1col+1
-     46  1e78		       b1 82		      lda	(pc1),y
-     47  1e7a		       24 80		      bit	$80
-     48  1e7c		       85 11		      sta	RESP1
-     49  1e7e		       86 0e		      stx	PF1
-     50  1e80		       85 1b		      sta	GRP0
-     51  1e82		       b1 84		      lda	(pc2),y
-     52  1e84		       88		      dey
-     53  1e85		       85 1b		      sta	GRP0
-     54  1e87		       68		      pla
-     55  1e88		       85 21		      sta	HMP1
-     56  1e8a		       68		      pla
-     57  1e8b		       85 8e		      sta	nextEv
-     58  1e8d		       24 80		      bit	$80
-     59  1e8f		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-     60  1e92				   EvA2 		; line A tail after the rts (cycle 58): enemy graphics pointer
-     61  1e92		       68		      pla
-     62  1e93		       85 88		      sta	p1ptr
-     63  1e95		       68		      pla
-     64  1e96		       85 89		      sta	p1ptr+1
-     65  1e98		       85 02		      sta	WSYNC
-     66  1e9a				   EvB2 		; RESP1 lands on cycle 44 (x 72), line B work ends at 69
-     67  1e9a		       b9 a0 f1 	      lda	BoxTab,y
-     68  1e9d		       85 0e		      sta	PF1
-     69  1e9f		       b1 80		      lda	(pc0),y
-     70  1ea1		       85 1b		      sta	GRP0
-     71  1ea3		       68		      pla
-     72  1ea4		       85 8a		      sta	p1col
-     73  1ea6		       68		      pla
-     74  1ea7		       85 8b		      sta	p1col+1
-     75  1ea9		       b1 82		      lda	(pc1),y
-     76  1eab		       ea		      nop
-     77  1eac		       86 0e		      stx	PF1
-     78  1eae		       85 1b		      sta	GRP0
-     79  1eb0		       85 11		      sta	RESP1
-     80  1eb2		       68		      pla
-     81  1eb3		       85 21		      sta	HMP1
-     82  1eb5		       b1 84		      lda	(pc2),y
-     83  1eb7		       85 1b		      sta	GRP0
-     84  1eb9		       88		      dey
-     85  1eba		       68		      pla
-     86  1ebb		       85 8e		      sta	nextEv
-     87  1ebd		       ea		      nop
-     88  1ebe		       ea		      nop
-     89  1ebf		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-     90  1ec2				   EvA3 		; line A tail after the rts (cycle 58): enemy graphics pointer
-     91  1ec2		       68		      pla
-     92  1ec3		       85 88		      sta	p1ptr
-     93  1ec5		       68		      pla
-     94  1ec6		       85 89		      sta	p1ptr+1
-     95  1ec8		       85 02		      sta	WSYNC
-     96  1eca				   EvB3 		; RESP1 lands on cycle 49 (x 87), line B work ends at 67
-     97  1eca		       b9 a0 f1 	      lda	BoxTab,y
-     98  1ecd		       85 0e		      sta	PF1
-     99  1ecf		       b1 80		      lda	(pc0),y
-    100  1ed1		       85 1b		      sta	GRP0
-    101  1ed3		       68		      pla
-    102  1ed4		       85 8a		      sta	p1col
-    103  1ed6		       68		      pla
-    104  1ed7		       85 8b		      sta	p1col+1
-    105  1ed9		       68		      pla
-    106  1eda		       85 21		      sta	HMP1
-    107  1edc		       86 0e		      stx	PF1
-    108  1ede		       b1 82		      lda	(pc1),y
-    109  1ee0		       85 1b		      sta	GRP0
-    110  1ee2		       85 11		      sta	RESP1
-    111  1ee4		       b1 84		      lda	(pc2),y
-    112  1ee6		       88		      dey
-    113  1ee7		       85 1b		      sta	GRP0
-    114  1ee9		       68		      pla
-    115  1eea		       85 8e		      sta	nextEv
-    116  1eec		       ea		      nop
-    117  1eed		       ea		      nop
-    118  1eee		       ea		      nop
-    119  1eef		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-    120  1ef2				   EvA4 		; line A tail after the rts (cycle 58): enemy graphics pointer
-    121  1ef2		       68		      pla
-    122  1ef3		       85 88		      sta	p1ptr
-    123  1ef5		       68		      pla
-    124  1ef6		       85 89		      sta	p1ptr+1
-    125  1ef8		       85 02		      sta	WSYNC
-    126  1efa				   EvB4 		; RESP1 lands on cycle 54 (x 102), line B work ends at 67
-    127  1efa		       b9 a0 f1 	      lda	BoxTab,y
-    128  1efd		       85 0e		      sta	PF1
-    129  1eff		       b1 80		      lda	(pc0),y
-    130  1f01		       85 1b		      sta	GRP0
-    131  1f03		       68		      pla
-    132  1f04		       85 8a		      sta	p1col
-    133  1f06		       68		      pla
-    134  1f07		       85 8b		      sta	p1col+1
-    135  1f09		       68		      pla
-    136  1f0a		       85 21		      sta	HMP1
-    137  1f0c		       86 0e		      stx	PF1
-    138  1f0e		       b1 82		      lda	(pc1),y
-    139  1f10		       85 1b		      sta	GRP0
-    140  1f12		       b1 84		      lda	(pc2),y
-    141  1f14		       85 11		      sta	RESP1
-    142  1f16		       88		      dey
-    143  1f17		       85 1b		      sta	GRP0
-    144  1f19		       68		      pla
-    145  1f1a		       85 8e		      sta	nextEv
-    146  1f1c		       ea		      nop
-    147  1f1d		       ea		      nop
-    148  1f1e		       ea		      nop
-    149  1f1f		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-    150  1f22				   EvA5 		; line A tail after the rts (cycle 58): enemy graphics pointer
-    151  1f22		       68		      pla
-    152  1f23		       85 88		      sta	p1ptr
-    153  1f25		       68		      pla
-    154  1f26		       85 89		      sta	p1ptr+1
-    155  1f28		       85 02		      sta	WSYNC
-    156  1f2a				   EvB5 		; RESP1 lands on cycle 59 (x 117), line B work ends at 67
-    157  1f2a		       b9 a0 f1 	      lda	BoxTab,y
-    158  1f2d		       85 0e		      sta	PF1
-    159  1f2f		       b1 80		      lda	(pc0),y
-    160  1f31		       85 1b		      sta	GRP0
-    161  1f33		       68		      pla
-    162  1f34		       85 8a		      sta	p1col
-    163  1f36		       68		      pla
-    164  1f37		       85 8b		      sta	p1col+1
-    165  1f39		       68		      pla
-    166  1f3a		       85 21		      sta	HMP1
-    167  1f3c		       86 0e		      stx	PF1
-    168  1f3e		       b1 82		      lda	(pc1),y
-    169  1f40		       85 1b		      sta	GRP0
-    170  1f42		       b1 84		      lda	(pc2),y
-    171  1f44		       88		      dey
-    172  1f45		       85 1b		      sta	GRP0
-    173  1f47		       85 11		      sta	RESP1
-    174  1f49		       68		      pla
-    175  1f4a		       85 8e		      sta	nextEv
-    176  1f4c		       ea		      nop
-    177  1f4d		       ea		      nop
-    178  1f4e		       ea		      nop
-    179  1f4f		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-    180  1f52				   EvA6 		; line A tail after the rts (cycle 58): enemy graphics pointer
-    181  1f52		       68		      pla
-    182  1f53		       85 88		      sta	p1ptr
-    183  1f55		       68		      pla
-    184  1f56		       85 89		      sta	p1ptr+1
-    185  1f58		       85 02		      sta	WSYNC
-    186  1f5a				   EvB6 		; RESP1 lands on cycle 64 (x 132), line B work ends at 67
-    187  1f5a		       b9 a0 f1 	      lda	BoxTab,y
-    188  1f5d		       85 0e		      sta	PF1
-    189  1f5f		       b1 80		      lda	(pc0),y
-    190  1f61		       85 1b		      sta	GRP0
-    191  1f63		       68		      pla
-    192  1f64		       85 8a		      sta	p1col
-    193  1f66		       68		      pla
-    194  1f67		       85 8b		      sta	p1col+1
-    195  1f69		       68		      pla
-    196  1f6a		       85 21		      sta	HMP1
-    197  1f6c		       86 0e		      stx	PF1
-    198  1f6e		       b1 82		      lda	(pc1),y
-    199  1f70		       85 1b		      sta	GRP0
-    200  1f72		       b1 84		      lda	(pc2),y
-    201  1f74		       85 1b		      sta	GRP0
-    202  1f76		       68		      pla
-    203  1f77		       85 8e		      sta	nextEv
-    204  1f79		       85 11		      sta	RESP1
-    205  1f7b		       88		      dey
-    206  1f7c		       ea		      nop
-    207  1f7d		       ea		      nop
-    208  1f7e		       ea		      nop
-    209  1f7f		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
-    210  1f82				   EvA7 		; line A tail after the rts (cycle 58): enemy graphics pointer
-    211  1f82		       68		      pla
-    212  1f83		       85 88		      sta	p1ptr
-    213  1f85		       68		      pla
-    214  1f86		       85 89		      sta	p1ptr+1
-    215  1f88		       85 02		      sta	WSYNC
-    216  1f8a				   EvB7 		; RESP1 lands on cycle 69 (x 147), line B work ends at 70
-    217  1f8a		       b9 a0 f1 	      lda	BoxTab,y
-    218  1f8d		       85 0e		      sta	PF1
-    219  1f8f		       b1 80		      lda	(pc0),y
-    220  1f91		       85 1b		      sta	GRP0
-    221  1f93		       68		      pla
-    222  1f94		       85 8a		      sta	p1col
-    223  1f96		       68		      pla
-    224  1f97		       85 8b		      sta	p1col+1
-    225  1f99		       68		      pla
-    226  1f9a		       85 21		      sta	HMP1
-    227  1f9c		       86 0e		      stx	PF1
-    228  1f9e		       b1 82		      lda	(pc1),y
-    229  1fa0		       85 1b		      sta	GRP0
-    230  1fa2		       b1 84		      lda	(pc2),y
-    231  1fa4		       88		      dey
-    232  1fa5		       85 1b		      sta	GRP0
-    233  1fa7		       68		      pla
-    234  1fa8		       85 8e		      sta	nextEv
-    235  1faa		       24 80		      bit	$80
-    236  1fac		       85 11		      sta	RESP1
-    237  1fae		       24 80		      bit	$80
-    238  1fb0		       4c 45 fa 	      jmp	RowAH	; ends on cycle 76
+      0  1e34					      include	"gen/variants.inc"
+      1  1e34							; generated by tools/gen.mjs -- do not edit
+      2  1e34				   EvA0 		; line A tail after the rts (cycle 58): enemy graphics pointer
+      3  1e34		       68		      pla
+      4  1e35		       85 88		      sta	p1ptr
+      5  1e37		       68		      pla
+      6  1e38		       85 89		      sta	p1ptr+1
+      7  1e3a		       85 02		      sta	WSYNC
+      8  1e3c				   EvB0 		; RESP1 lands on cycle 34 (x 42), line B work ends at 70
+      9  1e3c		       b9 a0 f1 	      lda	BoxTab,y
+     10  1e3f		       85 0e		      sta	PF1
+     11  1e41		       b1 80		      lda	(pc0),y
+     12  1e43		       85 1b		      sta	GRP0
+     13  1e45		       68		      pla
+     14  1e46		       85 8a		      sta	p1col
+     15  1e48		       68		      pla
+     16  1e49		       85 8b		      sta	p1col+1
+     17  1e4b		       24 80		      bit	$80
+     18  1e4d		       85 11		      sta	RESP1
+     19  1e4f		       b1 82		      lda	(pc1),y
+     20  1e51		       86 0e		      stx	PF1
+     21  1e53		       85 1b		      sta	GRP0
+     22  1e55		       b1 84		      lda	(pc2),y
+     23  1e57		       88		      dey
+     24  1e58		       85 1b		      sta	GRP0
+     25  1e5a		       68		      pla
+     26  1e5b		       85 21		      sta	HMP1
+     27  1e5d		       68		      pla
+     28  1e5e		       85 8e		      sta	nextEv
+     29  1e60		       24 80		      bit	$80
+     30  1e62		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+     31  1e65				   EvA1 		; line A tail after the rts (cycle 58): enemy graphics pointer
+     32  1e65		       68		      pla
+     33  1e66		       85 88		      sta	p1ptr
+     34  1e68		       68		      pla
+     35  1e69		       85 89		      sta	p1ptr+1
+     36  1e6b		       85 02		      sta	WSYNC
+     37  1e6d				   EvB1 		; RESP1 lands on cycle 39 (x 57), line B work ends at 70
+     38  1e6d		       b9 a0 f1 	      lda	BoxTab,y
+     39  1e70		       85 0e		      sta	PF1
+     40  1e72		       b1 80		      lda	(pc0),y
+     41  1e74		       85 1b		      sta	GRP0
+     42  1e76		       68		      pla
+     43  1e77		       85 8a		      sta	p1col
+     44  1e79		       68		      pla
+     45  1e7a		       85 8b		      sta	p1col+1
+     46  1e7c		       b1 82		      lda	(pc1),y
+     47  1e7e		       24 80		      bit	$80
+     48  1e80		       85 11		      sta	RESP1
+     49  1e82		       86 0e		      stx	PF1
+     50  1e84		       85 1b		      sta	GRP0
+     51  1e86		       b1 84		      lda	(pc2),y
+     52  1e88		       88		      dey
+     53  1e89		       85 1b		      sta	GRP0
+     54  1e8b		       68		      pla
+     55  1e8c		       85 21		      sta	HMP1
+     56  1e8e		       68		      pla
+     57  1e8f		       85 8e		      sta	nextEv
+     58  1e91		       24 80		      bit	$80
+     59  1e93		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+     60  1e96				   EvA2 		; line A tail after the rts (cycle 58): enemy graphics pointer
+     61  1e96		       68		      pla
+     62  1e97		       85 88		      sta	p1ptr
+     63  1e99		       68		      pla
+     64  1e9a		       85 89		      sta	p1ptr+1
+     65  1e9c		       85 02		      sta	WSYNC
+     66  1e9e				   EvB2 		; RESP1 lands on cycle 44 (x 72), line B work ends at 69
+     67  1e9e		       b9 a0 f1 	      lda	BoxTab,y
+     68  1ea1		       85 0e		      sta	PF1
+     69  1ea3		       b1 80		      lda	(pc0),y
+     70  1ea5		       85 1b		      sta	GRP0
+     71  1ea7		       68		      pla
+     72  1ea8		       85 8a		      sta	p1col
+     73  1eaa		       68		      pla
+     74  1eab		       85 8b		      sta	p1col+1
+     75  1ead		       b1 82		      lda	(pc1),y
+     76  1eaf		       ea		      nop
+     77  1eb0		       86 0e		      stx	PF1
+     78  1eb2		       85 1b		      sta	GRP0
+     79  1eb4		       85 11		      sta	RESP1
+     80  1eb6		       68		      pla
+     81  1eb7		       85 21		      sta	HMP1
+     82  1eb9		       b1 84		      lda	(pc2),y
+     83  1ebb		       85 1b		      sta	GRP0
+     84  1ebd		       88		      dey
+     85  1ebe		       68		      pla
+     86  1ebf		       85 8e		      sta	nextEv
+     87  1ec1		       ea		      nop
+     88  1ec2		       ea		      nop
+     89  1ec3		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+     90  1ec6				   EvA3 		; line A tail after the rts (cycle 58): enemy graphics pointer
+     91  1ec6		       68		      pla
+     92  1ec7		       85 88		      sta	p1ptr
+     93  1ec9		       68		      pla
+     94  1eca		       85 89		      sta	p1ptr+1
+     95  1ecc		       85 02		      sta	WSYNC
+     96  1ece				   EvB3 		; RESP1 lands on cycle 49 (x 87), line B work ends at 67
+     97  1ece		       b9 a0 f1 	      lda	BoxTab,y
+     98  1ed1		       85 0e		      sta	PF1
+     99  1ed3		       b1 80		      lda	(pc0),y
+    100  1ed5		       85 1b		      sta	GRP0
+    101  1ed7		       68		      pla
+    102  1ed8		       85 8a		      sta	p1col
+    103  1eda		       68		      pla
+    104  1edb		       85 8b		      sta	p1col+1
+    105  1edd		       68		      pla
+    106  1ede		       85 21		      sta	HMP1
+    107  1ee0		       86 0e		      stx	PF1
+    108  1ee2		       b1 82		      lda	(pc1),y
+    109  1ee4		       85 1b		      sta	GRP0
+    110  1ee6		       85 11		      sta	RESP1
+    111  1ee8		       b1 84		      lda	(pc2),y
+    112  1eea		       88		      dey
+    113  1eeb		       85 1b		      sta	GRP0
+    114  1eed		       68		      pla
+    115  1eee		       85 8e		      sta	nextEv
+    116  1ef0		       ea		      nop
+    117  1ef1		       ea		      nop
+    118  1ef2		       ea		      nop
+    119  1ef3		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+    120  1ef6				   EvA4 		; line A tail after the rts (cycle 58): enemy graphics pointer
+    121  1ef6		       68		      pla
+    122  1ef7		       85 88		      sta	p1ptr
+    123  1ef9		       68		      pla
+    124  1efa		       85 89		      sta	p1ptr+1
+    125  1efc		       85 02		      sta	WSYNC
+    126  1efe				   EvB4 		; RESP1 lands on cycle 54 (x 102), line B work ends at 67
+    127  1efe		       b9 a0 f1 	      lda	BoxTab,y
+    128  1f01		       85 0e		      sta	PF1
+    129  1f03		       b1 80		      lda	(pc0),y
+    130  1f05		       85 1b		      sta	GRP0
+    131  1f07		       68		      pla
+    132  1f08		       85 8a		      sta	p1col
+    133  1f0a		       68		      pla
+    134  1f0b		       85 8b		      sta	p1col+1
+    135  1f0d		       68		      pla
+    136  1f0e		       85 21		      sta	HMP1
+    137  1f10		       86 0e		      stx	PF1
+    138  1f12		       b1 82		      lda	(pc1),y
+    139  1f14		       85 1b		      sta	GRP0
+    140  1f16		       b1 84		      lda	(pc2),y
+    141  1f18		       85 11		      sta	RESP1
+    142  1f1a		       88		      dey
+    143  1f1b		       85 1b		      sta	GRP0
+    144  1f1d		       68		      pla
+    145  1f1e		       85 8e		      sta	nextEv
+    146  1f20		       ea		      nop
+    147  1f21		       ea		      nop
+    148  1f22		       ea		      nop
+    149  1f23		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+    150  1f26				   EvA5 		; line A tail after the rts (cycle 58): enemy graphics pointer
+    151  1f26		       68		      pla
+    152  1f27		       85 88		      sta	p1ptr
+    153  1f29		       68		      pla
+    154  1f2a		       85 89		      sta	p1ptr+1
+    155  1f2c		       85 02		      sta	WSYNC
+    156  1f2e				   EvB5 		; RESP1 lands on cycle 59 (x 117), line B work ends at 67
+    157  1f2e		       b9 a0 f1 	      lda	BoxTab,y
+    158  1f31		       85 0e		      sta	PF1
+    159  1f33		       b1 80		      lda	(pc0),y
+    160  1f35		       85 1b		      sta	GRP0
+    161  1f37		       68		      pla
+    162  1f38		       85 8a		      sta	p1col
+    163  1f3a		       68		      pla
+    164  1f3b		       85 8b		      sta	p1col+1
+    165  1f3d		       68		      pla
+    166  1f3e		       85 21		      sta	HMP1
+    167  1f40		       86 0e		      stx	PF1
+    168  1f42		       b1 82		      lda	(pc1),y
+    169  1f44		       85 1b		      sta	GRP0
+    170  1f46		       b1 84		      lda	(pc2),y
+    171  1f48		       88		      dey
+    172  1f49		       85 1b		      sta	GRP0
+    173  1f4b		       85 11		      sta	RESP1
+    174  1f4d		       68		      pla
+    175  1f4e		       85 8e		      sta	nextEv
+    176  1f50		       ea		      nop
+    177  1f51		       ea		      nop
+    178  1f52		       ea		      nop
+    179  1f53		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+    180  1f56				   EvA6 		; line A tail after the rts (cycle 58): enemy graphics pointer
+    181  1f56		       68		      pla
+    182  1f57		       85 88		      sta	p1ptr
+    183  1f59		       68		      pla
+    184  1f5a		       85 89		      sta	p1ptr+1
+    185  1f5c		       85 02		      sta	WSYNC
+    186  1f5e				   EvB6 		; RESP1 lands on cycle 64 (x 132), line B work ends at 67
+    187  1f5e		       b9 a0 f1 	      lda	BoxTab,y
+    188  1f61		       85 0e		      sta	PF1
+    189  1f63		       b1 80		      lda	(pc0),y
+    190  1f65		       85 1b		      sta	GRP0
+    191  1f67		       68		      pla
+    192  1f68		       85 8a		      sta	p1col
+    193  1f6a		       68		      pla
+    194  1f6b		       85 8b		      sta	p1col+1
+    195  1f6d		       68		      pla
+    196  1f6e		       85 21		      sta	HMP1
+    197  1f70		       86 0e		      stx	PF1
+    198  1f72		       b1 82		      lda	(pc1),y
+    199  1f74		       85 1b		      sta	GRP0
+    200  1f76		       b1 84		      lda	(pc2),y
+    201  1f78		       85 1b		      sta	GRP0
+    202  1f7a		       68		      pla
+    203  1f7b		       85 8e		      sta	nextEv
+    204  1f7d		       85 11		      sta	RESP1
+    205  1f7f		       88		      dey
+    206  1f80		       ea		      nop
+    207  1f81		       ea		      nop
+    208  1f82		       ea		      nop
+    209  1f83		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
+    210  1f86				   EvA7 		; line A tail after the rts (cycle 58): enemy graphics pointer
+    211  1f86		       68		      pla
+    212  1f87		       85 88		      sta	p1ptr
+    213  1f89		       68		      pla
+    214  1f8a		       85 89		      sta	p1ptr+1
+    215  1f8c		       85 02		      sta	WSYNC
+    216  1f8e				   EvB7 		; RESP1 lands on cycle 69 (x 147), line B work ends at 70
+    217  1f8e		       b9 a0 f1 	      lda	BoxTab,y
+    218  1f91		       85 0e		      sta	PF1
+    219  1f93		       b1 80		      lda	(pc0),y
+    220  1f95		       85 1b		      sta	GRP0
+    221  1f97		       68		      pla
+    222  1f98		       85 8a		      sta	p1col
+    223  1f9a		       68		      pla
+    224  1f9b		       85 8b		      sta	p1col+1
+    225  1f9d		       68		      pla
+    226  1f9e		       85 21		      sta	HMP1
+    227  1fa0		       86 0e		      stx	PF1
+    228  1fa2		       b1 82		      lda	(pc1),y
+    229  1fa4		       85 1b		      sta	GRP0
+    230  1fa6		       b1 84		      lda	(pc2),y
+    231  1fa8		       88		      dey
+    232  1fa9		       85 1b		      sta	GRP0
+    233  1fab		       68		      pla
+    234  1fac		       85 8e		      sta	nextEv
+    235  1fae		       24 80		      bit	$80
+    236  1fb0		       85 11		      sta	RESP1
+    237  1fb2		       24 80		      bit	$80
+    238  1fb4		       4c 49 fa 	      jmp	RowAH	; ends on cycle 76
 ------- FILE toywars.asm
-   1171  1fb3
-   1172  1fb3							;-------------------------------------------------------------------------------
-   1173  1fe0					      ORG	$1FE0
-   1174  1fe0					      RORG	$FFE0
-   1175  1fe0		       ad f6 ff 	      lda	$FFF6	; (bank 0 switches to 1 here)
-   1176  1fe3		       4c b3 f9 	      jmp	PreKernel	; $FFE3
-   1177  1fe6				   ToBank0
-   1178  1fe6		       ad f6 ff 	      lda	$FFF6	; $FFE6: bank 0 continues at $FFE9
-   1179  1ff0					      ORG	$1FF0
-   1180  1ff0					      RORG	$FFF0
-   1181  1ff0				   Reset1
-   1182  1ff0		       ad f6 ff 	      lda	$FFF6
-   1183  1ffa					      ORG	$1FFA
-   1184  1ffa					      RORG	$FFFA
-   1185  1ffa		       f0 ff f0 ff*	      .word.w	Reset1, Reset1, Reset1
-   1186  2000
-   1187  2000							;===============================================================================
-   1188  2000							; BANKS 2 and 3: free for now (game logic and sound will move here)
-   1189  2000							;===============================================================================
-   1190  3000 ????				      SEG	bank2
-   1191  2000					      ORG	$2000
-   1192  2000					      RORG	$F000
-   1193  2000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
+   1176  1fb7
+   1177  1fb7							;-------------------------------------------------------------------------------
+   1178  1fe0					      ORG	$1FE0
+   1179  1fe0					      RORG	$FFE0
+   1180  1fe0		       ad f6 ff 	      lda	$FFF6	; (bank 0 switches to 1 here)
+   1181  1fe3		       4c b3 f9 	      jmp	PreKernel	; $FFE3
+   1182  1fe6				   ToBank0
+   1183  1fe6		       ad f6 ff 	      lda	$FFF6	; $FFE6: bank 0 continues at $FFE9
+   1184  1ff0					      ORG	$1FF0
+   1185  1ff0					      RORG	$FFF0
+   1186  1ff0				   Reset1
+   1187  1ff0		       ad f6 ff 	      lda	$FFF6
+   1188  1ffa					      ORG	$1FFA
+   1189  1ffa					      RORG	$FFFA
+   1190  1ffa		       f0 ff f0 ff*	      .word.w	Reset1, Reset1, Reset1
+   1191  2000
+   1192  2000							;===============================================================================
+   1193  2000							; BANKS 2 and 3: free for now (game logic and sound will move here)
+   1194  2000							;===============================================================================
+   1195  3000 ????				      SEG	bank2
+   1196  2000					      ORG	$2000
+   1197  2000					      RORG	$F000
+   1198  2000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
 ------- FILE logic.asm LEVEL 2 PASS 2
       0  2100					      include	"logic.asm"
       1  2100							; TOY WARS game logic (bank 2), included by toywars.asm.
@@ -4244,31 +4249,31 @@
      38  2ea9				   LaneBase2
      39  2ea9		       14 28 3c 00*	      .byte.b	20,40,60,0,20,40,60
 ------- FILE toywars.asm
-   1196  2eb0
-   1197  2fc3					      ORG	$2FC3
-   1198  2fc3					      RORG	$FFC3
-   1199  2fc3		       20 00 f1 	      jsr	LogicInit
-   1200  2fc6		       ad f6 ff 	      lda	$FFF6	; back to bank 0, which returns at $FFC9
-   1201  2fd3					      ORG	$2FD3
-   1202  2fd3					      RORG	$FFD3
-   1203  2fd3		       20 18 f1 	      jsr	Logic
-   1204  2fd6		       ad f6 ff 	      lda	$FFF6	; back to bank 0, which returns at $FFD9
-   1205  2ff0					      ORG	$2FF0
-   1206  2ff0					      RORG	$FFF0
-   1207  2ff0				   Reset2
-   1208  2ff0		       ad f6 ff 	      lda	$FFF6
-   1209  2ffa					      ORG	$2FFA
-   1210  2ffa					      RORG	$FFFA
-   1211  2ffa		       f0 ff f0 ff*	      .word.w	Reset2, Reset2, Reset2
-   1212  3000
-   1213  4000 ????				      SEG	bank3
-   1214  3000					      ORG	$3000
-   1215  3000					      RORG	$F000
-   1216  3000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
-   1217  3ff0					      ORG	$3FF0
-   1218  3ff0					      RORG	$FFF0
-   1219  3ff0				   Reset3
-   1220  3ff0		       ad f6 ff 	      lda	$FFF6
-   1221  3ffa					      ORG	$3FFA
-   1222  3ffa					      RORG	$FFFA
-   1223  3ffa		       f0 ff f0 ff*	      .word.w	Reset3, Reset3, Reset3
+   1201  2eb0
+   1202  2fc3					      ORG	$2FC3
+   1203  2fc3					      RORG	$FFC3
+   1204  2fc3		       20 00 f1 	      jsr	LogicInit
+   1205  2fc6		       ad f6 ff 	      lda	$FFF6	; back to bank 0, which returns at $FFC9
+   1206  2fd3					      ORG	$2FD3
+   1207  2fd3					      RORG	$FFD3
+   1208  2fd3		       20 18 f1 	      jsr	Logic
+   1209  2fd6		       ad f6 ff 	      lda	$FFF6	; back to bank 0, which returns at $FFD9
+   1210  2ff0					      ORG	$2FF0
+   1211  2ff0					      RORG	$FFF0
+   1212  2ff0				   Reset2
+   1213  2ff0		       ad f6 ff 	      lda	$FFF6
+   1214  2ffa					      ORG	$2FFA
+   1215  2ffa					      RORG	$FFFA
+   1216  2ffa		       f0 ff f0 ff*	      .word.w	Reset2, Reset2, Reset2
+   1217  3000
+   1218  4000 ????				      SEG	bank3
+   1219  3000					      ORG	$3000
+   1220  3000					      RORG	$F000
+   1221  3000		       00 00 00 00*	      ds	256, 0	; Super Chip RAM window
+   1222  3ff0					      ORG	$3FF0
+   1223  3ff0					      RORG	$FFF0
+   1224  3ff0				   Reset3
+   1225  3ff0		       ad f6 ff 	      lda	$FFF6
+   1226  3ffa					      ORG	$3FFA
+   1227  3ffa					      RORG	$FFFA
+   1228  3ffa		       f0 ff f0 ff*	      .word.w	Reset3, Reset3, Reset3

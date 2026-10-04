@@ -2,9 +2,11 @@
 // (gen/layout.json and the sprite art in gen.mjs), independent of the 6502
 // code: what every visible pixel of a frame should be. Used by tools/test.mjs.
 import { readFileSync } from 'node:fs';
-import { DEFENDERS, ENEMIES, enemyFrame, KIND_COLOR, COLUMN_X, EH, ROWS, feetRow, shotRow, VARIANT_W } from './gen.mjs';
+import { DEFENDERS, ENEMIES, enemyFrame, KIND_COLOR, DARK_ROWS, COLUMN_X, EH, ROWS, feetRow, shotRow, VARIANT_W } from './gen.mjs';
 
-export const COL = { gold: 0xf8, red: 0x46, green: 0xc8, orange: 0x38 };
+export const COL = { gold: 0xf8, red: 0x46, green: 0xc8, orange: 0x38, redDark: 0x42, orangeDark: 0x34, header: 0xa0 };
+// enemy colors per kind: [bottom rows, the rest]
+const TONES = { red: [COL.redDark, COL.red], orange: [COL.orangeDark, COL.orange], green: [COL.green, COL.green] };
 const layout = JSON.parse(readFileSync(new URL('../gen/layout.json', import.meta.url)));
 const PLAY = 32; // first visible line of row 0
 
@@ -49,6 +51,7 @@ export function scheduled(enemies, frame) {
 export function expectedFrame(scene, frame) {
   const px = Array.from({ length: 192 }, () => new Uint8Array(160));
   const put = (line, x, c) => { if (line >= 0 && line < 192 && x >= 0 && x < 160) px[line][x] = c; };
+  for (let l = 0; l < 29; l += 1) px[l].fill(COL.header); // the header panel
   const row2 = (r, x, c) => { put(PLAY + 2 * r, x, c); put(PLAY + 2 * r + 1, x, c); };
   // header text: title (s1-14, red) and status (s16-25, gold) at x 54-101
   const text = (lines, s0, rowsPer, c) => lines.forEach((line, r) => [...line].forEach((p, x) => { if (p === '#') for (let k = 0; k < rowsPer; k += 1) put(s0 + rowsPer * r + k, 54 + x, c); }));
@@ -65,9 +68,10 @@ export function expectedFrame(scene, frame) {
   const enemyLines = new Map(); // line -> player 1's color there
   for (const e of drawn) {
     const g = ENEMIES[enemyFrame(e.type, e.x, e.state)];
-    const c = COL[KIND_COLOR[e.type] ?? 'red'];
-    for (let k = 0; k < EH; k += 1) { const r = e.f - k; enemyLines.set(PLAY + 2 * r + 1, c); enemyLines.set(PLAY + 2 * r + 2, c); }
-    g.forEach((bits, i) => { const r = e.f - (g.length - 1 - i); for (let b = 0; b < 8; b += 1) if (bits & (0x80 >> b)) { put(PLAY + 2 * r + 1, e.x + b, c); put(PLAY + 2 * r + 2, e.x + b, c); } });
+    const tones = TONES[KIND_COLOR[e.type] ?? 'red'];
+    const tone = (k) => tones[k < DARK_ROWS ? 0 : 1]; // k: rows up from the feet
+    for (let k = 0; k < EH; k += 1) { const r = e.f - k; enemyLines.set(PLAY + 2 * r + 1, tone(k)); enemyLines.set(PLAY + 2 * r + 2, tone(k)); }
+    g.forEach((bits, i) => { const k = g.length - 1 - i, r = e.f - k; for (let b = 0; b < 8; b += 1) if (bits & (0x80 >> b)) { put(PLAY + 2 * r + 1, e.x + b, tone(k)); put(PLAY + 2 * r + 2, e.x + b, tone(k)); } });
   }
   // shots: missile 1, 4 wide, both lines of its row; color of player 1 on that line
   scene.shots.forEach((x, L) => {
