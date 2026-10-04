@@ -27,11 +27,19 @@ export function scheduled(enemies, frame) {
     if (e.E < 1) continue;
     if (taken.every((t) => t.f < e.E - 1 || e.f < t.E - 1)) { taken.push(e); chosen.add(e.i); }
   }
+  // Schedule: an event row at most 41 rows after the previous drawn enemy's
+  // feet and at most 41 above this one's top, on a row the kernel allows;
+  // without one the enemy waits a frame
   const drawn = [];
   let prevF = 0;
   for (const e of order) {
     if (!chosen.has(e.i)) continue;
-    if (e.E <= prevF + 1) continue;
+    let E = e.E;
+    if (drawn.length && E > prevF + 41) {
+      E = prevF + 42;
+      do { E -= 1; if (e.f >= 51 && E < e.f - 51) { E = -1; break; } } while (layout.rowBad[E]);
+    }
+    if (E <= prevF + 1) continue;
     drawn.push(e); prevF = e.f;
   }
   return drawn;

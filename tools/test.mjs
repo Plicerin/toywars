@@ -47,7 +47,7 @@ function sceneFromRam(g) {
     if (!(off in toyAt)) throw new Error(`slot ${s}: pointer ${lo} is no toy and not empty`);
     return toyAt[off];
   });
-  const enemies = [...Array(5).keys()].filter((i) => sc('eType', i)).map((i) => [sc('eLane', i), sc('eX', i), KINDS[sc('eType', i)], sc('eState', i)]);
+  const enemies = [...Array(5).keys()].filter((i) => sc('eType', i)).map((i) => [sc('eLane', i) & 3, sc('eX', i), KINDS[sc('eType', i)], sc('eState', i)]); // (a flying jet's shelf is 4-6)
   const shots = [0, 1, 2].map((L) => { const row = r('shotPtr', L); return row === 80 ? 0 : 149 - 6 * (row - 20 * L - 11); });
   const two = (v) => `${(v / 10) | 0}${v % 10}`;
   const score = [0, 1, 2].map((i) => sc('score', i).toString(16).padStart(2, '0')).join('');
@@ -126,7 +126,7 @@ check('toywars.bin is 16K', ROM.length === 16384, `${ROM.length} bytes`);
     if (f % 300 === 0) toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', 40, s); });
     g.set('spawnLeft', 20);
     let added = false;
-    for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { added = true; g.set('eType', 1 + ((f + i) % 8), i); g.set('eLane', (f + i) % 3, i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 0, i); }
+    for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { added = true; const k = (f + i) % 9; g.set('eType', 1 + k, i); g.set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 0, i); }
     if (added) { g.frames(2); continue; } // the game updates each enemy's rows every other frame: let it see them
     const d = frameDiffs(g, {});
     if (d.length) { bad += 1; if (!first) first = `frame ${f}: ${d.slice(0, 2).join('; ')}`; }
@@ -134,7 +134,7 @@ check('toywars.bin is 16K', ROM.length === 16384, `${ROM.length} bytes`);
     if (total !== 262 || vb[0][0] !== 40) mistimed += 1;
     most = Math.max(most, [0, 1, 2, 3, 4].filter((i) => g.sc('eType', i)).length);
   }
-  check('late game (second lap, nine toys acting, fast enemies): 1,500 frames at 262 lines, every pixel as the reference', bad === 0 && mistimed === 0, `${bad} frames differ, ${mistimed} mistimed, up to ${most} enemies${first ? `; ${first}` : ''}`);
+  check('late game (second lap, nine toys acting, fast enemies and flying jets): 1,500 frames at 262 lines, every pixel as the reference', bad === 0 && mistimed === 0, `${bad} frames differ, ${mistimed} mistimed, up to ${most} enemies${first ? `; ${first}` : ''}`);
 }
 
 // ---------------------------------------------------------------- rules
@@ -223,7 +223,13 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   enemy(g, 0, 1, 100, 1, 6); enemy(g, 1, 1, 130, 1, 12); enemy(g, 2, 0, 100, 1, 6);
   g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40); // cursor is on slot 3 (middle shelf)
   g.press();
-  check('the jet strikes its whole shelf: 10 damage each, then it is gone', g.sc('eType', 0) === 0 && g.sc('eHP', 1) === 2 && g.sc('eType', 2) === 1 && g.sc('slotType', 3) === 0 && g.sc('batt') === 10 + 3, `hp ${g.sc('eHP', 1)}, batteries ${g.sc('batt')}`);
+  const jet = () => [0, 1, 2, 3, 4].find((i) => g.sc('eType', i) === 9);
+  const j = jet(), x0 = j === undefined ? -1 : g.sc('eX', j);
+  check('placing a jet launches it from its slot (30 batteries; the slot stays empty)', j !== undefined && x0 >= 48 && x0 < 60 && g.sc('slotType', 3) === 0 && g.sc('batt') === 10, `x ${x0}`);
+  let diffs = 0, frames = 0, path = [];
+  while (jet() !== undefined && frames < 120) { const dd = frameDiffs(g, {}); if (dd.length && process.env.WHY) console.log('jet frame', frames, dd.length, dd.slice(0, 4).join('; '), JSON.stringify([0,1,2,3,4].map((i) => [g.sc('eType', i), g.sc('eX', i), g.sc('eLane', i)]))); diffs += dd.length ? 1 : 0; frames += 1; if (jet() !== undefined) path.push(g.sc('eX', jet())); g.set('spawnTimer', 200); }
+  check('it flies right along its shelf, drawn in green, and is gone past the right edge', jet() === undefined && path.every((x, i) => i === 0 || x >= path[i - 1]) && frames > 40 && diffs === 0, `${frames} frames, ${diffs} frames off the reference`);
+  check('every enemy it passes on that shelf takes 10 damage, once; other shelves are untouched', g.sc('eType', 0) === 0 && g.sc('eHP', 1) === 2 && g.sc('eType', 2) === 1 && g.sc('eHP', 2) === 6, `hp ${g.sc('eHP', 1)}`);
 }
 {
   const g = quietGame();

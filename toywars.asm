@@ -714,7 +714,15 @@ Schedule:
     sta temp                    ; at most 41 rows after the previous feet ...
     inc temp
 .qDec:
-    dec temp                    ; ... and on a row the kernel allows
+    dec temp                    ; ... on a row the kernel allows ...
+    lda eFeet,y
+    sec
+    sbc #51
+    bcc .qBad
+    cmp temp
+    beq .qBad
+    bcs .qSkip                  ; ... and at most 41 rows above its top
+.qBad:
     sty temp+1
     ldy temp
     lda RowBad,y
@@ -727,6 +735,7 @@ Schedule:
     adc #1
     cmp temp
     bcc .qOk
+.qSkip:
     jmp .qNext                  ; needs event row > previous feet + 1
 .qOk:
     lda #79
@@ -774,7 +783,7 @@ Schedule:
     lda R_eState,y
     and #$40
     beq .frame
-    lda #18
+    lda #20                     ; (index 20 of EBase: the charge frame)
     sta QUEUE+7,x
 .frame:
     ldy QUEUE+7,x
@@ -803,8 +812,8 @@ Schedule:
     cpx #0
     beq .done
     lda evPrevF
-    cmp #38
-    bcs .done                   ; the bottom is near enough
+    cmp #39
+    bcs .done                   ; rows below it to the end: 40 at most
     clc
     adc #41
     cmp #78

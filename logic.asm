@@ -19,7 +19,8 @@ EN_KNIGHT   = 5
 EN_BALLOON  = 6
 EN_POGO     = 7
 EN_TREX     = 8
-NKINDS      = 9                 ; (kind 0 = none)
+EN_JET      = 9                 ; a launched jet (drawn like an enemy, in green)
+NKINDS      = 9                 ; (kind 0 = none; the jet has no pace entry)
 SHOT_ARMY   = 1
 SHOT_TANK   = 2
 SHOT_CANNON = 3
@@ -435,6 +436,8 @@ Act:
 
 ; JetStrike (X = slot): ten damage to every enemy on the slot's shelf; the
 ; jet is spent
+; JetStrike (X = slot): the jet takes off and flies its shelf (JetAct); if
+; every enemy slot is taken, it strikes the whole shelf at once
 JetStrike:
     SUBROUTINE
     SOUND SND_JET
@@ -442,9 +445,29 @@ JetStrike:
     sta lt0
     lda #24
     sta W_flash
+    jsr FreeEnemy
+    bmi .instant
+    lda #EN_JET
+    sta W_eType,y
+    lda lt0
+    ora #4                      ; shelves 4-6: never matches an enemy's shelf
+    sta W_eLane,y
+    lda SlotCol,x
+    tax
+    lda ColX,x
+    sta W_eX,y
+    lda #0
+    sta W_eState,y
+    sta W_eHP,y
+    tya
+    tax
+    jmp EnemyRow
+.instant:
     ldx #NENEMY-1
 .enemy:
     lda R_eType,x
+    beq .next
+    cmp #EN_JET
     beq .next
     lda R_eLane,x
     cmp lt0
@@ -542,6 +565,8 @@ CountAlive:                     ; A = enemies on the shelves (Z if none)
     ldx #NENEMY-1
 .loop:
     lda R_eType,x
+    beq .next
+    cmp #EN_JET
     beq .next
     iny
 .next:
@@ -740,8 +765,13 @@ Enemies:
 .loop:
     lda R_eType,x
     beq .next
+    cmp #EN_JET
+    beq .jet
     jsr EnemyAct
     jsr EnemyRow
+    jmp .next
+.jet:
+    jsr JetAct
 .next:
     inx
     inx
@@ -1234,6 +1264,58 @@ SlotPointer:                    ; slot X
     lda EmptyLo,x
     sta slotPtr,x
 .next:
+    rts
+
+;-------------------------------------------------------------------------------
+; JetAct (X = a launched jet): four pixels right per update; every enemy on
+; its shelf takes 10 damage as the nose passes its middle. Nose and middle
+; close by at most 7 pixels an update, so each enemy is hit exactly once.
+JetAct:
+    SUBROUTINE
+    stx lt3
+    lda R_eX,x
+    clc
+    adc #12
+    sta lt0                     ; the nose after this step
+    lda R_eLane,x
+    and #3
+    sta lt1
+    ldy #NENEMY-1
+.loop:
+    lda R_eType,y
+    beq .next
+    lda R_eLane,y
+    cmp lt1
+    bne .next
+    lda R_eX,y
+    clc
+    adc #4
+    sec
+    sbc lt0                     ; enemy middle - nose: passed when -7..-1
+    cmp #$F9
+    bcc .next
+    sty lt2
+    ldx lt2
+    lda #10
+    jsr Damage
+    ldy lt2
+    ldx lt3
+.next:
+    dey
+    bpl .loop
+    ldx lt3
+    lda R_eX,x
+    clc
+    adc #4
+    cmp #152
+    bcs .gone
+    sta W_eX,x
+    jmp EnemyRow
+.gone:
+    lda #0
+    sta W_eType,x
+    lda #$FF
+    sta eTop,x
     rts
 
 ;-------------------------------------------------------------------------------

@@ -7,7 +7,7 @@ from the right. (The reference mockup is kept locally, not in the repo.)
 
 Status: playable (2026-10-04). Built: board, batteries, all six toys, all
 eight enemies, waves 1-12 with unlocks, boss waves and the second lap, lid
-slams, game over, sound effects. Not yet: the jet's flight in green, music,
+slams, game over, sound effects, the jet's flight in green. Not yet: music,
 Game Select, difficulty switch.
 As built, the T-Rex is a full-height 8-pixel sprite in orange, not double
 width: setting player 1's width per enemy needs a fifth pull in the event
@@ -56,7 +56,10 @@ placed again.
 
 Drawing note: the jet flying along its shelf is a moving object, drawn by
 the enemy sprite (player 1) in green, using per-object colors *(decided
-2026-10-04)*.
+2026-10-04; built)*. It takes an enemy slot (kind 9, shelf stored as 4-6 so
+no enemy check matches it), flies 4 pixels per update (about a second across)
+and hits each enemy on its shelf once as its nose passes the enemy's middle;
+with all enemy slots full it strikes the shelf at once instead.
 
 ## Enemies
 
