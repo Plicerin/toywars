@@ -383,8 +383,15 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   // what the TIA's audio registers hold after each frame
   const watch = (g, n, input = {}, each) => { const out = []; for (let k = 0; k < n; k += 1) { g.frames(1, input, each); out.push({ ...g.m.bus.audio }); } return out; };
   const g = boot();
-  const quiet = watch(g, 60);
-  check('attract mode is silent', quiet.every((a) => a.v0 === 0 && a.v1 === 0));
+  const theme = watch(g, 400);
+  const melF = new Set([29, 26, 23, 19, 17, 14]), bassF = new Set([29, 26, 23, 19, 31]);
+  check('before a game the theme plays: melody on channel 0 (pure tone), bass on channel 1', theme.some((a) => a.v0 > 0 && a.c0 === 4 && melF.has(a.f0)) && theme.some((a) => a.v1 > 0 && a.c1 === 12 && bassF.has(a.f1)));
+  const notes = theme.filter((a, i) => a.v0 > 0 && (i === 0 || theme[i - 1].v0 === 0 || theme[i - 1].f0 !== a.f0)).map((a) => a.f0);
+  {
+    const g2 = boot();
+    const a = watch(g2, 100 + 768 * 2).map((x) => `${x.c0},${x.v0},${x.f0},${x.c1},${x.v1},${x.f1}`);
+    check('the theme repeats exactly every 64 eighth notes (768 frames)', a.slice(100, 868).join('|') === a.slice(868, 1636).join('|'), `${notes.length} note starts in 400 frames`);
+  }
   g.frames(1, { fire: true });
   const start = watch(g, 40);
   check('a new game starts with the wave jingle on channel 0 (pure tone)', start.some((a) => a.v0 > 0 && a.c0 === 4));
@@ -393,7 +400,8 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   watch(g, 60, {}, hush);
   g.frames(1, { fire: true }, hush);
   const place = watch(g, 20, {}, hush);
-  check('placing a toy chirps on channel 0, then goes quiet', place.some((a) => a.v0 > 0 && a.f0 === 15) && place.at(-1).v0 === 0);
+  check('placing a toy chirps on channel 0, then hands it back to the music', place.some((a) => a.v0 > 0 && a.f0 === 15) && g.sc('sndPri') === 0);
+  check('during play the melody is soft (volume 3) and channel 1 carries no bass', place.concat(watch(g, 200, {}, hush)).every((a) => !(a.c0 === 4 && melF.has(a.f0) && a.v0 > 3)) && g.m.bus.audio.v1 === 0);
   g.set('batt', 0); g.set('cursor', 4); g.press(); // an empty slot
   const broke = watch(g, 10, {}, hush);
   check('trying to place without batteries buzzes (AUDC 6)', broke.some((a) => a.v0 > 0 && a.c0 === 6));
@@ -409,7 +417,8 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   g.set('lids', 2);
   enemy(g, 0, 1, 42, 1, 6);
   const over = watch(g, 120, {}, hush);
-  check('game over plays its jingle (AUDC 12 on channel 0) and then goes silent', g.sc('state') === 2 && over.some((a) => a.v0 > 0 && a.c0 === 12) && over.at(-1).v0 === 0 && over.at(-1).v1 === 0);
+  const after = watch(g, 300);
+  check('game over plays its jingle (AUDC 12 on channel 0), then the theme comes back', g.sc('state') === 2 && over.some((a) => a.v0 > 0 && a.c0 === 12) && after.some((a) => a.v1 > 0 && a.c1 === 12));
 }
 
 console.log(failures ? `${failures} check(s) failed` : 'all checks passed');

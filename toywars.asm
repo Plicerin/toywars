@@ -98,6 +98,8 @@ W_packTimer ds 1
 W_packLane  ds 1
 W_game      ds 1        ; game 1-3 (Game Select): starts at wave 1, 5 or 9
 W_selPrev   ds 1        ; Game Select held last frame
+W_musPos    ds 1        ; music: eighth note 0-63 of the theme
+W_musTimer  ds 1        ;   frames into it (0-11)
 W_shotDmg   ds 3        ; per shelf: damage of the shot in flight, 0 = none
 W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing crawler)
 W_score     ds 3        ; BCD, most significant first
@@ -161,6 +163,8 @@ R_packTimer  = W_packTimer + $80
 R_packLane   = W_packLane + $80
 R_game       = W_game + $80
 R_selPrev    = W_selPrev + $80
+R_musPos     = W_musPos + $80
+R_musTimer   = W_musTimer + $80
 R_cells      = W_cells + $80
     echo "Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
 

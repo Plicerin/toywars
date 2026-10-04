@@ -138,9 +138,10 @@ Finish:
     jsr Flash
     lda frame                   ; even frames (with the shots): sound, its
     lsr                         ; steps are two frames long; odd frames (with
-    bcs .oddFinish              ; the toys): the kernel's toy pointers
-    jmp SndUpdate
+    bcs .oddFinish              ; the toys): the kernel's toy pointers and
+    jmp SndUpdate               ; the music
 .oddFinish:
+    jsr Music
     jmp SlotPointers
 
 ;-------------------------------------------------------------------------------
@@ -1375,6 +1376,108 @@ JetAct:
     lda #$FF
     sta eTop,x
     rts
+
+;-------------------------------------------------------------------------------
+; Music (odd frames): an 8-bar toy march, eighth notes of 12 frames. Before a
+; game and at game over: melody on channel 0 and bass on channel 1; during
+; play: the melody alone, softly. A sound effect on a channel always wins;
+; the music picks up again at its next note.
+Music:
+    SUBROUTINE
+    lda R_musTimer
+    clc
+    adc #2
+    cmp #12
+    bcc .same
+    lda R_musPos
+    clc
+    adc #1
+    and #63
+    sta W_musPos
+    lda #0
+.same:
+    sta W_musTimer
+    ; melody, channel 0
+    lda R_sndPri
+    bne .bass                   ; a sound effect has the channel
+    ldx R_musPos
+    lda R_musTimer
+    bne .melEnd
+    ldy MelNote,x               ; start of an eighth
+    cpy #7
+    beq .bass                   ; a tie: keep sounding
+    lda #0
+    cpy #0
+    beq .melVol                 ; a rest
+    lda #4
+    sta AUDC0
+    lda MelF,y
+    sta AUDF0
+    lda #6
+    ldy R_state
+    cpy #ST_PLAY
+    bne .melVol
+    lda #3                      ; softer under the game
+.melVol:
+    sta AUDV0
+    jmp .bass
+.melEnd:
+    cmp #10                     ; the last two frames: a short gap before the next note
+    bne .bass
+    lda MelNote+1,x             ; (MelNote has a 65th byte: the first again)
+    cmp #7
+    beq .bass
+    lda #0
+    sta AUDV0
+.bass:
+    ; bass, channel 1: only before a game and at game over
+    lda R_sndPri+1
+    bne .done
+    lda R_state
+    cmp #ST_PLAY
+    bne .bassOn
+    lda #0
+    sta AUDV1
+.done:
+    rts
+.bassOn:
+    lda R_musPos
+    lsr
+    tax                         ; quarter note 0-31
+    bcs .second                 ; the second eighth of the quarter
+    lda R_musTimer
+    bne .done
+    ldy BassNote,x
+    lda #0
+    cpy #0
+    beq .bassVol
+    lda #12
+    sta AUDC1
+    lda BassF,y
+    sta AUDF1
+    lda #5
+.bassVol:
+    sta AUDV1
+    rts
+.second:
+    lda R_musTimer
+    cmp #6
+    bne .done
+    lda #0                      ; bass notes last an eighth and a half
+    sta AUDV1
+    rts
+
+; the theme (original): melody in eighths, 1-6 = C5 D5 E5 G5 A5 C6, 7 = tie,
+; 0 = rest; bass in quarters, 1-5 = F3 G3 A3 C4 E3
+MelNote:    .byte 1,1,3,4,3,1,4,7, 5,5,4,3,2,3,1,7
+            .byte 1,1,3,4,5,4,3,7, 2,3,2,1,2,7,7,0
+            .byte 3,3,4,5,6,5,4,7, 5,4,3,2,3,4,3,7
+            .byte 1,1,3,4,5,6,5,4, 3,2,3,2,1,7,7,0
+            .byte 1
+MelF:       .byte 0, 29, 26, 23, 19, 17, 14          ; AUDC 4: C5 D5 E5 G5 A5 C6
+BassNote:   .byte 4,2,4,2, 1,4,2,4, 4,2,3,5, 2,2,2,2
+            .byte 4,3,1,2, 1,4,2,4, 4,3,1,2, 2,2,4,0
+BassF:      .byte 0, 29, 26, 23, 19, 31             ; AUDC 12: F3 G3 A3 C4 E3
 
 ;-------------------------------------------------------------------------------
 ; Sound: channel 0 plays the player's actions and jingles, channel 1 combat.

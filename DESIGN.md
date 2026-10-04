@@ -10,7 +10,8 @@ eight enemies, waves 1-12 with unlocks, boss waves and the second lap, lid
 slams, game over, sound effects, the jet's flight in green, Game Select
 (games 1-3 start at waves 1/5/9 with 30/50/70 batteries; the status line
 reads GAME n while choosing) and the left difficulty switch (A: second-lap
-pace and spawn gaps from wave 1). Not yet: music.
+pace and spawn gaps from wave 1), music. Everything in this document is
+built.
 As built, the T-Rex is a full-height 8-pixel sprite in orange, not double
 width: setting player 1's width per enemy needs a fifth pull in the event
 row, and the earliest-position variant has no cycles left for it. The
@@ -127,6 +128,15 @@ fighting (army man pop, tank boom, cannon thump, lasso whip, hit, kill,
 chewing crunch, lid slam, jet strike). A new sound replaces the one on its
 channel unless that one has a higher priority. Steps are two frames long
 and advance on even frames.
+
+## Music
+
+An original 8-bar toy march (logic.asm, MelNote/BassNote): melody in eighth
+notes on the pentatonic C5 D5 E5 G5 A5 C6 (pure tone, AUDC 4), bass in
+quarters on F3 G3 A3 C4 E3 (AUDC 12), all within 19 cents of true pitch.
+An eighth is 12 frames (150 quarter notes a minute). Before a game and at
+game over the melody (channel 0) and bass (channel 1) play; during play only
+the melody, at volume 3, and only when no sound effect has channel 0.
 
 ## Hardware limits the design accepts
 

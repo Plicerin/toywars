@@ -43,8 +43,9 @@ tougher; after wave 12 the waves repeat, faster.
 
 Playable: placing toys, batteries, the six toys, all eight monsters, waves
 with unlocks and boss waves, lid slams, game over, sound effects (TIA: your
-actions and the jingles on one channel, the fighting on the other), Game
-Select and the difficulty switch. See [DESIGN.md](DESIGN.md) for the design.
+actions and the jingles on one channel, the fighting on the other), music (a
+toy march: melody and bass before a game, the melody softly during play),
+Game Select and the difficulty switch. See [DESIGN.md](DESIGN.md) for the design.
 
 How the screen is drawn:
 
