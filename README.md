@@ -5,15 +5,41 @@ Zombies: toys on a shelf hold off monsters marching in from the right.
 16K cartridge (F6 bank switching) with Atari's Super Chip (128 bytes of
 cartridge RAM), NTSC.
 
-**Play the current build in your browser:** https://plicerin.github.io/toywars/
+**Play it in your browser:** https://plicerin.github.io/toywars/
 
-![Toy Wars in motion](img/motion.gif)
+![Toy Wars](img/screen.png)
+
+
+## How to play
+
+Defend the toy box on the left. Monsters walk in along the three shelves;
+place toys in the nine slots (three per shelf) to stop them.
+
+- **Joystick / arrow keys:** move the cursor over the slots. An empty slot
+  shows a blinking ghost of the toy you're about to place.
+- **Fire / Space:** place that toy (it costs batteries), or pick up the toy
+  under the cursor (half its cost back).
+- **Hold fire + left/right:** choose a different toy.
+- **Game Reset / Enter:** new game. Fire also starts one.
+
+Batteries (the number by the battery icon) trickle in and every monster you
+destroy pays some. The first monster that reaches the box slams that shelf's
+lid and clears it; the second one through the same shelf ends the game.
+
+Toys unlock wave by wave: army man (shoots), teddy (soaks up bites), tank
+(one heavy shell), cowboy (lassos a monster in place), cannon (heavy shots),
+jet (strikes its whole shelf, once). Monsters: dino, helicopter (hops over
+the first toy), crawler (army bullets pass over it while it chews). Every
+fourth wave they get tougher; after wave 12 the waves repeat, faster.
 
 ## Status
 
-Milestone 1 — the play screen, with demo motion (enemies walk in, shots fly;
-there is no gameplay yet). The design for the full game is in
-[DESIGN.md](DESIGN.md).
+Playable: placing toys, batteries, the six toys, three monster kinds, waves
+with unlocks, lid slams, game over. Still to come (see [DESIGN.md](DESIGN.md)):
+the other monsters (mouse, knight, balloon clown, pogo frog, T-Rex boss), the
+jet flying its strike in green, sound, and Game Select.
+
+How the screen is drawn:
 
 - Three slanted shelves drawn by the ball, moved six pixels left every row
   with HMOVE.
@@ -21,13 +47,13 @@ there is no gameplay yet). The design for the full game is in
   shows.
 - Toys on a 3 × 3 grid: player 0 as three copies 32 pixels apart, its
   graphics rewritten between the copies, so the toys never flicker.
-- Enemies: player 1, moved from enemy to enemy down the screen by an event
-  queue built each frame (PLA pulls the data, RTS jumps into one of eight
-  code variants that strobe RESP1 on a fixed cycle). Enemies that share lines
-  take turns; the start of the rotation moves every frame, so no enemy goes
-  more than six frames undrawn. Two walking frames each.
+- Monsters: player 1, moved from monster to monster down the screen by an
+  event queue built each frame (PLA pulls the data, RTS jumps into one of
+  eight code variants that strobe RESP1 on a fixed cycle). Monsters that
+  share lines take turns; no monster goes more than six frames undrawn.
+  Each picks its color through the queue.
 - Shots: missile 1, one per shelf.
-- Header: 48-pixel text (title, then score and wave).
+- Header: 48-pixel text (title or GAME OVER, then score, batteries, wave).
 
 ## Files
 
@@ -36,11 +62,15 @@ there is no gameplay yet). The design for the full game is in
   code (`gen/`) that the assembly includes.
 - `tools/build.ps1` — runs the generator and DASM (put `dasm.exe` and `vcs.h`
   in `tools/dasm/`).
+- `toywars.asm` holds the frame loop, header and screen kernel; `logic.asm`
+  (bank 2) is the game.
 - `tools/test.mjs` — runs the cartridge on the 6502 core and TIA model in
-  `src/` and checks it against `tools/expect.mjs`, a reference picture drawn
-  straight from the design: frame timing (262 lines), every visible pixel of
-  the scene, 300 random scenes, 1,200 frames of motion, booting from each
-  bank, and correct Super Chip use.
+  `src/`: frame timing (262 lines) through 20,000 frames of random play and a
+  late-game stress test, every visible pixel against `tools/expect.mjs` (a
+  reference picture drawn from the game state), the rules scenario by
+  scenario, booting from each bank, and correct Super Chip use.
+- `tools/bot.mjs` — a player that uses only the joystick; reports how far it
+  gets (it reaches waves 12-18).
 - `src/` — the emulator core used by the tests and the web page (6502, TIA,
   RIOT, F8/F6 bank switching, Super Chip).
 

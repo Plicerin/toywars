@@ -5,7 +5,7 @@ EvA0:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB0:                     ; RESP1 lands on cycle 34 (x 42), line B work ends at 63
+EvB0:                     ; RESP1 lands on cycle 34 (x 42), line B work ends at 70
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -13,7 +13,7 @@ EvB0:                     ; RESP1 lands on cycle 34 (x 42), line B work ends at 
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     bit $80
     sta RESP1
     lda (pc1),y
@@ -23,12 +23,10 @@ EvB0:                     ; RESP1 lands on cycle 34 (x 42), line B work ends at 
     dey
     sta GRP0
     pla
+    sta HMP1
+    pla
     sta nextEv
-    nop
-    nop
-    nop
-    nop
-    nop
+    bit $80
     jmp RowAH                ; ends on cycle 76
 EvA1:                     ; line A tail after the rts (cycle 58): enemy graphics pointer
     pla
@@ -36,7 +34,7 @@ EvA1:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB1:                     ; RESP1 lands on cycle 39 (x 57), line B work ends at 63
+EvB1:                     ; RESP1 lands on cycle 39 (x 57), line B work ends at 70
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -44,7 +42,7 @@ EvB1:                     ; RESP1 lands on cycle 39 (x 57), line B work ends at 
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     lda (pc1),y
     bit $80
     sta RESP1
@@ -54,12 +52,10 @@ EvB1:                     ; RESP1 lands on cycle 39 (x 57), line B work ends at 
     dey
     sta GRP0
     pla
+    sta HMP1
+    pla
     sta nextEv
-    nop
-    nop
-    nop
-    nop
-    nop
+    bit $80
     jmp RowAH                ; ends on cycle 76
 EvA2:                     ; line A tail after the rts (cycle 58): enemy graphics pointer
     pla
@@ -67,7 +63,7 @@ EvA2:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB2:                     ; RESP1 lands on cycle 44 (x 72), line B work ends at 62
+EvB2:                     ; RESP1 lands on cycle 44 (x 72), line B work ends at 69
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -75,20 +71,19 @@ EvB2:                     ; RESP1 lands on cycle 44 (x 72), line B work ends at 
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     lda (pc1),y
     nop
     stx PF1
     sta GRP0
     sta RESP1
     pla
-    sta nextEv
+    sta HMP1
     lda (pc2),y
     sta GRP0
     dey
-    nop
-    nop
-    bit $80
+    pla
+    sta nextEv
     nop
     nop
     jmp RowAH                ; ends on cycle 76
@@ -98,7 +93,7 @@ EvA3:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB3:                     ; RESP1 lands on cycle 49 (x 87), line B work ends at 60
+EvB3:                     ; RESP1 lands on cycle 49 (x 87), line B work ends at 67
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -106,9 +101,9 @@ EvB3:                     ; RESP1 lands on cycle 49 (x 87), line B work ends at 
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     pla
-    sta nextEv
+    sta HMP1
     stx PF1
     lda (pc1),y
     sta GRP0
@@ -116,10 +111,9 @@ EvB3:                     ; RESP1 lands on cycle 49 (x 87), line B work ends at 
     lda (pc2),y
     dey
     sta GRP0
+    pla
+    sta nextEv
     nop
-    nop
-    nop
-    bit $80
     nop
     nop
     jmp RowAH                ; ends on cycle 76
@@ -129,7 +123,7 @@ EvA4:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB4:                     ; RESP1 lands on cycle 54 (x 102), line B work ends at 60
+EvB4:                     ; RESP1 lands on cycle 54 (x 102), line B work ends at 67
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -137,9 +131,9 @@ EvB4:                     ; RESP1 lands on cycle 54 (x 102), line B work ends at
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     pla
-    sta nextEv
+    sta HMP1
     stx PF1
     lda (pc1),y
     sta GRP0
@@ -147,10 +141,9 @@ EvB4:                     ; RESP1 lands on cycle 54 (x 102), line B work ends at
     sta RESP1
     dey
     sta GRP0
+    pla
+    sta nextEv
     nop
-    nop
-    nop
-    bit $80
     nop
     nop
     jmp RowAH                ; ends on cycle 76
@@ -160,7 +153,7 @@ EvA5:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB5:                     ; RESP1 lands on cycle 59 (x 117), line B work ends at 60
+EvB5:                     ; RESP1 lands on cycle 59 (x 117), line B work ends at 67
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -168,9 +161,9 @@ EvB5:                     ; RESP1 lands on cycle 59 (x 117), line B work ends at
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     pla
-    sta nextEv
+    sta HMP1
     stx PF1
     lda (pc1),y
     sta GRP0
@@ -178,10 +171,9 @@ EvB5:                     ; RESP1 lands on cycle 59 (x 117), line B work ends at
     dey
     sta GRP0
     sta RESP1
+    pla
+    sta nextEv
     nop
-    nop
-    nop
-    bit $80
     nop
     nop
     jmp RowAH                ; ends on cycle 76
@@ -191,7 +183,7 @@ EvA6:                     ; line A tail after the rts (cycle 58): enemy graphics
     pla
     sta p1ptr+1
     sta WSYNC
-EvB6:                     ; RESP1 lands on cycle 64 (x 132), line B work ends at 65
+EvB6:                     ; RESP1 lands on cycle 64 (x 132), line B work ends at 67
     lda BoxTab,y
     sta PF1
     lda (pc0),y
@@ -199,19 +191,18 @@ EvB6:                     ; RESP1 lands on cycle 64 (x 132), line B work ends at
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     pla
-    sta nextEv
+    sta HMP1
     stx PF1
     lda (pc1),y
     sta GRP0
     lda (pc2),y
-    dey
     sta GRP0
-    bit $80
-    nop
+    pla
+    sta nextEv
     sta RESP1
-    nop
+    dey
     nop
     nop
     nop
@@ -230,20 +221,18 @@ EvB7:                     ; RESP1 lands on cycle 69 (x 147), line B work ends at
     pla
     sta p1col
     pla
-    sta HMP1
+    sta p1col+1
     pla
-    sta nextEv
+    sta HMP1
     stx PF1
     lda (pc1),y
     sta GRP0
     lda (pc2),y
     dey
     sta GRP0
-    nop
-    nop
-    nop
-    nop
-    nop
+    pla
+    sta nextEv
+    bit $80
     sta RESP1
     bit $80
     jmp RowAH                ; ends on cycle 76

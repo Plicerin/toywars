@@ -9,7 +9,7 @@
 ;
 ; Bank 0: frame loop, game logic, the event scheduler, the header (title and
 ; status line, 48-pixel text). Bank 1: the play kernel and its graphics.
-; Banks 2-3: free (reset stubs only).
+; Bank 2: game logic (logic.asm). Bank 3: free (reset stub only).
 ;
 ; Frame: 3 VSYNC + 37 VBLANK + 192 visible + 30 overscan = 262 lines.
 ; Visible: s0 blank, s1-14 title, s15 setup, s16-25 status, s26-28
@@ -52,40 +52,93 @@ nextSt      ds 1        ; y of the next static row
 slotPtr     ds 9        ; defender pointer (low byte) per lane*3+column
 shotPtr     ds 3        ; shot pointer (low byte) per lane
 frame       ds 1
-; Shared scratch. SelectEnemies (overscan) fills eTop/eFeet/eOrder and
-; Schedule (VBLANK) reads them; BuildStatus (VBLANK, after Schedule) then
-; reuses the same bytes for the status line, which the header draws.
-eTop        ds NENEMY   ; scheduler: event row, feet row, sorted order
-eFeet       ds NENEMY
-eOrder      ds NENEMY
-cellS5      ds 5
-cellS0      = eTop      ; status line cells (bottom row first), 5 bytes each
-cellS1      = eFeet
-cellS2      = eOrder
+pfColor     ds 1        ; shelves and box (flashes white on a lid slam or air strike)
+; scheduler scratch: SelectEnemies (overscan) fills it, Schedule (VBLANK) reads it
+eTop        ds NENEMY   ; event row
+eFeet       ds NENEMY   ; feet row
+eOrder      ds NENEMY   ; sorted order, bit 7 = drawn this frame
 temp        ds 4
-QUEUE       ds 35       ; event records, 7 bytes: return lo, hi, gfx lo, hi, feet, HMP1, next y
+lt0         ds 1        ; game logic scratch (bank 2)
+lt1         ds 1
+lt2         ds 1
+lt3         ds 1
+lt4         ds 1
+lt5         ds 1
+QUEUE       ds 40       ; event records, 8 bytes: return lo, hi, gfx lo, hi, feet, color page, HMP1, next y
 STACKTOP    = $FF
 
 lineCnt     = temp+3    ; header loops
 evPrevF     = temp+2    ; scheduler
 
-    echo "RAM used: ", (QUEUE + 35 - $80)d, " bytes (stack above)"
+    echo "RAM used: ", (QUEUE + 40 - $80)d, " bytes (stack above)"
 
 ; Super Chip RAM (cartridge, 128 bytes): write at W_name, read at R_name
 ; ($80 higher). Game state that the kernel doesn't need lives here.
     SEG.U scram
     ORG $F000
-W_eX        ds NENEMY   ; enemies: left x, lane, type (0 none, 1 dino, 2 heli, 3 crouch)
-W_eLane     ds NENEMY
-W_eType     ds NENEMY
+W_eX        ds NENEMY   ; enemies: left x
+W_eLane     ds NENEMY   ;   shelf 0-2
+W_eType     ds NENEMY   ;   0 none, 1 dino, 2 helicopter, 3 crawler
+W_eHP       ds NENEMY   ;   health
+W_eState    ds NENEMY   ;   bit 7 chewing, bit 6 hopped, bits 0-5 lasso frames left
+W_slotType  ds 9        ; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
+W_slotHP    ds 9
+W_slotCool  ds 9        ; visits (6 frames) until the toy acts again
+W_toyShelf  ds 1        ; the shelf whose toys act next
+W_shotDmg   ds 3        ; per shelf: damage of the shot in flight, 0 = none
+W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing crawler)
 W_score     ds 3        ; BCD, most significant first
-W_wave      ds 1
+W_wave      ds 1        ; binary, from 1
+W_batt      ds 1        ; batteries, binary 0-99
+W_battTimer ds 1
+W_cursor    ds 1        ; slot 0-8
+W_toy       ds 1        ; toy type chosen for placing
+W_unlock    ds 1        ; highest toy type unlocked
+W_input     ds 1        ; last frame's joystick (bits 3-0 right left down up) and fire (bit 7)
+W_repeat    ds 1        ; cursor auto-repeat countdown
+W_fireState ds 1        ; 1 = fire pressed (act on release), 2 = used to change toy
+W_swPrev    ds 1        ; Game Reset held last frame
+W_lids      ds 1        ; bits 0-2: shelf's lid slam used
+W_state     ds 1        ; 0 attract, 1 playing, 2 game over
+W_overTimer ds 1
+W_spawnLeft ds 1
+W_spawnTimer ds 1
+W_rand      ds 1
+W_flash     ds 1
+W_dirty     ds 1        ; status line parts to rebuild: 1/8/16 score cells, 2 batteries, 4 wave
+W_cells     ds 30       ; status line, 6 cells x 5 rows (bottom row first)
 SC_END      = .
-R_eX        = W_eX + $80
-R_eLane     = W_eLane + $80
-R_eType     = W_eType + $80
-R_score     = W_score + $80
-R_wave      = W_wave + $80
+R_eX         = W_eX + $80
+R_eLane      = W_eLane + $80
+R_eType      = W_eType + $80
+R_eHP        = W_eHP + $80
+R_eState     = W_eState + $80
+R_slotType   = W_slotType + $80
+R_slotHP     = W_slotHP + $80
+R_slotCool   = W_slotCool + $80
+R_shotDmg    = W_shotDmg + $80
+R_shotKind   = W_shotKind + $80
+R_score      = W_score + $80
+R_wave       = W_wave + $80
+R_batt       = W_batt + $80
+R_battTimer  = W_battTimer + $80
+R_cursor     = W_cursor + $80
+R_toy        = W_toy + $80
+R_unlock     = W_unlock + $80
+R_input      = W_input + $80
+R_repeat     = W_repeat + $80
+R_fireState  = W_fireState + $80
+R_swPrev     = W_swPrev + $80
+R_lids       = W_lids + $80
+R_state      = W_state + $80
+R_overTimer  = W_overTimer + $80
+R_spawnLeft  = W_spawnLeft + $80
+R_spawnTimer = W_spawnTimer + $80
+R_rand       = W_rand + $80
+R_flash      = W_flash + $80
+R_dirty      = W_dirty + $80
+R_toyShelf   = W_toyShelf + $80
+R_cells      = W_cells + $80
     echo "Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
 
 ;===============================================================================
@@ -112,8 +165,13 @@ Start0:
     sta W_eX,x                  ; W_eX = $F000: the whole write port
     dex
     bpl .clearSC
-    jsr InitScene
-    jsr SelectEnemies
+    ldx #NENEMY-1               ; the enemy sort order persists from frame to frame
+.order:
+    txa
+    sta eOrder,x
+    dex
+    bpl .order
+    jsr CallInit                ; bank 2: power-on state (attract mode)
 
 MainLoop:
     lda #2
@@ -129,9 +187,10 @@ MainLoop:
     sta TIM64T
 
     inc frame
-    jsr Schedule                ; reads eTop/eFeet/eOrder ...
-    jsr BuildStatus             ; ... then overwrites them with the status line
-    lda #<(D_EMPTY - 79)        ; defenders: zeros until the lane 0 swaps
+    jsr SelectEnemies
+    jsr Schedule
+    jsr BuildStatus
+    lda #161                    ; defenders: rows 0-16 read the page's zero tail
     sta pc0
     sta pc1
     sta pc2
@@ -159,12 +218,16 @@ MainLoop:
     sta stVec+1
 
     ; header: 48-pixel text, player 0 at x 54 and player 1 at x 62
-    lda #54-3                   ; PosObject puts players 3 pixels right
-    ldx #0
-    jsr PosObject
-    lda #62-3
-    ldx #1
-    jsr PosObject
+    sta WSYNC                   ; RESPx lands on its last cycle w: x = 3w - 60
+    lda #$10                    ; 0-1
+    sta HMP1                    ; 2-4    player 1: 63 - 1 = 62 at the HMOVE
+    lda #0                      ; 5-6
+    sta HMP0                    ; 7-9
+    REPEAT 13
+    nop                         ; 10-35
+    REPEND
+    sta RESP0                   ; 36-38  player 0 at 54
+    sta RESP1                   ; 39-41  player 1 at 63
     sta WSYNC
     sta HMOVE
     lda #3                      ; three copies, close
@@ -200,6 +263,10 @@ MainLoop:
     lda #13
     sta lineCnt
     ldy #6
+    lda R_state
+    cmp #2
+    bne .title
+    jmp .over
 
     ; s1-14: title, seven font rows of two lines
 .title:
@@ -227,7 +294,34 @@ MainLoop:
     tay
     jmp .title
 .titleDone:
+    jmp .header2
 
+.over:                          ; the same with GAME OVER
+    sta WSYNC
+    lda Over0,y
+    sta GRP0
+    lda Over1,y
+    sta GRP1
+    lda Over2,y
+    sta GRP0
+    lda Over4,y
+    tax
+    lda Over5,y
+    sta temp
+    lda Over3,y
+    ldy temp
+    sta GRP1
+    stx GRP0
+    sty GRP1
+    sta GRP0
+    dec lineCnt
+    bmi .header2
+    lda lineCnt
+    lsr
+    tay
+    jmp .over
+
+.header2:
     sta WSYNC                   ; s15
     lda #0
     sta GRP0
@@ -243,17 +337,17 @@ MainLoop:
     ; s16-25: status line, five font rows of two lines
 .status:
     sta WSYNC
-    lda cellS0,y
+    lda R_cells,y
     sta GRP0
-    lda cellS1,y
+    lda R_cells+5,y
     sta GRP1
-    lda cellS2,y
+    lda R_cells+10,y
     sta GRP0
-    lda Status4,y
+    lda R_cells+20,y
     tax
-    lda cellS5,y
+    lda R_cells+25,y
     sta temp
-    lda Status3,y
+    lda R_cells+15,y
     ldy temp
     sta GRP1
     stx GRP0
@@ -278,8 +372,7 @@ MainLoop:
 Overscan:                       ; from bank 1, the line after s191
     lda #OVERSCAN_TIME
     sta TIM64T
-    jsr Motion
-    jsr SelectEnemies
+    jsr CallLogic               ; bank 2: the game
 .osWait:
     lda INTIM
     bne .osWait
@@ -303,12 +396,25 @@ PosObject:                      ; A = x, X = object (0 P0, 1 P1, 2 M0, 3 M1, 4 B
     rts
 
 ;-------------------------------------------------------------------------------
-; status cells: score digits two per cell, "E" plus the wave digit
-BuildStatus:
+; BuildStatus: rebuild the parts of the status line that changed (W_dirty).
+; Cells (narrow 3x5 font, two characters per 8-pixel cell): 0-2 the score,
+; 3 battery icon + tens, 4 ones + "W", 5 the wave's two digits (cells 4-5
+; start with a blank column).
+BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     SUBROUTINE
-    lda #0
-    sta temp+2                  ; destination offset from cellS0 (0-14)
-    tax
+    ; the score's three cells one per frame: dirty bit 0, then 3, then 4
+    lda R_dirty
+    and #$19
+    beq .noScore
+    ldx #0
+    lsr
+    bcs .cell
+    inx
+    lsr
+    lsr
+    lsr
+    bcs .cell
+    inx
 .cell:
     stx temp+3
     lda R_score,x
@@ -328,6 +434,11 @@ BuildStatus:
     asl
     adc temp+1
     sta temp+1                  ; low digit * 5
+    lda temp+3
+    asl
+    asl
+    adc temp+3
+    sta temp+2                  ; destination: cell * 5
     ldy #4
 .row:
     ldx temp
@@ -335,128 +446,102 @@ BuildStatus:
     ldx temp+1
     ora DigitLo,x
     ldx temp+2
-    sta cellS0,x
+    sta W_cells,x
     inc temp
     inc temp+1
     inc temp+2
     dey
     bpl .row
     ldx temp+3
-    inx
-    cpx #3
-    bne .cell
-    lda R_wave
+    lda R_dirty
+    and ScoreDone,x
+    ora ScoreNext,x
+    sta W_dirty
+    rts
+ScoreDone:  .byte $FE, $F7, $EF  ; clear this cell's bit ...
+ScoreNext:  .byte $08, $10, $00  ; ... and ask for the next
+.noScore:
+    lda R_dirty
+    and #2
+    beq .noBatt
+    ldx R_batt
+    jsr TwoDigits               ; temp = tens*5, temp+1 = ones*5
+    ldy #0
+.batt:
+    ldx temp
+    lda DigitR,x
+    ora IconW,y
+    sta W_cells+15,y
+    ldx temp+1
+    lda DigitM,x
+    ora GlyphW,y
+    sta W_cells+20,y
+    inc temp
+    inc temp+1
+    iny
+    cpy #5
+    bne .batt
+    lda R_dirty
+    and #$FD
+    sta W_dirty
+    rts
+.noBatt:
+    lda R_dirty
+    and #4
+    beq .done
+    ldx R_wave
+    cpx #100
+    bcc .w
+    ldx #99
+.w:
+    jsr TwoDigits
+    ldy #0
+.wave:
+    ldx temp
+    lda DigitM,x
+    ldx temp+1
+    ora DigitR,x
+    sta W_cells+25,y
+    inc temp
+    inc temp+1
+    iny
+    cpy #5
+    bne .wave
+.done:
+    lda #0
+    sta W_dirty
+    rts
+
+TwoDigits:                      ; X = 0-99 -> temp = tens*5, temp+1 = ones*5
+    lda Bin2BCD,x
+    lsr
+    lsr
+    lsr
+    lsr
     sta temp
     asl
     asl
     adc temp
-    tax
-    ldy #0
-.wave:
-    lda Status5E,y
-    ora DigitR,x
-    sta cellS5,y
-    inx
-    iny
-    cpy #5
-    bne .wave
+    sta temp
+    lda Bin2BCD,x
+    and #$0F
+    sta temp+1
+    asl
+    asl
+    adc temp+1
+    sta temp+1
     rts
 
 ;-------------------------------------------------------------------------------
-; Demo motion (until there is gameplay): enemies walk left one pixel every
-; fourth frame and come back on the right; shots fly right one row (six
-; pixels) every fourth frame and restart at the first column. The TV type
-; switch on B/W holds everything still.
-Motion:
-    SUBROUTINE
-    lda SWCHB
-    and #$08
-    beq .done
-    lda frame
-    and #3
-    bne .done
-    ldx #NENEMY-1
-.enemy:
-    lda R_eType,x
-    beq .nextEnemy
-    lda R_eX,x
-    sec
-    sbc #1
-    cmp #52
-    bcs .stepped
-    lda #151
-.stepped:
-    sta W_eX,x
-.nextEnemy:
-    dex
-    bpl .enemy
-    ldx #2
-.shot:
-    lda shotPtr,x
-    cmp #80
-    beq .nextShot                ; no shot in this lane
-    sec
-    sbc #1                      ; one row up the diagonal = six pixels right
-    cmp ShotFirst,x
-    bcs .store
-    lda ShotLast,x
-.store:
-    sta shotPtr,x
-.nextShot:
-    dex
-    bpl .shot
-.done:
-    rts
-ShotFirst:                      ; shot rows of each lane: x 149 ... x 59
-    .byte 11, 31, 51
-ShotLast:
-    .byte 26, 46, 66
-
-;-------------------------------------------------------------------------------
-InitScene:
-    SUBROUTINE
-    lda #$01
-    sta W_score+1
-    lda #$20
-    sta W_score+2               ; 000120
-    lda #1
-    sta W_wave
-    ldx #8
-.slots:
-    lda SceneSlot,x
-    clc
-    adc SlotOfs,x
-    sta slotPtr,x
-    dex
-    bpl .slots
-    ldx #NENEMY-1
-.enemies:
-    lda SceneEX,x
-    sta W_eX,x
-    lda SceneELane,x
-    sta W_eLane,x
-    lda SceneEType,x
-    sta W_eType,x
-    dex
-    bpl .enemies
-    ldx #2
-.shots:
-    lda SceneShot,x
-    sta shotPtr,x
-    dex
-    bpl .shots
-    rts
-
-;-------------------------------------------------------------------------------
-; SelectEnemies (overscan, after Motion): decide which enemies player 1 draws
-; next frame. Each enemy needs rows E-1 .. feet, where E is its event row (the
+; SelectEnemies (VBLANK): decide which enemies player 1 draws this frame. Each enemy needs rows E-1 .. feet, where E is its event row (the
 ; first row at or above top-1 that the kernel allows) and E-1 is blank. They
 ; are sorted by E; one that overlaps an enemy already taken waits.
 SelectEnemies:
     SUBROUTINE
     ldx #NENEMY-1
 .tf:
-    txa
+    lda eOrder,x                ; forget last frame's choice, keep the order
+    and #$7F
     sta eOrder,x
     lda R_eType,x
     beq .none
@@ -484,7 +569,7 @@ SelectEnemies:
 .next:
     dex
     bpl .tf
-    ; insertion sort of eOrder by eTop
+    ; insertion sort of eOrder by eTop (nearly sorted already: cheap)
     ldx #1
 .so:
     stx temp+3
@@ -499,7 +584,10 @@ SelectEnemies:
     lda eTop,x
     cmp temp+1
     bcc .place
-    beq .place
+    bne .shift
+    cpx temp                    ; same event row: the lower enemy number first
+    bcc .place
+.shift:
     txa
     sta eOrder,y
     dey
@@ -511,9 +599,9 @@ SelectEnemies:
     inx
     cpx #NENEMY
     bne .so
-    ; choose: walk the sorted list from position frame mod n, wrapping, and
-    ; take each enemy whose rows (top-2 .. feet) miss every enemy taken so far.
-    ; The start moves every frame, so enemies that overlap take turns.
+    ; choose: walk the sorted list from position (frame & 7) mod n, wrapping,
+    ; and take each enemy whose rows (event row - 1 .. feet) miss every enemy
+    ; taken so far. The start moves every frame, so overlapping ones take turns.
     ldx #0
 .count:
     ldy eOrder,x
@@ -529,42 +617,57 @@ SelectEnemies:
     beq .selDone
     sta temp+1                  ; candidates left
     lda frame
+    and #7                      ; start: (frame & 7) mod n, so it visits every position
     sec
 .mod:
     sbc temp+3
     bcs .mod
     adc temp+3
-    sta temp+2                  ; position: frame mod n
+    sta temp+2
+;   The list is sorted by event row, so within each run (start..n-1, then
+;   0..start-1) a candidate can only overlap the last enemy taken in that
+;   run; in the second run it must also end above the first enemy taken in
+;   the first. QUEUE+0..3 (free until Schedule): last taken feet, any taken
+;   in this run, first run's first event row, in the second run.
+    lda #0
+    sta QUEUE+1
+    sta QUEUE+3
+    lda #$FF
+    sta QUEUE+2
 .cand:
     ldx temp+2
     ldy eOrder,x
     lda eTop,y
+    beq .reject                 ; no usable event row
     sec
     sbc #1
-    bcc .reject                 ; no usable event row
     sta temp                    ; candidate event row - 1
-    lda eFeet,y
-    sta QUEUE                   ; candidate feet (the queue is free until VBLANK)
-    ldx #0
-.vs:
-    lda eOrder,x
-    bpl .vsNext                 ; not taken
-    and #$7F
-    tay
-    lda eFeet,y
+    lda QUEUE+1
+    beq .noPrev
+    lda QUEUE
     cmp temp
-    bcc .vsNext                 ; taken one ends above the candidate
+    bcs .reject                 ; the last one taken ends at or below it
+.noPrev:
+    lda QUEUE+3
+    beq .take
+    lda eFeet,y
+    clc
+    adc #1
+    cmp QUEUE+2
+    bcs .reject                 ; second run: must end above the first run's first
+.take:
+    lda eFeet,y
+    sta QUEUE
+    lda #1
+    sta QUEUE+1
+    lda QUEUE+3
+    bne .mark
+    lda QUEUE+2
+    cmp #$FF
+    bne .mark
     lda eTop,y
-    sec
-    sbc #1
-    cmp QUEUE
-    beq .reject
-    bcc .reject                 ; overlap
-.vsNext:
-    inx
-    cpx temp+3
-    bne .vs
-    ldx temp+2
+    sta QUEUE+2
+.mark:
     lda eOrder,x
     ora #$80
     sta eOrder,x
@@ -575,6 +678,9 @@ SelectEnemies:
     bne .noWrap
     lda #0
     sta temp+2
+    sta QUEUE+1
+    lda #1
+    sta QUEUE+3
 .noWrap:
     dec temp+1
     bne .cand
@@ -583,7 +689,7 @@ SelectEnemies:
 
 ;-------------------------------------------------------------------------------
 ; Schedule (VBLANK): the event queue for the enemies SelectEnemies took, one
-; 7-byte record per enemy in row order.
+; 8-byte record per enemy in row order.
 Schedule:
     SUBROUTINE
     lda #0
@@ -631,7 +737,7 @@ Schedule:
     sty temp+1
     tay
     lda XHm,y
-    sta QUEUE+5,x
+    sta QUEUE+6,x
     lda XVar,y
     tay
     lda VarLo,y
@@ -642,14 +748,19 @@ Schedule:
     lda eFeet,y
     sta QUEUE+4,x
     sta evPrevF
+    lda R_eType,y
+    tay
+    lda EnColHi,y               ; color page for this kind of enemy
+    sta QUEUE+5,x
+    ldy temp+1
     lda R_eX,y                  ; walking frame: (x >> 2) & 1
     lsr
     lsr
     and #1
-    sta QUEUE+6,x               ; (scratch until the next record links here)
+    sta QUEUE+7,x               ; (scratch until the next record links here)
     lda R_eType,y
     asl
-    ora QUEUE+6,x
+    ora QUEUE+7,x
     tay
     lda QUEUE+4,x
     clc
@@ -659,12 +770,12 @@ Schedule:
     adc #0
     sta QUEUE+3,x
     lda #$FF
-    sta QUEUE+6,x
+    sta QUEUE+7,x
     txa
     clc
-    adc #7
+    adc #8
     tax
-    cpx #35
+    cpx #40
     bcs .done
 .qNext:
     inc temp+3
@@ -680,6 +791,21 @@ Schedule:
 ;-------------------------------------------------------------------------------
 ; F6 hotspots: an access to $FFF6/$FFF7/$FFF8/$FFF9 selects bank 0/1/2/3.
 ; A switch takes effect on the next fetch, at the same address in the new bank.
+; Calls into bank 2: bank 0 switches, bank 2 (at the next address) does the
+; JSR and switches back, and bank 0 returns.
+    ORG $0FC0
+    RORG $FFC0
+CallInit:
+    lda $FFF8                   ; bank 2 runs $FFC3-$FFC8: jsr LogicInit, lda $FFF6
+    ds 6, $EA
+    rts                         ; $FFC9
+    ORG $0FD0
+    RORG $FFD0
+CallLogic:
+    lda $FFF8                   ; bank 2 runs $FFD3-$FFD8: jsr Logic, lda $FFF6
+    ds 6, $EA
+    rts                         ; $FFD9
+
     ORG $0FE0
     RORG $FFE0
 ToBank1:
@@ -740,7 +866,7 @@ PreKernel:                      ; arrives early in s26
     lda #$FF
     sta PF1
     sta PF2                     ; by cycle 15
-    lda #COL_GOLD
+    lda pfColor
     sta COLUPF
     lda #COL_GREEN
     sta COLUP0
@@ -973,6 +1099,17 @@ Reset1:
     ORG $2000
     RORG $F000
     ds 256, 0                   ; Super Chip RAM window
+    include "logic.asm"
+    include "gen/bank2.inc"
+
+    ORG $2FC3
+    RORG $FFC3
+    jsr LogicInit
+    lda $FFF6                   ; back to bank 0, which returns at $FFC9
+    ORG $2FD3
+    RORG $FFD3
+    jsr Logic
+    lda $FFF6                   ; back to bank 0, which returns at $FFD9
     ORG $2FF0
     RORG $FFF0
 Reset2:

@@ -1,7 +1,8 @@
 // Generates the data and timed code that toywars.asm includes:
 //   gen/bank1.inc  play-kernel tables (box, shelves, shots, enemy colors),
 //                  defender and enemy graphics, event-row variants
-//   gen/bank0.inc  header fonts and the scene layout constants
+//   gen/bank0.inc  header fonts, status glyphs, scheduler tables
+//   gen/bank2.inc  game logic tables
 //   gen/layout.json geometry for the tests
 // usage: node tools/gen.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -30,8 +31,9 @@ export const shotRow = (L, x) => 20 * L + 11 + (149 - x) / 6;
 
 // ---------------------------------------------------------------- art
 const bits = (rows) => rows.map((r) => parseInt(r.replace(/[.]/g, '0').replace(/#/g, '1'), 2));
+// the toys (all green: player 0's three copies share one color), bottom-aligned
 export const DEFENDERS = {
-  soldier: bits([
+  army: bits([
     '...###..', '...##...', '...##...', '.#######', '.#####..', '.####...',
     '..###...', '..#.##..', '.##.##..', '.##..##.', '########']),
   tank: bits([
@@ -39,8 +41,16 @@ export const DEFENDERS = {
   teddy: bits([
     '.##..##.', '.######.', '.#.##.#.', '.######.', '..####..', '########',
     '.######.', '.######.', '###..###']),
-  empty: [],
+  cowboy: bits([
+    '...##...', '..####..', '########', '..####..', '...##...', '.######.',
+    '#.####.#', '..####..', '..#..#..', '.##..##.']),
+  cannon: bits([
+    '......##', '.....###', '....###.', '..#####.', '.#######', '.######.',
+    '.#....#.', '#.#..#.#', '.#....#.']),
+  jet: bits([
+    '..#.....', '.##.....', '###.....', '########', '########', '..####..', '...##...']),
 };
+export const TOYS = ['army', 'teddy', 'tank', 'cowboy', 'cannon', 'jet']; // toy type 1-6
 // two walking frames each; the kernel shows frame 2 while (x >> 2) is odd
 export const ENEMIES = {
   dino: bits([
@@ -95,6 +105,7 @@ const NARROW = {
   9: ['###', '#.#', '###', '..#', '###'],
   W: ['#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'], A: ['.#.', '#.#', '###', '#.#', '#.#'], V: ['#.#', '#.#', '#.#', '#.#', '.#.'],
   E: ['###', '#..', '##.', '#..', '###'],
+  w: ['#.#', '#.#', '###', '###', '#.#'], bat: ['.#.', '###', '#.#', '#.#', '###'],
 };
 // 48-pixel text: an array of rows (top first) of 48-char strings -> six cell tables, bottom row first
 function cells48(lines) {
@@ -105,22 +116,25 @@ function cells48(lines) {
 export function titleLines() {
   return Array.from({ length: 7 }, (_, r) => [...'TOY WARS'].map((ch) => `${TITLE_GLYPHS[ch][r]}.`).join(''));
 }
-// status: "dddddd" score at x 0-23, "WAVE" at 26-42, wave digit at 45-47
-export function statusLines(score, wave) {
-  return statusStatic().map((line, r) => {
-    const row = [...line];
-    [...score].forEach((d, i) => [...NARROW[d][r]].forEach((p, k) => { row[4 * i + k] = p; }));
-    [...NARROW[wave][r]].forEach((p, k) => { row[45 + k] = p; });
+// status line (48 px, narrow 3x5 font): score at x 0-23, battery icon 25-27,
+// batteries 29-31 and 33-35, "W" 37-39, wave 41-43 and 45-47
+export function statusLines(score, batteries, wave) {
+  return Array.from({ length: 5 }, (_, r) => {
+    const row = Array(48).fill('.');
+    const put = (x, g) => [...NARROW[g][r]].forEach((p, i) => { row[x + i] = p; });
+    [...score].forEach((d, i) => put(4 * i, d));
+    put(25, 'bat'); put(29, batteries[0]); put(33, batteries[1]); put(37, 'w'); put(41, wave[0]); put(45, wave[1]);
     return row.join('');
   });
 }
-function statusStatic() {
-  return Array.from({ length: 5 }, (_, r) => {
-    const row = Array(48).fill('.');
-    const put = (x, s) => [...s].forEach((p, i) => { row[x + i] = p; });
-    put(26, NARROW.W[r]); put(32, NARROW.A[r]); put(36, NARROW.V[r]); put(40, NARROW.E[r]);
-    return row.join('');
-  });
+const GAMEOVER_GLYPHS = {
+  G: ['.###', '#...', '#...', '#.##', '#..#', '#..#', '.###'], A: ['.##.', '#..#', '#..#', '####', '#..#', '#..#', '#..#'],
+  M: ['#..#', '####', '####', '#..#', '#..#', '#..#', '#..#'], E: ['####', '#...', '#...', '###.', '#...', '#...', '####'],
+  ' ': Array(7).fill('....'), O: ['.##.', '#..#', '#..#', '#..#', '#..#', '#..#', '.##.'],
+  V: ['#..#', '#..#', '#..#', '#..#', '#..#', '.##.', '.##.'], R: ['###.', '#..#', '#..#', '###.', '#.#.', '#..#', '#..#'],
+};
+export function gameOverLines() {
+  return Array.from({ length: 7 }, (_, r) => `.${[...'GAME OVER'].map((ch) => `${GAMEOVER_GLYPHS[ch][r]}.`).join('').slice(0, 46)}.`.padEnd(48, '.'));
 }
 
 // ---------------------------------------------------------------- emit helpers
@@ -147,21 +161,23 @@ export function build() {
   out1.push('ColArr:');
   for (let i = 0; i < 160; i += 16) out1.push(`    .byte ${colArr.slice(i, i + 16).join(',')}`);
   out1.push('BallTab:', bytes(ballTab), '    ALIGN 256');
+  // page B2: the same for green objects (the jet)
+  out1.push('ColGreen:');
+  for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => (c === 'COL_RED' ? 'COL_GREEN' : c)).join(',')}`);
+  out1.push('    ALIGN 256');
 
-  // page C: defenders, bottom row first: 18 zeros, then each sprite padded to DH rows + 18 zeros
+  // page C: toys, bottom row first, 29 apart from offset 58 (each needs 18
+  // zeros below it and 6 above within its band); offsets 224-255 stay zero
+  // for empty slots, whose pointer is chosen per slot so its band reads them
   const defPage = Array(256).fill(0);
-  let at = 58;
-  const defOrder = ['soldier', 'tank', 'teddy', 'empty'];
-  for (const name of defOrder) {
-    const g = [...DEFENDERS[name]].reverse();
-    g.forEach((v, i) => { defPage[at + i] = v; });
+  TOYS.forEach((name, k) => {
+    const at = 58 + 29 * k;
+    [...DEFENDERS[name]].reverse().forEach((v, i) => { defPage[at + i] = v; });
     layout.defenders[name] = at;
-    at += DH + 18;
-  }
-  if (at - 18 + DH + 6 > 256) throw new Error('defender page overflow');
+  });
+  if (58 + 29 * 5 + DH + 6 > 224) throw new Error('defender page overflow');
   out1.push('DefPage:', bytes(defPage));
-  for (const name of defOrder) out1.push(`D_${name.toUpperCase()} = DefPage + ${layout.defenders[name]}`);
-  if (layout.defenders.empty < 79) throw new Error('empty defender must sit at page offset >= 79');
+  for (const name of TOYS) out1.push(`D_${name.toUpperCase()} = DefPage + ${layout.defenders[name]}`);
 
   // enemies: 80 zeros, then each sprite (bottom-aligned in EH rows) followed by 79 zeros
   const enemy = Array(80).fill(0);
@@ -181,13 +197,16 @@ export function build() {
   out0.push('    ALIGN 256');
   const title = cells48(titleLines());
   title.forEach((c, i) => out0.push(`Title${i}:`, bytes(c)));
-  const st = cells48(statusStatic());
-  out0.push('Status3:', bytes(st[3]), 'Status4:', bytes(st[4]), 'Status5E:', bytes(st[5]));
+  const go = cells48(gameOverLines());
+  go.forEach((c, i) => out0.push(`Over${i}:`, bytes(c)));
   // narrow digits, bottom row first: Hi = glyph in bits 7-5, Lo = bits 3-1, R = bits 2-0
   const nd = (d) => [...NARROW[d]].reverse().map((s) => parseInt(s.replace(/\./g, '0').replace(/#/g, '1'), 2));
   out0.push('DigitHi:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 5))));
   out0.push('DigitLo:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 1))));
   out0.push('DigitR:', bytes([...Array(10).keys()].flatMap((d) => nd(d))));
+  out0.push('DigitM:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 4))));
+  out0.push('IconW:', bytes(nd('bat').map((v) => v << 4)), 'GlyphW:', bytes(nd('w')));
+  out0.push('Bin2BCD:', bytes([...Array(100).keys()].map((n) => ((n / 10) | 0) * 16 + (n % 10))));
 
   // scheduler tables (bank 0)
   const staticRows = new Set([...STATIC.swaps.map((x) => x[0]), ...STATIC.ball, ...STATIC.shot.map((x) => x[0]), STATIC.end]);
@@ -203,29 +222,29 @@ export function build() {
   out0.push('EBaseHi:', `    .byte ${eb.map((e) => (e === '0' ? 0 : `>(${e})`)).join(',')}`);
   out0.push('VarLo:', `    .byte ${VARIANT_W.map((_, v) => `<(EvA${v}-1)`).join(',')}`);
   out0.push('VarHi:', `    .byte ${VARIANT_W.map((_, v) => `>(EvA${v}-1)`).join(',')}`);
-  // defender slot k of lane L: pointer low byte = sprite + feet row - 79
-  const slotF = [0, 1, 2].flatMap((L) => COLUMN_X.map((x) => feetRow(L, x + 4)));
-  out0.push('SlotOfs:', bytes(slotF.map((f) => f - 79)));
-  // the still scene (from the mockup)
-  const scene = {
-    defenders: { 0: 'soldier', 3: 'tank', 6: 'teddy' },
-    enemies: [[0, 119, 'dino'], [1, 128, 'heli'], [1, 105, 'dino'], [2, 135, 'crouch'], [2, 107, 'dino']],
-    shots: [83, 77, 0],
-  };
-  const etype = { dino: 1, heli: 2, crouch: 3 };
-  out0.push('SceneSlot:', `    .byte ${[...Array(9).keys()].map((i) => `<D_${(scene.defenders[i] ?? 'empty').toUpperCase()}`).join(',')}`);
-  out0.push('SceneEX:', bytes(scene.enemies.map((e) => e[1])), 'SceneELane:', bytes(scene.enemies.map((e) => e[0])), 'SceneEType:', bytes(scene.enemies.map((e) => etype[e[2]])));
-  out0.push('SceneShot:', bytes(scene.shots.map((x, L) => (x ? shotRow(L, x) : 80))));
-  layout.scene = scene; layout.slotF = slotF; layout.rowBad = rowBad;
-  for (const [L, x] of scene.shots.entries()) if (x && (149 - x) % 6) throw new Error(`shot x ${x} is off the diagonal`);
+  out0.push('EnColHi:', '    .byte 0,>ColArr,>ColArr,>ColArr'); // color page per enemy type
 
-  return { out1, out0, layout, boxTab, ballTab };
+  // ---------------------------------------------------------------- bank 2: game logic tables
+  const out2 = [];
+  const slotF = [0, 1, 2].flatMap((L) => COLUMN_X.map((x) => feetRow(L, x + 4)));
+  // empty slot k of lane L: point so the slot's band (swap row .. next swap - 1) reads offsets 224-255
+  const swaps = [[17, 37, 57], [12, 33, 53], [7, 28, 48]];
+  const emptyLo = [0, 1, 2].flatMap((L) => [0, 1, 2].map((k) => { const last = L < 2 ? swaps[k][L + 1] - 1 : 79; return 224 - (79 - last); }));
+  const shotStart = [0, 1, 2].flatMap((L) => COLUMN_X.map((x) => 20 * L + 11 + Math.floor((149 - (x + 8)) / 6)));
+  out2.push('ToyLo:', `    .byte 0,${TOYS.map((n) => `<D_${n.toUpperCase()}`).join(',')}`);
+  out2.push('SlotOfs:', bytes(slotF.map((f) => f - 79)), 'EmptyLo:', bytes(emptyLo));
+  out2.push('SlotLane:', '    .byte 0,0,0,1,1,1,2,2,2', 'SlotCol:', '    .byte 0,1,2,0,1,2,0,1,2', 'ColX:', `    .byte ${COLUMN_X.join(',')}`);
+  out2.push('ShotStart:', bytes(shotStart), 'LaneR0:', '    .byte 11,31,51');
+  out2.push('ShotX:', bytes(Array.from({ length: 18 }, (_, j) => 149 - 6 * j))); // x of shot step j
+  layout.slotF = slotF; layout.rowBad = rowBad; layout.emptyLo = emptyLo; layout.shotStart = shotStart;
+
+  return { out1, out0, out2, layout, boxTab, ballTab };
 }
 
 // ---------------------------------------------------------------- event-row variants
 // Line B of an event row (player 1 moves to the next enemy): it keeps the
-// shelf/box/defender work of a normal line B and adds three pulls from the
-// event queue (enemy color pointer, HMP1, next event row) and RESP1 at a
+// shelf/box/defender work of a normal line B and adds four pulls from the
+// event queue (color pointer low and high, HMP1, next event row) and RESP1 at a
 // fixed cycle. Eight variants put RESP1 at w = 34, 39, ... 69 (x 42 ... 147);
 // HMP1 (-7..+7) covers the 15 pixels in between.
 // Cycle model: an instruction's write lands on its last cycle w; it affects
@@ -241,6 +260,7 @@ function scheduleVariant(wR) {
   ];
   const rest = [
     { id: 'A', asm: ['pla', 'sta p1col'], cyc: [4, 3] },
+    { id: 'K', asm: ['pla', 'sta p1col+1'], cyc: [4, 3] },
     { id: 'B', asm: ['pla', 'sta HMP1'], cyc: [4, 3] },
     { id: 'C', asm: ['pla', 'sta nextEv'], cyc: [4, 3] },
     { id: 'R', asm: ['sta RESP1'], cyc: [3], win: [wR, wR] },
@@ -256,7 +276,7 @@ function scheduleVariant(wR) {
   const perms = (arr) => (arr.length <= 1 ? [arr] : arr.flatMap((x, i) => perms([...arr.slice(0, i), ...arr.slice(i + 1)]).map((p) => [x, ...p])));
   const okOrder = (seq) => {
     const pos = Object.fromEntries(seq.map((s, i) => [s.id, i]));
-    if (!(pos.A < pos.B && pos.B < pos.C)) return false;
+    if (!(pos.A < pos.K && pos.K < pos.B && pos.B < pos.C)) return false;
     if (!(pos.L1 < pos.S1 && pos.S1 < pos.L2 && pos.L2 < pos.S2 && pos.L2 < pos.D)) return false;
     // A must stay intact between Lx and Sx: only stores without A use in between
     const between = (a, b) => seq.slice(pos[a] + 1, pos[b]).map((s) => s.id);
@@ -271,7 +291,7 @@ function scheduleVariant(wR) {
   const interleave = (x, y) => (!x.length ? [y] : !y.length ? [x] : [
     ...interleave(x.slice(1), y).map((r) => [x[0], ...r]), ...interleave(x, y.slice(1)).map((r) => [y[0], ...r])]);
   const insertAll = (seqs, id) => seqs.flatMap((q) => q.map((_, i) => [...q.slice(0, i), id, ...q.slice(i)]).concat([[...q, id]]));
-  let orders = interleave(['A', 'B', 'C'], ['L1', 'S1', 'L2', 'S2']);
+  let orders = interleave(['A', 'K', 'B', 'C'], ['L1', 'S1', 'L2', 'S2']);
   for (const id of ['P', 'R', 'D']) orders = insertAll(orders, id);
   for (const ord of orders) {
     const order = ord.map((id) => byId[id]);
@@ -313,8 +333,8 @@ function padCycles(n) {
   return out;
 }
 
-if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}` || process.argv[1]?.endsWith('gen.mjs')) {
-  const { out1, out0, layout, boxTab, ballTab } = build();
+if (process.argv[1]?.endsWith('gen.mjs')) {
+  const { out1, out0, out2, layout, boxTab, ballTab } = build();
   const variants = [];
   VARIANT_W.forEach((w, v) => {
     const { t, lines } = scheduleVariant(w);
@@ -328,6 +348,7 @@ if (import.meta.url === `file://${process.argv[1].replace(/\\/g, '/')}` || proce
   writeFileSync('gen/bank1.inc', `; generated by tools/gen.mjs -- do not edit\n${out1.join('\n')}\n`);
   writeFileSync('gen/variants.inc', `; generated by tools/gen.mjs -- do not edit\n${variants.join('\n')}\n`);
   writeFileSync('gen/bank0.inc', `; generated by tools/gen.mjs -- do not edit\n${out0.join('\n')}\n`);
+  writeFileSync('gen/bank2.inc', `; generated by tools/gen.mjs -- do not edit\n${out2.join('\n')}\n`);
   writeFileSync('gen/layout.json', JSON.stringify({ ...layout, boxTab, ballTab, VARIANT_W, STATIC, COLUMN_X, EH, DH }, null, 1));
   console.log('gen ok');
 }

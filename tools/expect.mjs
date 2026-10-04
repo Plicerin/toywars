@@ -18,13 +18,12 @@ export function scheduled(enemies, frame) {
     return { i, lane, x, type, f, E };
   });
   const order = [...info].sort((a, b) => a.E - b.E || a.i - b.i);
-  // walk the sorted list from position frame mod n (frame: the counter when
-  // SelectEnemies ran, one less than the displayed frame's), take each enemy
-  // that misses the ones already taken
+  // walk the sorted list from position (frame & 7) mod n (frame: the displayed
+  // frame's counter), take each enemy that misses the ones already taken
   const chosen = new Set(), taken = [];
   const n = order.length;
   for (let k = 0; k < n; k += 1) {
-    const e = order[(frame + k) % n];
+    const e = order[((frame & 7) % n + k) % n];
     if (e.E < 1) continue;
     if (taken.every((t) => t.f < e.E - 1 || e.f < t.E - 1)) { taken.push(e); chosen.add(e.i); }
   }
@@ -46,14 +45,15 @@ export function expectedFrame(scene, frame) {
   // header text: title (s1-14, red) and status (s16-25, gold) at x 54-101
   const text = (lines, s0, rowsPer, c) => lines.forEach((line, r) => [...line].forEach((p, x) => { if (p === '#') for (let k = 0; k < rowsPer; k += 1) put(s0 + rowsPer * r + k, 54 + x, c); }));
   text(scene.titleLines, 1, 2, COL.red);
-  text(scene.statusLines, 16, 2, COL.gold);
-  for (let x = 8; x < 160; x += 1) put(30, x, COL.gold); // rule (HMOVE blanks x 0-7)
+  if (scene.statusLines) text(scene.statusLines, 16, 2, COL.gold);
+  const pf = scene.pfColor ?? COL.gold; // shelves, box and rule (white while flashing)
+  for (let x = 8; x < 160; x += 1) put(30, x, pf); // rule (HMOVE blanks x 0-7)
   // box: PF1 bits for x 16-47
-  layout.boxTab.forEach((v, y) => { const r = 79 - y; for (let b = 0; b < 8; b += 1) if (v & (0x80 >> b)) for (let d = 0; d < 4; d += 1) row2(r, 16 + 4 * b + d, COL.gold); });
+  layout.boxTab.forEach((v, y) => { const r = 79 - y; for (let b = 0; b < 8; b += 1) if (v & (0x80 >> b)) for (let d = 0; d < 4; d += 1) row2(r, 16 + 4 * b + d, pf); });
   // shelves: row 20k+j at x 149-6j, 4 wide, both lines
-  for (let k = 0; k < 4; k += 1) for (let j = 0; j <= 18; j += 1) for (let d = 0; d < 4; d += 1) row2(20 * k + j, 149 - 6 * j + d, COL.gold);
+  for (let k = 0; k < 4; k += 1) for (let j = 0; j <= 18; j += 1) for (let d = 0; d < 4; d += 1) row2(20 * k + j, 149 - 6 * j + d, pf);
   // enemies: player 1 graphics change on line B, so a row shows on line B and the next line A
-  const drawn = scheduled(scene.enemies, (frame + 255) % 256);
+  const drawn = scheduled(scene.enemies, frame);
   const enemyLines = new Set();
   for (const e of drawn) {
     const g = ENEMIES[enemyFrame(e.type, e.x)];

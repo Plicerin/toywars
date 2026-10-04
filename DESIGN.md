@@ -5,8 +5,13 @@ Super Chip, 128 bytes of cartridge RAM; NTSC), in the
 spirit of Plants vs. Zombies: toys on a shelf hold off monsters marching in
 from the right. (The reference mockup is kept locally, not in the repo.)
 
-Status: the screen kernel is built and verified pixel for pixel
-(`node tools/test.mjs`). Everything below the kernel is design, not code yet.
+Status: playable (2026-10-04). Built: board, batteries, all six toys, three
+enemies (dino, helicopter, crawler), waves 1-12 with unlocks and the second
+lap, lid slams, game over. Not yet: mouse, knight, balloon clown, pogo frog,
+T-Rex, the jet's flight in green, sound, Game Select, difficulty switch.
+Numbers as built: army man fires every 42 frames (1 damage), tank every 300
+(8), cannon every 198 (3); cowboy lasso holds 60 frames, every 120; chewing
+takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
 
 ## Board
 
