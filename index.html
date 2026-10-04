@@ -2,54 +2,343 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Toy Wars 2600</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toy Wars · Atari 2600</title>
+  <meta name="description" content="Toy Wars: an original lane-defense game for the Atari 2600. Place toys on the shelves and stop the monsters before they reach the toy box. Play it in your browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    :root { color-scheme: dark; --bg: #0c0a10; --panel: #17131d; --fg: #efe9f4; --muted: #a399ae; --accent: #d2b04a; --border: rgba(255, 255, 255, 0.12); }
+    :root {
+      color-scheme: dark;
+      --bg: #0a0910;
+      --panel: #14121c;
+      --panel-2: #1b1826;
+      --line: rgba(255, 255, 255, 0.09);
+      --fg: #efe9f4;
+      --muted: #a69daf;
+      --navy: #003064;      /* the game's header panel, $A0 */
+      --gold: #bb9f47;      /* shelves and status line, $F8 */
+      --gold-hi: #e2c56b;
+      --red: #c84848;       /* monsters, $46 */
+      --green: #5cba5c;     /* toys, $C8 */
+      --orange: #d5824a;    /* the T-Rex, $38 */
+      --pixel: 'Press Start 2P', ui-monospace, monospace;
+      --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; display: grid; place-items: center; padding: 16px; }
-    main { width: min(760px, 100%); display: grid; gap: 12px; }
-    canvas { display: block; width: 100%; aspect-ratio: 4 / 3; image-rendering: pixelated; background: #000; border-radius: 8px; outline: none; }
-    canvas:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
-    .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; cursor: pointer; }
-    button:hover { border-color: var(--accent); }
-    button[aria-pressed="true"] { color: var(--accent); }
-    #hint { color: var(--muted); margin: 0; }
-    .about { color: var(--muted); margin: 0; font-size: 13px; }
-    a { color: var(--accent); }
-    .touch { display: none; justify-content: space-between; align-items: center; touch-action: none; user-select: none; -webkit-user-select: none; }
-    .dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 48px); gap: 4px; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 var(--body); }
+    a { color: var(--gold-hi); }
+    img.px { image-rendering: pixelated; }
+    .wrap { width: min(1080px, 100%); margin: 0 auto; padding: 0 16px; }
+
+    /* header */
+    .top { background: linear-gradient(180deg, var(--navy), #001c3d); border-bottom: 4px solid var(--gold); }
+    .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; flex-wrap: wrap; }
+    .logo { font: 22px/1 var(--pixel); color: var(--red); letter-spacing: 2px; text-decoration: none; text-shadow: 3px 3px 0 #2a0a0a; }
+    nav { display: flex; gap: 6px; flex-wrap: wrap; }
+    nav a { font: 9px/1 var(--pixel); color: var(--gold-hi); text-decoration: none; padding: 9px 10px; border: 1px solid rgba(226, 197, 107, 0.25); border-radius: 6px; }
+    nav a:hover { background: rgba(226, 197, 107, 0.12); }
+
+    /* hero */
+    .hero { padding: 40px 0 8px; }
+    .hero .wrap { display: grid; grid-template-columns: 1.15fr 1fr; gap: 40px; align-items: center; }
+    .kicker { font: 10px/1.6 var(--pixel); color: var(--gold); letter-spacing: 1px; margin: 0 0 14px; }
+    h1 { font: 44px/1.15 var(--pixel); margin: 0 0 20px; color: var(--red); text-shadow: 4px 4px 0 #2a0a0a; }
+    h1 span { display: block; color: var(--gold-hi); font-size: 0.42em; margin-top: 14px; text-shadow: none; line-height: 1.6; }
+    .lede { font-size: 19px; color: #ddd5e6; margin: 0 0 24px; max-width: 34em; }
+    .cta { display: inline-flex; align-items: center; gap: 10px; font: 12px/1 var(--pixel); color: #1a1205; background: var(--gold-hi); padding: 16px 20px; border-radius: 10px; text-decoration: none; box-shadow: 0 5px 0 #8a7430; }
+    .cta:hover { transform: translateY(-1px); }
+    .cta:active { transform: translateY(3px); box-shadow: 0 2px 0 #8a7430; }
+    .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; padding: 0; list-style: none; }
+    .facts li { font-size: 14px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; }
+    .parade { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; justify-items: center; align-items: end; padding: 26px; background: radial-gradient(circle at 50% 40%, #16213a, var(--bg) 70%); border-radius: 18px; }
+    .parade img { height: 66px; }
+    .parade .big { height: 76px; }
+
+    /* sections */
+    section { padding: 56px 0 10px; }
+    h2 { font: 20px/1.4 var(--pixel); color: var(--gold-hi); margin: 0 0 8px; }
+    h2 small { display: block; font: 15px/1.5 var(--body); color: var(--muted); margin-top: 10px; letter-spacing: 0; }
+    h3 { font: 12px/1.5 var(--pixel); margin: 0 0 8px; }
+
+    /* the console */
+    .console { background: linear-gradient(180deg, #2a2420, #15110e); border: 1px solid #3a322c; border-radius: 22px; padding: 22px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+    .screen { background: #000; border-radius: 14px; padding: 10px; box-shadow: inset 0 0 0 3px #0c0b0a, inset 0 0 40px rgba(0, 0, 0, 0.9); }
+    #player canvas { display: block; width: 100%; aspect-ratio: 4 / 3; image-rendering: pixelated; background: #000; border-radius: 8px; outline: none; }
+    #player canvas:focus-visible { box-shadow: 0 0 0 3px var(--gold-hi); }
+    .switches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; align-items: center; }
+    .switches button { font: 9px/1.4 var(--pixel); color: #e9e2d6; background: linear-gradient(180deg, #4a4038, #2b2520); border: 1px solid #5b4f45; border-bottom-width: 4px; border-radius: 8px; padding: 12px 14px; cursor: pointer; }
+    .switches button:hover { border-color: var(--gold); }
+    .switches button:active { border-bottom-width: 1px; transform: translateY(3px); }
+    .switches button[aria-pressed="true"] { color: var(--gold-hi); }
+    .switches [data-play] { background: linear-gradient(180deg, #e2c56b, #a8893a); color: #1a1205; border-color: #c9ad5a; }
+    #hint { color: #cfc6d8; margin: 16px 2px 0; min-height: 3.2em; }
+    .touch { display: none; justify-content: space-between; align-items: center; margin-top: 16px; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 50px); gap: 5px; }
     .dpad [data-hold="up"] { grid-area: 1 / 2; } .dpad [data-hold="left"] { grid-area: 2 / 1; }
     .dpad [data-hold="right"] { grid-area: 2 / 3; } .dpad [data-hold="down"] { grid-area: 3 / 2; }
-    .dpad button { padding: 0; font-size: 18px; touch-action: none; }
-    .jump { width: 92px; height: 92px; border-radius: 50%; touch-action: none; }
+    .touch button { font-size: 20px; color: #eee; background: #2b2520; border: 1px solid #5b4f45; border-radius: 10px; touch-action: none; }
+    .jump { width: 96px; height: 96px; border-radius: 50% !important; background: radial-gradient(circle at 40% 35%, #e05a4a, #8e2a22) !important; font: 11px/1 var(--pixel) !important; }
     @media (pointer: coarse) { .touch { display: flex; } }
+
+    /* cards */
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; grid-template-columns: 64px 1fr; gap: 6px 16px; align-items: start; }
+    .card .art { grid-row: span 3; display: grid; place-items: center; height: 88px; background: #000; border-radius: 10px; }
+    .card .art img { max-height: 70px; max-width: 52px; }
+    .card h3 { margin: 2px 0 0; }
+    .toy h3 { color: var(--green); }
+    .foe h3 { color: var(--red); }
+    .foe.boss h3 { color: var(--orange); }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { font-size: 13px; color: var(--muted); background: var(--panel-2); border-radius: 6px; padding: 1px 8px; white-space: nowrap; }
+    .tag b { color: var(--fg); font-weight: 700; }
+    .card p { grid-column: 1 / -1; margin: 8px 0 0; color: #d8d0e2; font-size: 16px; }
+
+    /* how to play */
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+    .shot { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+    .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+    .steps li { position: relative; padding: 14px 16px 14px 60px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+    .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 16px; top: 14px; width: 30px; height: 30px; display: grid; place-items: center; font: 11px/1 var(--pixel); color: #1a1205; background: var(--gold-hi); border-radius: 8px; }
+    .steps b { color: var(--gold-hi); }
+    .table-scroll { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); }
+    .controls { width: 100%; min-width: 600px; border-collapse: collapse; background: var(--panel); }
+    .controls th, .controls td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .controls th { font: 9px/1.5 var(--pixel); color: var(--gold); background: var(--panel-2); }
+    .controls tr:last-child td { border-bottom: 0; }
+    kbd { font: 12px/1 var(--pixel); display: inline-block; min-width: 26px; text-align: center; padding: 6px 7px; margin: 1px 2px; color: #f3ead6; background: linear-gradient(180deg, #3d3530, #26201c); border: 1px solid #5b4f45; border-bottom-width: 3px; border-radius: 6px; }
+    .subhead { margin: 36px 0 12px; color: var(--gold-hi); }
+
+    /* waves */
+    .waves { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .wave { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .wave .n { font: 10px/1 var(--pixel); color: var(--gold); }
+    .wave .new { display: flex; gap: 8px; align-items: center; margin-top: 10px; min-height: 36px; flex-wrap: wrap; }
+    .wave img { height: 30px; }
+    .wave .t { font-size: 14px; color: var(--muted); }
+    .options { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 18px; }
+    .option { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+    .option h3 { color: var(--gold-hi); }
+    .option p { margin: 0; color: #d8d0e2; }
+
+    /* tips */
+    .tips { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; padding: 0; list-style: none; margin: 0; }
+    .tips li { background: var(--panel); border-left: 4px solid var(--gold); border-radius: 10px; padding: 14px 16px; color: #ddd5e6; }
+
+    footer { margin-top: 64px; padding: 34px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: 15px; }
+    footer .wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; }
+    footer h3 { color: var(--gold); }
+    footer ul { margin: 0; padding-left: 18px; }
+
+    @media (max-width: 860px) {
+      .hero .wrap, .two, footer .wrap { grid-template-columns: 1fr; }
+      h1 { font-size: 32px; }
+    }
+    @media (max-width: 520px) {
+      body { font-size: 16px; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 16px; }
+      .console { padding: 12px; border-radius: 16px; }
+      .screen { padding: 6px; }
+      nav a { padding: 8px; }
+      .tips { grid-template-columns: 1fr; }
+      .parade img { height: 48px; } .parade .big { height: 56px; }
+    }
   </style>
 </head>
 <body>
-  <main id="player">
-    <canvas width="640" height="480" tabindex="0" aria-label="Toy Wars. Arrow keys or WASD move the cursor, Space or Z places a toy, hold Space with left or right to choose a toy, Enter for Game Reset."></canvas>
-    <div class="bar">
-      <button type="button" data-play>Play</button>
-      <button type="button" data-reset>Game Reset</button>
-      <button type="button" data-select>Game Select</button>
-      <button type="button" data-difficulty aria-pressed="false" title="Left difficulty switch: A = monsters at second-lap speed from the start">Difficulty B</button>
-      <button type="button" data-pause>Pause</button>
-      <button type="button" data-mute aria-pressed="false">Mute</button>
+  <header class="top">
+    <div class="wrap">
+      <a class="logo" href="#">TOY WARS</a>
+      <nav aria-label="Sections">
+        <a href="#play">Play</a>
+        <a href="#how">How to play</a>
+        <a href="#toys">Toys</a>
+        <a href="#monsters">Monsters</a>
+        <a href="#waves">Waves</a>
+      </nav>
     </div>
-    <div class="touch" aria-label="Touch controls">
-      <div class="dpad">
-        <button type="button" data-hold="up" aria-label="Up">▲</button>
-        <button type="button" data-hold="left" aria-label="Left">◀</button>
-        <button type="button" data-hold="right" aria-label="Right">▶</button>
-        <button type="button" data-hold="down" aria-label="Down">▼</button>
+  </header>
+
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <p class="kicker">AN ORIGINAL ATARI 2600 GAME</p>
+        <h1>TOY WARS<span>Defend the toy box!</span></h1>
+        <p class="lede">The monsters are marching along the shelves toward the toy box. Line the shelves with army men, teddies, tanks, cowboys, cannons and jets, keep your batteries charged, and don't let anything through.</p>
+        <a class="cta" href="#play">▶ PLAY NOW</a>
+        <ul class="facts">
+          <li>Plays in your browser</li>
+          <li>Keyboard, gamepad or touch</li>
+          <li>16K cartridge + Super Chip</li>
+        </ul>
       </div>
-      <button type="button" class="jump" data-hold="fire">Fire</button>
+      <div class="parade" aria-hidden="true">
+        <img class="px" src="img/sprites/army.png" alt="">
+        <img class="px" src="img/sprites/teddy.png" alt="">
+        <img class="px" src="img/sprites/cowboy.png" alt="">
+        <img class="px" src="img/sprites/tank.png" alt="">
+        <img class="px" src="img/sprites/dino.png" alt="">
+        <img class="px big" src="img/sprites/trex.png" alt="">
+        <img class="px" src="img/sprites/knight.png" alt="">
+        <img class="px" src="img/sprites/balloon.png" alt="">
+      </div>
     </div>
-    <p id="hint" data-hint>Click the game to start. Arrows move the cursor, Space places a toy, hold Space and press left/right to choose a toy, Enter is Game Reset, G is Game Select. P pauses, M mutes.</p>
-    <p class="about">Toy Wars is an original Atari 2600 game in progress: a 16K cartridge with Atari's Super Chip, running here on a 6502 and TIA emulator. Defend the toy box: place toys on the shelves with batteries, and stop the monsters before they reach it. Each shelf's lid slams once; the second monster through ends the game. <a href="https://github.com/Plicerin/toywars">Source and design</a>.</p>
-  </main>
+  </div>
+
+  <section id="play">
+    <div class="wrap">
+      <div class="console" id="player">
+        <div class="screen">
+          <canvas width="640" height="480" tabindex="0" aria-label="Toy Wars. Arrow keys or WASD move the cursor, Space or Z places a toy, hold Space with left or right to choose a toy, Enter for Game Reset, G for Game Select."></canvas>
+        </div>
+        <div class="switches">
+          <button type="button" data-play>Play</button>
+          <button type="button" data-reset>Game Reset</button>
+          <button type="button" data-select>Game Select</button>
+          <button type="button" data-difficulty aria-pressed="false" title="Left difficulty switch: A = monsters at second-lap speed from the start">Difficulty B</button>
+          <button type="button" data-pause>Pause</button>
+          <button type="button" data-mute aria-pressed="false">Mute</button>
+        </div>
+        <div class="touch" aria-label="Touch controls">
+          <div class="dpad">
+            <button type="button" data-hold="up" aria-label="Up">▲</button>
+            <button type="button" data-hold="left" aria-label="Left">◀</button>
+            <button type="button" data-hold="right" aria-label="Right">▶</button>
+            <button type="button" data-hold="down" aria-label="Down">▼</button>
+          </div>
+          <button type="button" class="jump" data-hold="fire">FIRE</button>
+        </div>
+        <p id="hint" data-hint>Click the game to start. Arrows move the cursor, Space places a toy, hold Space and press left/right to choose a toy, Enter is Game Reset, G is Game Select. P pauses, M mutes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How to play<small>Three shelves, nine slots, one toy box to protect.</small></h2>
+      <div class="two">
+        <div>
+          <img class="shot px" src="img/screen.png" alt="Toy Wars: the toy box on the left, three slanted shelves with green toys in their slots, and red monsters walking in from the right. The status line shows the score, batteries and wave.">
+        </div>
+        <ol class="steps">
+          <li><b>Pick a slot.</b> The joystick moves the cursor over the nine slots, three on each shelf. An empty slot shows a blinking ghost of the toy you're about to place.</li>
+          <li><b>Choose a toy.</b> Hold fire and push left or right to flip through the toys you've unlocked.</li>
+          <li><b>Place it.</b> Press fire on an empty slot. It costs batteries. Fire on a toy picks it up again and gives you half its cost back.</li>
+          <li><b>Keep the batteries coming.</b> One trickles in every second and a half, and every monster you stop pays a few more. Watch the count next to the battery icon.</li>
+          <li><b>Guard the box.</b> The first monster to reach the toy box slams that shelf's lid and clears the shelf. The lid only slams once: the next monster through the same shelf ends the game.</li>
+        </ol>
+      </div>
+
+      <h3 class="subhead">Controls</h3>
+      <div class="table-scroll">
+        <table class="controls">
+          <thead><tr><th scope="col"></th><th scope="col">Keyboard</th><th scope="col">Joystick / gamepad</th><th scope="col">Touch</th></tr></thead>
+          <tbody>
+            <tr><td>Move the cursor</td><td><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Stick or D-pad</td><td>D-pad</td></tr>
+            <tr><td>Place / pick up</td><td>Tap <kbd>Space</kbd> or <kbd>Z</kbd></td><td>Tap any face button</td><td>Tap FIRE</td></tr>
+            <tr><td>Choose a toy</td><td>Hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd></td><td>Hold fire + left/right</td><td>Hold FIRE + ◀/▶</td></tr>
+            <tr><td>New game</td><td><kbd>Enter</kbd> (Game Reset)</td><td>Start</td><td>Game Reset button</td></tr>
+            <tr><td>Game Select</td><td><kbd>G</kbd></td><td>—</td><td>Game Select button</td></tr>
+            <tr><td>Pause / mute</td><td><kbd>P</kbd> / <kbd>M</kbd></td><td>Back pauses</td><td>Buttons</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="toys">
+    <div class="wrap">
+      <h2>Your toys<small>A new toy unlocks as the waves go on. Only one shot flies along a shelf at a time, so toys on the same shelf take turns.</small></h2>
+      <div class="grid">
+        <article class="card toy"><div class="art"><img class="px" src="img/sprites/army.png" alt="Army man"></div><h3>Army man</h3><div class="tags"><span class="tag"><b>10</b> batteries</span><span class="tag">from wave <b>1</b></span></div><div class="tags"><span class="tag">health <b>8</b></span></div><p>Fires along its shelf about every 0.7 seconds, 1 damage a bullet. Cheap and steady, but its bullets fly over a crawler that's busy chewing.</p></article>
+        <article class="card toy"><div class="art"><img class="px" src="img/sprites/teddy.png" alt="Teddy bear"></div><h3>Teddy</h3><div class="tags"><span class="tag"><b>5</b> batteries</span><span class="tag">from wave <b>2</b></span></div><div class="tags"><span class="tag">health <b>40</b></span></div><p>Doesn't fight back. Monsters stop to chew on it, which holds a dino up for about ten seconds while your other toys work.</p></article>
+        <article class="card toy"><div class="art"><img class="px" src="img/sprites/tank.png" alt="Tank"></div><h3>Tank</h3><div class="tags"><span class="tag"><b>25</b> batteries</span><span class="tag">from wave <b>4</b></span></div><div class="tags"><span class="tag">health <b>12</b></span></div><p>One heavy shell every 5 seconds: 8 damage, enough for most monsters. Shells can't reach the balloon clown.</p></article>
+        <article class="card toy"><div class="art"><img class="px" src="img/sprites/cowboy.png" alt="Cowboy"></div><h3>Cowboy</h3><div class="tags"><span class="tag"><b>15</b> batteries</span><span class="tag">from wave <b>5</b></span></div><div class="tags"><span class="tag">health <b>8</b></span></div><p>Lassos a monster within about a slot's length and holds it still for a second, every two seconds. Great for stopping a charging knight.</p></article>
+        <article class="card toy"><div class="art"><img class="px" src="img/sprites/cannon.png" alt="Cannon"></div><h3>Cannon</h3><div class="tags"><span class="tag"><b>20</b> batteries</span><span class="tag">from wave <b>7</b></span></div><div class="tags"><span class="tag">health <b>10</b></span></div><p>A cannonball every 3.3 seconds, 3 damage. It hits everything, balloon clowns included.</p></article>
+        <article class="card toy"><div class="art"><img class="px" src="img/sprites/jet.png" alt="Jet"></div><h3>Jet</h3><div class="tags"><span class="tag"><b>30</b> batteries</span><span class="tag">from wave <b>9</b></span></div><div class="tags"><span class="tag">one use</span></div><p>Takes off as soon as you place it and flies the whole shelf in about a second, hitting every monster it passes for 10 damage. Then it's gone: save it for emergencies.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="monsters">
+    <div class="wrap">
+      <h2>The monsters<small>Every fourth wave they all get a little tougher (one more health). Stopping one earns batteries and points.</small></h2>
+      <div class="grid">
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/dino.png" alt="Dino"></div><h3>Dino</h3><div class="tags"><span class="tag">wave <b>1</b></span><span class="tag">health <b>6</b></span></div><div class="tags"><span class="tag"><b>+3</b> batteries</span><span class="tag"><b>10</b> pts</span></div><p>Slow and stubborn. Stops at the first toy in its way and chews until it's gone.</p></article>
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/mouse.png" alt="Wind-up mouse"></div><h3>Wind-up mouse</h3><div class="tags"><span class="tag">wave <b>3</b></span><span class="tag">health <b>1</b></span></div><div class="tags"><span class="tag"><b>+1</b> battery</span><span class="tag"><b>5</b> pts</span></div><p>Fast, and always in a pack of three on the same shelf. One hit each, but there are a lot of them.</p></article>
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/crawler.png" alt="Crawler"></div><h3>Crawler</h3><div class="tags"><span class="tag">wave <b>4</b></span><span class="tag">health <b>3</b></span></div><div class="tags"><span class="tag"><b>+2</b> batteries</span><span class="tag"><b>10</b> pts</span></div><p>Low to the ground: once it's chewing on a toy, army men's bullets fly right over it. Answer it with a tank or a cannon.</p></article>
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/knight.png" alt="Knight"></div><h3>Knight</h3><div class="tags"><span class="tag">wave <b>5</b></span><span class="tag">health <b>6</b></span></div><div class="tags"><span class="tag"><b>+4</b> batteries</span><span class="tag"><b>20</b> pts</span></div><p>Plods along behind a shield. When it's down to 2 health the shield breaks, and it charges at four times the speed.</p></article>
+        <article class="card foe boss"><div class="art"><img class="px" src="img/sprites/trex.png" alt="T-Rex"></div><h3>T-Rex</h3><div class="tags"><span class="tag">waves <b>6</b> &amp; <b>12</b></span><span class="tag">health <b>20</b></span></div><div class="tags"><span class="tag"><b>+10</b> batteries</span><span class="tag"><b>50</b> pts</span></div><p>The boss: opens wave 6 (and wave 12, two of them). Very slow, but it crushes a toy in a single bite.</p></article>
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/heli.png" alt="Helicopter"></div><h3>Helicopter</h3><div class="tags"><span class="tag">wave <b>7</b></span><span class="tag">health <b>5</b></span></div><div class="tags"><span class="tag"><b>+3</b> batteries</span><span class="tag"><b>15</b> pts</span></div><p>Hops over the first toy in its path, then walks on. Put a second toy behind the first.</p></article>
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/balloon.png" alt="Balloon clown"></div><h3>Balloon clown</h3><div class="tags"><span class="tag">wave <b>8</b></span><span class="tag">health <b>2</b></span></div><div class="tags"><span class="tag"><b>+3</b> batteries</span><span class="tag"><b>15</b> pts</span></div><p>Floats over every toy, so nothing can block it. Tank shells can't reach it; army men and cannons can.</p></article>
+        <article class="card foe"><div class="art"><img class="px" src="img/sprites/pogo.png" alt="Pogo frog"></div><h3>Pogo frog</h3><div class="tags"><span class="tag">wave <b>9</b></span><span class="tag">health <b>3</b></span></div><div class="tags"><span class="tag"><b>+3</b> batteries</span><span class="tag"><b>15</b> pts</span></div><p>The first time a toy blocks it, it bounces over to the next shelf. After that it settles down and chews like the rest.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="waves">
+    <div class="wrap">
+      <h2>Waves<small>Each wave starts with a short breather and ends with a rush. After wave 12 the waves repeat at a faster pace, with every toy unlocked.</small></h2>
+      <div class="waves">
+        <div class="wave"><div class="n">WAVE 1</div><div class="new"><img class="px" src="img/sprites/army.png" alt="Army man"><img class="px" src="img/sprites/dino.png" alt="Dino"></div><div class="t">Army man vs. dinos</div></div>
+        <div class="wave"><div class="n">WAVE 2</div><div class="new"><img class="px" src="img/sprites/teddy.png" alt="Teddy"></div><div class="t">Teddy unlocks</div></div>
+        <div class="wave"><div class="n">WAVE 3</div><div class="new"><img class="px" src="img/sprites/mouse.png" alt="Wind-up mouse"></div><div class="t">Mouse packs</div></div>
+        <div class="wave"><div class="n">WAVE 4</div><div class="new"><img class="px" src="img/sprites/tank.png" alt="Tank"><img class="px" src="img/sprites/crawler.png" alt="Crawler"></div><div class="t">Tank · crawlers</div></div>
+        <div class="wave"><div class="n">WAVE 5</div><div class="new"><img class="px" src="img/sprites/cowboy.png" alt="Cowboy"><img class="px" src="img/sprites/knight.png" alt="Knight"></div><div class="t">Cowboy · knights</div></div>
+        <div class="wave"><div class="n">WAVE 6</div><div class="new"><img class="px" src="img/sprites/trex.png" alt="T-Rex"></div><div class="t">Boss: T-Rex</div></div>
+        <div class="wave"><div class="n">WAVE 7</div><div class="new"><img class="px" src="img/sprites/cannon.png" alt="Cannon"><img class="px" src="img/sprites/heli.png" alt="Helicopter"></div><div class="t">Cannon · helicopters</div></div>
+        <div class="wave"><div class="n">WAVE 8</div><div class="new"><img class="px" src="img/sprites/balloon.png" alt="Balloon clown"></div><div class="t">Balloon clowns</div></div>
+        <div class="wave"><div class="n">WAVE 9</div><div class="new"><img class="px" src="img/sprites/jet.png" alt="Jet"><img class="px" src="img/sprites/pogo.png" alt="Pogo frog"></div><div class="t">Jet · pogo frogs</div></div>
+        <div class="wave"><div class="n">WAVES 10–11</div><div class="new"><span class="t">Everything at once</span></div><div class="t">Bigger, faster waves</div></div>
+        <div class="wave"><div class="n">WAVE 12</div><div class="new"><img class="px" src="img/sprites/trex.png" alt="T-Rex"><img class="px" src="img/sprites/trex.png" alt="T-Rex"></div><div class="t">Two T-Rexes</div></div>
+        <div class="wave"><div class="n">WAVE 13+</div><div class="new"><span class="t">Lap two</span></div><div class="t">Faster, and on it goes</div></div>
+      </div>
+
+      <div class="options">
+        <div class="option"><h3>Game Select</h3><p>Before a game the status line reads <b>GAME 1</b>. Press Game Select to step through the three games, then fire or Game Reset to start. Game 1 starts at wave 1 with 30 batteries, game 2 at wave 5 with 50, game 3 at wave 9 with 70 and every toy. Pressing Select during a game ends it and takes you back to choosing.</p></div>
+        <div class="option"><h3>Difficulty switch</h3><p>Leave the left difficulty switch on <b>B</b> for the normal climb. On <b>A</b> the monsters move at their lap-two speed and arrive more often, right from wave 1. You can flip it any time.</p></div>
+        <div class="option"><h3>Score</h3><p>Every monster you stop is worth points, from 5 for a mouse to 50 for a T-Rex. The status line shows your score, your batteries and the wave.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tips">
+    <div class="wrap">
+      <h2>Tips from the toy box</h2>
+      <ul class="tips">
+        <li>Put an army man on every shelf in wave 1. The first dinos come one or two at a time.</li>
+        <li>A teddy in front of your shooters buys them time: the monsters stop to chew, your army men keep firing.</li>
+        <li>Toys on the same shelf share one shot, so spread your shooters across the shelves rather than stacking one shelf.</li>
+        <li>Don't count on the lid. It saves a shelf once; after that, a single monster through ends the game.</li>
+        <li>Get a tank or cannon onto each shelf soon after wave 4, when crawlers start sneaking under your army men's fire.</li>
+        <li>Picking a toy up refunds half its cost. Move a teddy to whichever shelf is in trouble.</li>
+        <li>Save 30 batteries for a jet once you reach wave 9. It's your answer to a crowded shelf.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div>
+        <h3>About the cartridge</h3>
+        <p>Toy Wars is a real Atari 2600 program, written in 6502 assembly for a 16K cartridge (F6 bank switching) with Atari's Super Chip, 128 extra bytes of RAM. It runs here on a 6502 and TIA emulator, cycle by cycle, at 60 frames a second. The cartridge image also runs in Stella.</p>
+        <p>Every frame it draws is checked against a reference picture made from the game's state, and every rule is checked by automated tests.</p>
+      </div>
+      <div>
+        <h3>Links</h3>
+        <ul>
+          <li><a href="https://github.com/Plicerin/toywars">Source code</a></li>
+          <li><a href="https://github.com/Plicerin/toywars/blob/main/DESIGN.md">Design document</a></li>
+          <li><a href="toywars.bin" download>Download the cartridge (toywars.bin)</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
   <script type="module">
     import { mountPlayer } from './src/toywarsPlayer.mjs';
     const [rom, sym] = await Promise.all([
