@@ -28,17 +28,21 @@ lid and clears it; the second one through the same shelf ends the game.
 
 Toys unlock wave by wave: army man (shoots), teddy (soaks up bites), tank
 (one heavy shell), cowboy (lassos a monster in place), cannon (heavy shots),
-jet (strikes its whole shelf, once). Monsters: dino, helicopter (hops over
-the first toy), crawler (army bullets pass over it while it chews). Every
-fourth wave they get tougher; after wave 12 the waves repeat, faster.
+jet (strikes its whole shelf, once). Monsters arrive wave by wave too:
+dino, wind-up mice (in packs of three), crawler (army bullets pass over it
+while it chews), knight (charges once its shield breaks), helicopter (hops
+over the first toy), balloon clown (floats over every toy; tank shells can't
+reach it), pogo frog (jumps to the next shelf once), and the T-Rex boss of
+waves 6 and 12 (crushes a toy in one bite). Every fourth wave they get
+tougher; after wave 12 the waves repeat, faster.
 
 ## Status
 
-Playable: placing toys, batteries, the six toys, three monster kinds, waves
-with unlocks, lid slams, game over, sound effects (TIA: your actions and the
-jingles on one channel, the fighting on the other). Still to come (see
-[DESIGN.md](DESIGN.md)): the other monsters (mouse, knight, balloon clown,
-pogo frog, T-Rex boss), the jet flying its strike in green, Game Select.
+Playable: placing toys, batteries, the six toys, all eight monsters, waves
+with unlocks and boss waves, lid slams, game over, sound effects (TIA: your
+actions and the jingles on one channel, the fighting on the other). Still to
+come (see [DESIGN.md](DESIGN.md)): the jet flying its strike in green, Game
+Select, the difficulty switch.
 
 How the screen is drawn:
 

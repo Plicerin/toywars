@@ -69,8 +69,40 @@ export const ENEMIES = {
     '......##', '...####.', '.#####..', '######..', '##...#..', '..#..###', '.......#']),
   crouch2: bits([
     '......##', '...####.', '.#####..', '######..', '##..#...', '.#...##.', '......#.']),
+  mouse: bits(['......#.', '.....###', '..####..', '.######.', '########', '.#.#..#.']),
+  mouse2: bits(['......#.', '.....###', '..####..', '.######.', '########', '#.#..#..']),
+  knight: bits([
+    '...###..', '..####..', '..#.##..', '..####..', '##.###..', '##.####.',
+    '##.###..', '##.###..', '...##...', '..#..#..', '.##..##.']),
+  knight2: bits([
+    '...###..', '..####..', '..#.##..', '..####..', '##.###..', '##.####.',
+    '##.###..', '##.###..', '...##...', '..#.#...', '.##.##..']),
+  knightx: bits([ // shield gone: charging
+    '...###..', '..####..', '..#.##..', '..####..', '.#####..', '#.####..',
+    '..###...', '..###...', '..#.#...', '.#...#..', '#.....#.']),
+  balloon: bits([
+    '..###...', '.#####..', '.#####..', '..###...', '...#....', '...#....',
+    '..###...', '.#####..', '..#.#...']),
+  pogo: bits([
+    '.##.##..', '#######.', '.#####..', '..###...', '...#....', '..###...', '...#....', '..###...']),
+  pogo2: bits([
+    '.##.##..', '#######.', '.#####..', '..###...', '...#....', '...#....', '..###...', '...#....', '...#....', '..###...']),
+  trex: bits([
+    '.#####..', '##.####.', '#######.', '###.....', '#######.', '..######',
+    '..#####.', '.######.', '..#####.', '..##.##.', '.##..##.']),
+  trex2: bits([
+    '.#####..', '##.####.', '#######.', '###.....', '#######.', '..######',
+    '..#####.', '.######.', '..#####.', '..###.#.', '.##...##']),
 };
-export const enemyFrame = (type, x) => ((x >> 2) & 1 ? `${type}2` : type);
+// enemy kinds 1-8 and their frames: [walk 1, walk 2] (the knight's third is
+// its charge without the shield)
+export const KINDS = ['', 'dino', 'heli', 'crouch', 'mouse', 'knight', 'balloon', 'pogo', 'trex'];
+const TWO_FRAMES = new Set(['dino', 'heli', 'crouch', 'mouse', 'knight', 'pogo', 'trex']);
+export const enemyFrame = (type, x, state = 0) => {
+  if (type === 'knight' && state & 0x40) return 'knightx';
+  return (x >> 2) & 1 && TWO_FRAMES.has(type) ? `${type}2` : type;
+};
+export const KIND_COLOR = { trex: 'orange' };
 // build the box procedurally so the label and edges line up with the shelves
 function boxRows() {
   const g = Array.from({ length: ROWS }, () => Array(8).fill(0));
@@ -165,6 +197,9 @@ export function build() {
   out1.push('ColGreen:');
   for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => (c === 'COL_RED' ? 'COL_GREEN' : c)).join(',')}`);
   out1.push('    ALIGN 256');
+  out1.push('ColOrange:');
+  for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => (c === 'COL_RED' ? 'COL_ORANGE' : c)).join(',')}`);
+  out1.push('    ALIGN 256');
 
   // page C: toys, bottom row first, 29 apart from offset 58 (each needs 18
   // zeros below it and 6 above within its band); offsets 224-255 stay zero
@@ -179,14 +214,16 @@ export function build() {
   out1.push('DefPage:', bytes(defPage));
   for (const name of TOYS) out1.push(`D_${name.toUpperCase()} = DefPage + ${layout.defenders[name]}`);
 
-  // enemies: 80 zeros, then each sprite (bottom-aligned in EH rows) followed by 79 zeros
+  // enemies: 80 zeros (the pointer before the first enemy and after the park
+  // event reads them), then each frame (bottom-aligned in EH rows) followed by
+  // 40 zeros. The scheduler keeps every enemy's pointer within 40 rows of it.
   const enemy = Array(80).fill(0);
-  const enemyOrder = ['dino', 'dino2', 'heli', 'heli2', 'crouch', 'crouch2'];
+  const enemyOrder = ['dino', 'dino2', 'heli', 'heli2', 'crouch', 'crouch2', 'mouse', 'mouse2', 'knight', 'knight2', 'knightx', 'balloon', 'pogo', 'pogo2', 'trex', 'trex2'];
   for (const name of enemyOrder) {
     layout.enemies[name] = enemy.length;
     const g = [...ENEMIES[name]].reverse();
     for (let i = 0; i < EH; i += 1) enemy.push(g[i] ?? 0);
-    for (let i = 0; i < 79; i += 1) enemy.push(0);
+    for (let i = 0; i < 40; i += 1) enemy.push(0);
   }
   out1.push('EnemyGfx:', bytes(enemy));
   for (const name of enemyOrder) out1.push(`E_${name.toUpperCase()} = EnemyGfx + ${layout.enemies[name]}`);
@@ -216,13 +253,15 @@ export function build() {
   const xHm = xVar.map((v, x) => (Math.max(-8, Math.min(7, variantX(v) - x)) & 15) << 4);
   out0.push('FeetX:', bytes(feetX), 'XVar:', bytes(xVar), 'XHm:', bytes(xHm), 'RowBad:', bytes(rowBad));
   out0.push('LaneBase:', '    .byte 20,40,60');
-  // indexed by type * 2 + walking frame (types 1-3)
-  const eb = ['0', '0', ...enemyOrder.map((n) => `E_${n.toUpperCase()}-79`)];
+  // indexed by type * 2 + walking frame (types 1-8); index 18 = the knight's charge
+  const eb = ['0', '0', ...KINDS.slice(1).flatMap((k) => [k, TWO_FRAMES.has(k) ? `${k}2` : k]), 'knightx'].map((n) => (n === '0' ? '0' : `E_${n.toUpperCase()}-79`));
   out0.push('EBaseLo:', `    .byte ${eb.map((e) => (e === '0' ? 0 : `<(${e})`)).join(',')}`);
   out0.push('EBaseHi:', `    .byte ${eb.map((e) => (e === '0' ? 0 : `>(${e})`)).join(',')}`);
   out0.push('VarLo:', `    .byte ${VARIANT_W.map((_, v) => `<(EvA${v}-1)`).join(',')}`);
   out0.push('VarHi:', `    .byte ${VARIANT_W.map((_, v) => `>(EvA${v}-1)`).join(',')}`);
-  out0.push('EnColHi:', '    .byte 0,>ColArr,>ColArr,>ColArr'); // color page per enemy type
+  out0.push('EnColHi:', `    .byte 0,${KINDS.slice(1).map((k) => (KIND_COLOR[k] === 'orange' ? '>ColOrange' : '>ColArr')).join(',')}`); // color page per enemy kind
+  // the scheduler's row tables again for bank 2 (EnemyRows)
+  layout.feetX = feetX;
 
   // ---------------------------------------------------------------- bank 2: game logic tables
   const out2 = [];
@@ -236,6 +275,7 @@ export function build() {
   out2.push('SlotLane:', '    .byte 0,0,0,1,1,1,2,2,2', 'SlotCol:', '    .byte 0,1,2,0,1,2,0,1,2', 'ColX:', `    .byte ${COLUMN_X.join(',')}`);
   out2.push('ShotStart:', bytes(shotStart), 'LaneR0:', '    .byte 11,31,51');
   out2.push('ShotX:', bytes(Array.from({ length: 18 }, (_, j) => 149 - 6 * j))); // x of shot step j
+  out2.push('FeetX2:', bytes(feetX), 'RowBad2:', bytes(rowBad), 'LaneBase2:', '    .byte 20,40,60');
   layout.slotF = slotF; layout.rowBad = rowBad; layout.emptyLo = emptyLo; layout.shotStart = shotStart;
 
   return { out1, out0, out2, layout, boxTab, ballTab };

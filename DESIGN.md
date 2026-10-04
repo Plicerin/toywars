@@ -5,11 +5,15 @@ Super Chip, 128 bytes of cartridge RAM; NTSC), in the
 spirit of Plants vs. Zombies: toys on a shelf hold off monsters marching in
 from the right. (The reference mockup is kept locally, not in the repo.)
 
-Status: playable (2026-10-04). Built: board, batteries, all six toys, three
-enemies (dino, helicopter, crawler), waves 1-12 with unlocks and the second
-lap, lid slams, game over, sound effects. Not yet: mouse, knight, balloon
-clown, pogo frog, T-Rex, the jet's flight in green, music, Game Select,
-difficulty switch.
+Status: playable (2026-10-04). Built: board, batteries, all six toys, all
+eight enemies, waves 1-12 with unlocks, boss waves and the second lap, lid
+slams, game over, sound effects. Not yet: the jet's flight in green, music,
+Game Select, difficulty switch.
+As built, the T-Rex is a full-height 8-pixel sprite in orange, not double
+width: setting player 1's width per enemy needs a fifth pull in the event
+row, and the earliest-position variant has no cycles left for it. The
+knight's armor shows in its sprite (with and without the shield), not as a
+dark red; enemies move every other frame (half of them each frame).
 Numbers as built: army man fires every 42 frames (1 damage), tank every 300
 (8), cannon every 198 (3); cowboy lasso holds 60 frames, every 120; chewing
 takes 1 health every 16 frames; enemies gain 1 health every fourth wave.

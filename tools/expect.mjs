@@ -2,20 +2,20 @@
 // (gen/layout.json and the sprite art in gen.mjs), independent of the 6502
 // code: what every visible pixel of a frame should be. Used by tools/test.mjs.
 import { readFileSync } from 'node:fs';
-import { DEFENDERS, ENEMIES, enemyFrame, COLUMN_X, EH, ROWS, feetRow, shotRow, VARIANT_W } from './gen.mjs';
+import { DEFENDERS, ENEMIES, enemyFrame, KIND_COLOR, COLUMN_X, EH, ROWS, feetRow, shotRow, VARIANT_W } from './gen.mjs';
 
-export const COL = { gold: 0xf8, red: 0x46, green: 0xc8 };
+export const COL = { gold: 0xf8, red: 0x46, green: 0xc8, orange: 0x38 };
 const layout = JSON.parse(readFileSync(new URL('../gen/layout.json', import.meta.url)));
 const PLAY = 32; // first visible line of row 0
 
 // the enemies the kernel should draw on a frame (mirror of Schedule in bank 0)
 export function scheduled(enemies, frame) {
   // E: the event row, the first row at or above top-1 the kernel allows
-  const info = enemies.map(([lane, x, type], i) => {
+  const info = enemies.map(([lane, x, type, state = 0], i) => {
     const f = feetRow(lane, x + 4);
     let E = f - 11;
     while (E > 0 && layout.rowBad[E]) E -= 1;
-    return { i, lane, x, type, f, E };
+    return { i, lane, x, type, state, f, E };
   });
   const order = [...info].sort((a, b) => a.E - b.E || a.i - b.i);
   // walk the sorted list from position (frame & 7) mod n (frame: the displayed
@@ -54,17 +54,18 @@ export function expectedFrame(scene, frame) {
   for (let k = 0; k < 4; k += 1) for (let j = 0; j <= 18; j += 1) for (let d = 0; d < 4; d += 1) row2(20 * k + j, 149 - 6 * j + d, pf);
   // enemies: player 1 graphics change on line B, so a row shows on line B and the next line A
   const drawn = scheduled(scene.enemies, frame);
-  const enemyLines = new Set();
+  const enemyLines = new Map(); // line -> player 1's color there
   for (const e of drawn) {
-    const g = ENEMIES[enemyFrame(e.type, e.x)];
-    for (let k = 0; k < EH; k += 1) { const r = e.f - k; enemyLines.add(PLAY + 2 * r + 1); enemyLines.add(PLAY + 2 * r + 2); }
-    g.forEach((bits, i) => { const r = e.f - (g.length - 1 - i); for (let b = 0; b < 8; b += 1) if (bits & (0x80 >> b)) { put(PLAY + 2 * r + 1, e.x + b, COL.red); put(PLAY + 2 * r + 2, e.x + b, COL.red); } });
+    const g = ENEMIES[enemyFrame(e.type, e.x, e.state)];
+    const c = COL[KIND_COLOR[e.type] ?? 'red'];
+    for (let k = 0; k < EH; k += 1) { const r = e.f - k; enemyLines.set(PLAY + 2 * r + 1, c); enemyLines.set(PLAY + 2 * r + 2, c); }
+    g.forEach((bits, i) => { const r = e.f - (g.length - 1 - i); for (let b = 0; b < 8; b += 1) if (bits & (0x80 >> b)) { put(PLAY + 2 * r + 1, e.x + b, c); put(PLAY + 2 * r + 2, e.x + b, c); } });
   }
   // shots: missile 1, 4 wide, both lines of its row; color of player 1 on that line
   scene.shots.forEach((x, L) => {
     if (!x) return;
     const r = shotRow(L, x);
-    for (const line of [PLAY + 2 * r, PLAY + 2 * r + 1]) for (let d = 0; d < 4; d += 1) put(line, x + d, enemyLines.has(line) ? COL.red : COL.gold);
+    for (const line of [PLAY + 2 * r, PLAY + 2 * r + 1]) for (let d = 0; d < 4; d += 1) put(line, x + d, enemyLines.get(line) ?? COL.gold);
   });
   // defenders last: player 0 has priority over player 1 and missile 1
   // defenders: player 0 copies, both lines of each row

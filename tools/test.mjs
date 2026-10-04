@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
 import { expectedFrame } from './expect.mjs';
-import { titleLines, gameOverLines, statusLines, TOYS, COLUMN_X } from './gen.mjs';
+import { titleLines, gameOverLines, statusLines, TOYS, COLUMN_X, KINDS } from './gen.mjs';
 
 const layout = JSON.parse(readFileSync('gen/layout.json'));
 const SYM = Object.fromEntries(readFileSync('tools/build/toywars.sym', 'latin1').split(/\r?\n/)
@@ -47,7 +47,7 @@ function sceneFromRam(g) {
     if (!(off in toyAt)) throw new Error(`slot ${s}: pointer ${lo} is no toy and not empty`);
     return toyAt[off];
   });
-  const enemies = [...Array(5).keys()].filter((i) => sc('eType', i)).map((i) => [sc('eLane', i), sc('eX', i), ['', 'dino', 'heli', 'crouch'][sc('eType', i)]]);
+  const enemies = [...Array(5).keys()].filter((i) => sc('eType', i)).map((i) => [sc('eLane', i), sc('eX', i), KINDS[sc('eType', i)], sc('eState', i)]);
   const shots = [0, 1, 2].map((L) => { const row = r('shotPtr', L); return row === 80 ? 0 : 149 - 6 * (row - 20 * L - 11); });
   const two = (v) => `${(v / 10) | 0}${v % 10}`;
   const score = [0, 1, 2].map((i) => sc('score', i).toString(16).padStart(2, '0')).join('');
@@ -125,7 +125,9 @@ check('toywars.bin is 16K', ROM.length === 16384, `${ROM.length} bytes`);
   for (let f = 0; f < 1500; f += 1) {
     if (f % 300 === 0) toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', 40, s); });
     g.set('spawnLeft', 20);
-    for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { g.set('eType', 1 + ((f + i) % 3), i); g.set('eLane', (f + i) % 3, i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 0, i); }
+    let added = false;
+    for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { added = true; g.set('eType', 1 + ((f + i) % 8), i); g.set('eLane', (f + i) % 3, i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 0, i); }
+    if (added) { g.frames(2); continue; } // the game updates each enemy's rows every other frame: let it see them
     const d = frameDiffs(g, {});
     if (d.length) { bad += 1; if (!first) first = `frame ${f}: ${d.slice(0, 2).join('; ')}`; }
     const { vb, total } = g.m.layout();
@@ -258,6 +260,84 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   for (let f = 0; f < 600 && !spawned; f += 1) { g.frames(1); spawned = [0, 1, 2, 3, 4].filter((i) => g.sc('eType', i)).length; }
   const i = [0, 1, 2, 3, 4].find((k) => g.sc('eType', k));
   check('after a breather enemies arrive at the right edge', spawned > 0 && g.sc('eX', i) >= 149 && g.sc('spawnLeft') === 6, `x ${i === undefined ? '-' : g.sc('eX', i)}`);
+}
+
+// ---------------------------------------------------------------- the other monsters
+{
+  const g = quietGame();
+  slot(g, 4, 2, 40); // teddy, middle shelf, column 1 (x 80)
+  enemy(g, 0, 1, 100, 6, 2); // balloon clown
+  g.run(200);
+  check('the balloon clown floats over toys', g.sc('eX', 0) < COLUMN_X[1] && g.sc('slotHP', 4) === 40, `x ${g.sc('eX', 0)}`);
+}
+{
+  const g = quietGame();
+  slot(g, 5, 3, 40); // tank, middle shelf, column 2 (x 112)
+  enemy(g, 0, 1, 150, 6, 2);
+  g.run(300);
+  check('tank shells cannot hit it', g.sc('eType', 0) === 6 && g.sc('eHP', 0) === 2);
+  slot(g, 3, 1, 8); // an army man can
+  enemy(g, 0, 1, 150, 6, 2);
+  let f = 0;
+  while (g.sc('eType', 0) && f < 600) { g.run(1); f += 1; }
+  check('army men shoot it down', g.sc('eType', 0) === 0, `after ${f} frames`);
+}
+{
+  const g = quietGame();
+  enemy(g, 0, 0, 120, 5, 6); // knight
+  g.run(2);
+  const slow = g.sc('eX', 0); g.run(40); const slowStep = slow - g.sc('eX', 0);
+  g.set('eHP', 3, 0);
+  slot(g, 0, 1, 8); // army man at x 48, top shelf, to land the hit
+  let f = 0;
+  while (!(g.sc('eState', 0) & 0x40) && f < 600) { g.run(1); f += 1; }
+  slot(g, 0, 0, 0);
+  g.set('shotDmg', 0, 0); g.m.poke(SYM.shotPtr, 80); g.set('eHP', 2, 0); // no more hits
+  const fast = g.sc('eX', 0); g.run(40); const fastStep = fast - g.sc('eX', 0);
+  check('a knight walks slowly until its shield breaks, then charges', (g.sc('eState', 0) & 0x40) !== 0 && fastStep >= 3 * slowStep && slowStep > 0, `${slowStep} then ${fastStep} pixels in 40 frames, kind ${g.sc('eType', 0)}`);
+}
+{
+  const g = quietGame();
+  slot(g, 1, 2, 40); // teddy, top shelf, x 80
+  enemy(g, 0, 0, 92, 7, 3); // pogo frog
+  g.run(20);
+  check('a pogo frog that meets a toy jumps to the next shelf', g.sc('eLane', 0) === 1 && (g.sc('eState', 0) & 0x40) !== 0 && g.sc('slotHP', 1) === 40);
+  slot(g, 4, 2, 40); // teddy on the middle shelf too
+  g.run(120);
+  check('only once: then it chews', g.sc('eLane', 0) === 1 && g.sc('slotHP', 4) < 40);
+}
+{
+  const g = quietGame();
+  slot(g, 0, 2, 40); // teddy, top shelf
+  enemy(g, 0, 0, 58, 8, 20); // T-Rex at the teddy
+  g.run(40);
+  check('a T-Rex crushes a toy in one bite', g.sc('slotType', 0) === 0);
+}
+{
+  const g = boot();
+  g.press(); g.frames(2);
+  g.set('wave', 5); g.set('spawnLeft', 0);
+  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  let first = 0;
+  for (let f = 0; f < 600 && !first; f += 1) { g.frames(1); first = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i)).find((t) => t) ?? 0; }
+  check('wave 6 opens with its boss, a T-Rex', g.sc('wave') === 6 && first === 8, `first kind ${first}`);
+}
+{
+  const g = boot();
+  g.press(); g.frames(2);
+  g.set('wave', 3); g.set('spawnLeft', 0);
+  for (let i = 0; i < 5; i += 1) g.set('eType', 0, i);
+  const seen = new Set();
+  let packs = 0;
+  for (let f = 0; f < 5000; f += 1) {
+    g.frames(1);
+    const kinds = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i));
+    kinds.forEach((k) => k && seen.add(k));
+    if (kinds.filter((k) => k === 4).length === 3) packs += 1;
+    for (let i = 0; i < 5; i += 1) if (g.sc('eX', i) < 100 && g.sc('eType', i)) g.set('eType', 0, i); // clear the way
+    g.set('lids', 0);
+  }
+  check('wave 3 brings wind-up mice, in packs of three, along with dinos', seen.has(4) && seen.has(1) && packs > 0, `kinds ${[...seen].sort().join(',')}`);
 }
 
 // ---------------------------------------------------------------- sound

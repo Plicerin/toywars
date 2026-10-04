@@ -14,6 +14,15 @@ TOY_JET     = 6
 EN_DINO     = 1
 EN_HELI     = 2
 EN_CRAWL    = 3
+EN_MOUSE    = 4
+EN_KNIGHT   = 5
+EN_BALLOON  = 6
+EN_POGO     = 7
+EN_TREX     = 8
+NKINDS      = 9                 ; (kind 0 = none)
+SHOT_ARMY   = 1
+SHOT_TANK   = 2
+SHOT_CANNON = 3
 ST_ATTRACT  = 0
 ST_PLAY     = 1
 ST_OVER     = 2
@@ -137,6 +146,13 @@ ClearBoard:
     sta W_eState,x
     dex
     bpl .enemies
+    lda #$FF
+    ldx #NENEMY-1
+.rows:
+    sta eTop,x
+    dex
+    bpl .rows
+    lda #0
     ldx #2
 .shots:
     lda #0
@@ -147,6 +163,7 @@ ClearBoard:
     bpl .shots
     lda #0
     sta W_flash
+    sta W_packLeft
     rts
 
 NewGame:
@@ -181,6 +198,8 @@ StartWave:
     jsr WaveIndex
     lda WaveCount,x
     sta W_spawnLeft
+    lda WaveBoss,x
+    sta W_bossLeft
     lda #90                     ; a three-second breather (ticks of 2 frames)
     sta W_spawnTimer
     lda R_wave
@@ -460,6 +479,15 @@ Damage:
     bcc Kill
     sta W_eHP,x
     SOUND SND_HIT
+    cmp #3
+    bcs .done
+    lda R_eType,x               ; a knight's shield breaks
+    cmp #EN_KNIGHT
+    bne .done
+    lda R_eState,x
+    ora #$40
+    sta W_eState,x
+.done:
     rts
 
 Kill:                           ; enemy X destroyed: batteries and score
@@ -484,6 +512,8 @@ Kill:                           ; enemy X destroyed: batteries and score
     cld
     lda #0
     sta W_eType,x
+    lda #$FF
+    sta eTop,x
     lda R_dirty
     ora #1
     sta W_dirty
@@ -521,12 +551,14 @@ CountAlive:                     ; A = enemies on the shelves (Z if none)
     rts
 
 ; Spawner (even frames): the wave's enemies arrive one by one at the right
-; edge of a random shelf; when all have come and gone, the next wave starts
+; edge of a random shelf (a boss wave starts with its T-Rexes; wind-up mice
+; come in packs of three); when all have come and gone, the next wave starts
 Spawner:
     SUBROUTINE
     lda frame
     lsr
     bcs .done
+    jsr Pack
     lda R_spawnLeft
     bne .spawning
     jsr CountAlive
@@ -555,23 +587,25 @@ Spawner:
     lda lt0
     cmp WaveMax,x
     bcs .done                   ; enough on the shelves already
-    ldy #NENEMY-1
-.free:
-    lda R_eType,y
-    beq .found
-    dey
-    bpl .free
-    rts
-.found:
-    ; kind: start from a random one of the three and take the first the wave allows
+    jsr FreeEnemy
+    bmi .done
+    ; kind: a boss first, else start from a random kind and take the first the wave allows
+    lda R_bossLeft
+    beq .random
+    sec
+    sbc #1
+    sta W_bossLeft
+    lda #EN_TREX
+    jmp .kindOk
+.random:
     lda R_rand
     and #31
     sty lt1
     tay
-    lda Mod3,y
+    lda Mod7,y
     ldy lt1
-    sta lt2                     ; 0-2
-    lda #3
+    sta lt2                     ; 0-6
+    lda #7
     sta lt3                     ; tries
 .kind:
     stx lt4
@@ -579,31 +613,22 @@ Spawner:
     lda KindBit,x
     ldx lt4
     and WaveKinds,x
-    bne .kindOk
+    bne .found
     inc lt2
     lda lt2
-    cmp #3
+    cmp #7
     bcc .kindNext
     lda #0
     sta lt2
 .kindNext:
     dec lt3
     bne .kind
-.kindOk:
-    ldx lt2
-    inx                         ; type = 1-3
-    txa
-    sta W_eType,y
-    lda R_wave                  ; one more health every fourth wave
-    lsr
-    lsr
+.found:
+    lda lt2
     clc
-    adc EnHP,x
-    sta W_eHP,y
-    lda #151
-    sta W_eX,y
-    lda #0
-    sta W_eState,y
+    adc #1                      ; type = 1-7
+.kindOk:
+    sta lt5
     lda R_rand
     lsr
     lsr
@@ -611,7 +636,19 @@ Spawner:
     and #31
     tax
     lda Mod3,x
-    sta W_eLane,y
+    sta lt0                     ; shelf
+    lda lt5
+    cmp #EN_MOUSE
+    bne .one
+    lda #2                      ; a pack: two more follow on the same shelf
+    sta W_packLeft
+    lda #6
+    sta W_packTimer
+    lda lt0
+    sta W_packLane
+.one:
+    lda lt5
+    jsr Spawn
     lda R_spawnLeft
     sec
     sbc #1
@@ -631,19 +668,90 @@ Spawner:
     sta W_spawnTimer
     rts
 
+; Pack: the rest of a wind-up mouse pack, every 12 frames
+Pack:
+    SUBROUTINE
+    lda R_packLeft
+    beq .done
+    lda R_packTimer
+    sec
+    sbc #1
+    sta W_packTimer
+    bne .done
+    lda #6
+    sta W_packTimer
+    jsr FreeEnemy
+    bmi .done
+    lda R_packLeft
+    sec
+    sbc #1
+    sta W_packLeft
+    lda R_packLane
+    sta lt0
+    lda #EN_MOUSE
+    jmp Spawn
+.done:
+    rts
+
+FreeEnemy:                      ; Y = a free enemy slot ($FF, N set, if none)
+    SUBROUTINE
+    ldy #NENEMY-1
+.loop:
+    lda R_eType,y
+    beq .found
+    dey
+    bpl .loop
+.found:
+    rts
+
+; Spawn: enemy kind A into slot Y on shelf lt0, at the right edge
+Spawn:
+    SUBROUTINE
+    sta W_eType,y
+    tax
+    lda R_wave                  ; one more health every fourth wave
+    lsr
+    lsr
+    clc
+    adc EnHP,x
+    sta W_eHP,y
+    lda #151
+    sta W_eX,y
+    lda #0
+    sta W_eState,y
+    lda lt0
+    sta W_eLane,y
+    tya
+    tax
+    jmp EnemyRow
+
 ;-------------------------------------------------------------------------------
-; Enemies: each walks left at its kind's pace; a toy in its way stops it and
-; gets chewed (the helicopter hops over the first one instead); a lasso
-; holds it; reaching the toy box is a breach
+; Enemies: half of them each frame (even slots on even frames, odd slots on
+; odd frames), so each moves in steps of two frames. Each walks left at its
+; kind's pace; a toy in its way stops it and gets chewed, except: the
+; helicopter hops over the first toy, the pogo frog jumps to the next shelf
+; once, the balloon clown floats over every toy, the T-Rex crushes a toy in
+; one bite. A lasso holds it; reaching the toy box is a breach.
 Enemies:
     SUBROUTINE
-    ldx #NENEMY-1
+    lda frame
+    and #1
+    tax
 .loop:
     lda R_eType,x
-    bne .live
-    jmp .next
-.live:
-    sta lt5
+    beq .next
+    jsr EnemyAct
+    jsr EnemyRow
+.next:
+    inx
+    inx
+    cpx #NENEMY
+    bcc .loop
+    rts
+
+EnemyAct:                       ; enemy X (kept)
+    SUBROUTINE
+    sta lt5                     ; kind
     lda R_eState,x
     and #$3F
     beq .free
@@ -651,11 +759,14 @@ Enemies:
     sec
     sbc #1
     sta W_eState,x
-    jmp .next
+    rts
 .free:
+    lda lt5
+    cmp #EN_BALLOON
+    beq .walk                   ; floats over every toy
     lda R_eX,x
     cmp #121
-    bcs .noBlockAll             ; right of every toy
+    bcs .walk                   ; right of every toy
     ldy R_eLane,x
     lda Lane3,y
     sta lt0                     ; first slot of the shelf
@@ -678,39 +789,71 @@ Enemies:
     lda R_slotType,y
     ldy lt2
     cmp #0
-    bne .blocked
+    beq .noBlock
+    jmp .blocked
 .noBlock:
     dey
     bpl .block
-.noBlockAll:
+.walk:
     lda R_eState,x              ; walking: not chewing
     and #$7F
     sta W_eState,x
+    ; pace: move on updates where (frame/2) & mask = 0, by step pixels
     ldy lt5
     lda R_wave
     cmp #13
-    lda EnMask,y
-    bcc .pace
-    lda EnMaskFast,y            ; second lap: twice the speed
+    bcc .lap1
+    tya                         ; second lap: the fast table
+    clc
+    adc #NKINDS
+    tay
+.lap1:
+    lda lt5
+    cmp #EN_KNIGHT
+    bne .pace
+    lda R_eState,x
+    and #$40
+    beq .pace
+    tya                         ; a knight without its shield charges
+    clc
+    adc #2*NKINDS
+    tay
 .pace:
-    and frame
-    bne .next
+    lda frame
+    lsr
+    and EnMask,y
+    bne .done
     lda R_eX,x
     sec
-    sbc #1
+    sbc EnStep,y
     sta W_eX,x
     cmp #BREACH_X
-    bcs .next
-    jsr Breach
-    jmp .next
+    bcs .done
+    jmp Breach
+.done:
+    rts
 .blocked:
     lda lt5
     cmp #EN_HELI
+    beq .hop
+    cmp #EN_POGO
     bne .chew
+    ; pogo frog: once, jump to the next shelf
     lda R_eState,x
     and #$40
     bne .chew
-    ora R_eState,x              ; hop over the toy, once
+    lda R_eState,x
+    ora #$40
+    sta W_eState,x
+    ldy R_eLane,x
+    lda NextLane,y
+    sta W_eLane,x
+    rts
+.hop:
+    lda R_eState,x
+    and #$40
+    bne .chew
+    lda R_eState,x              ; helicopter: hop over the toy, once
     ora #$40
     sta W_eState,x
     ldy lt2
@@ -719,30 +862,59 @@ Enemies:
     sbc #9
     sta W_eX,x
     cmp #BREACH_X
-    bcs .next
-    jsr Breach
-    jmp .next
+    bcs .done
+    jmp Breach
 .chew:
     lda R_eState,x
     ora #$80
     sta W_eState,x
     lda frame
-    and #15                     ; one bite every 16 frames
-    bne .next
+    lsr
+    and #7                      ; one bite every 16 frames
+    bne .done
     SOUND SND_CHEW
     ldy lt1
+    lda lt5
+    cmp #EN_TREX
+    beq .crush
     lda R_slotHP,y
     sec
     sbc #1
     sta W_slotHP,y
-    bne .next
+    bne .done
+.crush:
     lda #0
     sta W_slotType,y
-.next:
-    dex
-    bmi .done
-    jmp .loop
-.done:
+    rts
+
+; EnemyRow (X = enemy, kept): its feet row and event row for the kernel's
+; scheduler (SelectEnemies, VBLANK), $FF when there is none. Kept up to date
+; wherever an enemy moves, changes shelf, arrives or goes.
+EnemyRow:
+    SUBROUTINE
+    lda R_eType,x
+    beq .none
+    ldy R_eX,x
+    lda FeetX2,y
+    ldy R_eLane,x
+    clc
+    adc LaneBase2,y
+    sta eFeet,x
+    sec
+    sbc #11                     ; top - 1: the latest row for its event
+    tay
+.findE:
+    lda RowBad2,y
+    beq .gotE
+    dey
+    bne .findE
+.gotE:
+    tya
+    sta eTop,x                  ; eTop = the event row (0: none usable)
+    rts
+.none:
+    lda #$FF
+    sta eTop,x
     rts
 
 ; Breach (X = enemy at the box): the shelf's lid slams and clears it, once;
@@ -766,6 +938,8 @@ Breach:
     bne .next
     lda #0
     sta W_eType,y
+    lda #$FF
+    sta eTop,y
 .next:
     dey
     bpl .clear
@@ -846,7 +1020,7 @@ ToyAct:                         ; slot X (kept)
     bcs .next
     lda R_eState,y
     and #$C0
-    ora #60
+    ora #30                     ; held for 30 updates (60 frames)
     sta W_eState,y
     SOUND SND_LASSO
     lda #20                     ; next lasso after 2 seconds
@@ -860,12 +1034,8 @@ ToyAct:                         ; slot X (kept)
     lda ToyDmg,y
     ldy lt1
     sta W_shotDmg,y
-    lda #0
     ldy lt5
-    cpy #TOY_ARMY
-    bne .kind
-    lda #1
-.kind:
+    lda ToyShot,y
     ldy lt1
     sta W_shotKind,y
     lda ShotStart,x
@@ -962,7 +1132,15 @@ ShotHit:
     cmp lt0
     bcc .next                   ; enemy ends left of the shot
     lda R_shotKind,x
-    beq .hit
+    cmp #SHOT_TANK
+    bne .notShell
+    lda R_eType,y
+    cmp #EN_BALLOON
+    beq .next                   ; tank shells can't hit the balloon clown
+    bne .hit
+.notShell:
+    cmp #SHOT_ARMY
+    bne .hit
     lda R_eType,y
     cmp #EN_CRAWL
     bne .hit
@@ -1208,18 +1386,32 @@ ToyCost:    .byte 0, 10, 5, 25, 15, 20, 30
 ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1
 ToyPeriod:  .byte 0, 7, 0, 50, 20, 33, 0        ; visits (6 frames) between shots
 ToyDmg:     .byte 0, 1, 0, 8, 0, 3, 0
-EnHP:       .byte 0, 6, 5, 3
-EnMask:     .byte 0, 3, 1, 1                    ; moves on frames where frame & mask = 0
-EnMaskFast: .byte 0, 1, 0, 0
-EnReward:   .byte 0, 3, 3, 2                    ; batteries
-EnScore:    .byte 0, $10, $15, $10              ; BCD points
-KindBit:    .byte 1, 2, 4                       ; dino, helicopter, crawler
+; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
+EnHP:       .byte 0,   6,   5,   3,    1,    6,     2,     3,  20
+EnReward:   .byte 0,   3,   3,   2,    1,    4,     3,     3,  10   ; batteries
+EnScore:    .byte 0, $10, $15, $10,  $05,  $20,   $15,   $15, $50   ; BCD points
+; pace (updates are two frames): move when (frame/2) & mask = 0, by step
+; pixels; four blocks: first lap, second lap, knight charging (first lap,
+; second lap)
+EnMask:     .byte 0,   1,   0,   0,    0,    1,     1,     0,   3
+            .byte 0,   0,   0,   0,    0,    0,     0,     0,   1
+            .byte 0,   0,   0,   0,    0,    0,     0,     0,   0
+            .byte 0,   0,   0,   0,    0,    0,     0,     0,   0
+EnStep:     .byte 0,   1,   1,   1,    2,    1,     1,     1,   1
+            .byte 0,   1,   2,   2,    3,    1,     1,     2,   1
+            .byte 0,   1,   1,   1,    1,    2,     1,     1,   1
+            .byte 0,   1,   1,   1,    1,    3,     1,     1,   1
+KindBit:    .byte 1, 2, 4, 8, 16, 32, 64                ; kinds 1-7 (the T-Rex only as a boss)
+NextLane:   .byte 1, 2, 0                               ; the pogo frog's jump
+ToyShot:    .byte 0, SHOT_ARMY, 0, SHOT_TANK, 0, SHOT_CANNON, 0
 ; waves 1-12 (later waves repeat them)
-WaveCount:  .byte 5, 7, 9, 10, 12, 12, 12, 14, 15, 18, 20, 22
+WaveCount:  .byte 5, 7, 9, 10, 12, 7, 12, 14, 15, 18, 20, 12
+WaveBoss:   .byte 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2   ; T-Rexes first
 WaveGap:    .byte 180, 150, 150, 135, 120, 120, 120, 105, 105, 90, 90, 90
 WaveMax:    .byte 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5
-WaveKinds:  .byte 1, 1, 1, 5, 5, 5, 7, 7, 7, 7, 7, 7
+WaveKinds:  .byte 1, 1, 9, 13, 29, 29, 31, 63, 127, 127, 127, 127
 WaveUnlock: .byte 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6
 Lane3:      .byte 0, 3, 6
 Bit:        .byte 1, 2, 4
 Mod3:       .byte 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+Mod7:       .byte 0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3

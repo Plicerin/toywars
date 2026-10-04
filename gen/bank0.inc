@@ -98,12 +98,12 @@ RowBad:
 LaneBase:
     .byte 20,40,60
 EBaseLo:
-    .byte 0,0,<(E_DINO-79),<(E_DINO2-79),<(E_HELI-79),<(E_HELI2-79),<(E_CROUCH-79),<(E_CROUCH2-79)
+    .byte 0,0,<(E_DINO-79),<(E_DINO2-79),<(E_HELI-79),<(E_HELI2-79),<(E_CROUCH-79),<(E_CROUCH2-79),<(E_MOUSE-79),<(E_MOUSE2-79),<(E_KNIGHT-79),<(E_KNIGHT2-79),<(E_BALLOON-79),<(E_BALLOON-79),<(E_POGO-79),<(E_POGO2-79),<(E_TREX-79),<(E_TREX2-79),<(E_KNIGHTX-79)
 EBaseHi:
-    .byte 0,0,>(E_DINO-79),>(E_DINO2-79),>(E_HELI-79),>(E_HELI2-79),>(E_CROUCH-79),>(E_CROUCH2-79)
+    .byte 0,0,>(E_DINO-79),>(E_DINO2-79),>(E_HELI-79),>(E_HELI2-79),>(E_CROUCH-79),>(E_CROUCH2-79),>(E_MOUSE-79),>(E_MOUSE2-79),>(E_KNIGHT-79),>(E_KNIGHT2-79),>(E_BALLOON-79),>(E_BALLOON-79),>(E_POGO-79),>(E_POGO2-79),>(E_TREX-79),>(E_TREX2-79),>(E_KNIGHTX-79)
 VarLo:
     .byte <(EvA0-1),<(EvA1-1),<(EvA2-1),<(EvA3-1),<(EvA4-1),<(EvA5-1),<(EvA6-1),<(EvA7-1)
 VarHi:
     .byte >(EvA0-1),>(EvA1-1),>(EvA2-1),>(EvA3-1),>(EvA4-1),>(EvA5-1),>(EvA6-1),>(EvA7-1)
 EnColHi:
-    .byte 0,>ColArr,>ColArr,>ColArr
+    .byte 0,>ColArr,>ColArr,>ColArr,>ColArr,>ColArr,>ColArr,>ColArr,>ColOrange

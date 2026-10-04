@@ -31,6 +31,7 @@
 COL_GOLD    = $F8
 COL_RED     = $46
 COL_GREEN   = $C8
+COL_ORANGE  = $38
 COL_BG      = $00
 
 VBLANK_TIME   = 44
@@ -66,13 +67,13 @@ lt4         ds 1
 lt5         ds 1
 sndX        ds 1        ; SndPlay keeps X and Y here
 sndY        ds 1
-QUEUE       ds 40       ; event records, 8 bytes: return lo, hi, gfx lo, hi, feet, color page, HMP1, next y
+QUEUE       ds 48       ; event records, 8 bytes: return lo, hi, gfx lo, hi, color lo, hi, HMP1, next y
 STACKTOP    = $FF
 
 lineCnt     = temp+3    ; header loops
 evPrevF     = temp+2    ; scheduler
 
-    echo "RAM used: ", (QUEUE + 40 - $80)d, " bytes (stack above)"
+    echo "RAM used: ", (QUEUE + 48 - $80)d, " bytes (stack above)"
 
 ; Super Chip RAM (cartridge, 128 bytes): write at W_name, read at R_name
 ; ($80 higher). Game state that the kernel doesn't need lives here.
@@ -90,6 +91,10 @@ W_toyShelf  ds 1        ; the shelf whose toys act next
 W_sndPos    ds 2        ; per channel: position in SndData
 W_sndTimer  ds 2        ;   ticks left in the step
 W_sndPri    ds 2        ;   priority of what's playing (0 = quiet)
+W_bossLeft  ds 1        ; T-Rexes still to come this wave
+W_packLeft  ds 1        ; wind-up mice still to come in the pack
+W_packTimer ds 1
+W_packLane  ds 1
 W_shotDmg   ds 3        ; per shelf: damage of the shot in flight, 0 = none
 W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing crawler)
 W_score     ds 3        ; BCD, most significant first
@@ -146,6 +151,10 @@ R_toyShelf   = W_toyShelf + $80
 R_sndPos     = W_sndPos + $80
 R_sndTimer   = W_sndTimer + $80
 R_sndPri     = W_sndPri + $80
+R_bossLeft   = W_bossLeft + $80
+R_packLeft   = W_packLeft + $80
+R_packTimer  = W_packTimer + $80
+R_packLane   = W_packLane + $80
 R_cells      = W_cells + $80
     echo "Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
 
@@ -546,37 +555,13 @@ TwoDigits:                      ; X = 0-99 -> temp = tens*5, temp+1 = ones*5
 ; are sorted by E; one that overlaps an enemy already taken waits.
 SelectEnemies:
     SUBROUTINE
-    ldx #NENEMY-1
-.tf:
+    ldx #NENEMY-1               ; (eFeet/eTop come from EnemyRows in bank 2)
+.clear:
     lda eOrder,x                ; forget last frame's choice, keep the order
     and #$7F
     sta eOrder,x
-    lda R_eType,x
-    beq .none
-    ldy R_eX,x
-    lda FeetX,y
-    ldy R_eLane,x
-    clc
-    adc LaneBase,y
-    sta eFeet,x
-    sec
-    sbc #11                     ; top - 1: the latest row for its event
-    tay
-.findE:
-    lda RowBad,y
-    beq .gotE
-    dey
-    bne .findE
-.gotE:
-    tya
-    sta eTop,x                  ; eTop = the event row (0: none usable)
-    jmp .next
-.none:
-    lda #$FF
-    sta eTop,x
-.next:
     dex
-    bpl .tf
+    bpl .clear
     ; insertion sort of eOrder by eTop (nearly sorted already: cheap)
     ldx #1
 .so:
@@ -697,7 +682,10 @@ SelectEnemies:
 
 ;-------------------------------------------------------------------------------
 ; Schedule (VBLANK): the event queue for the enemies SelectEnemies took, one
-; 8-byte record per enemy in row order.
+; 8-byte record per enemy in row order. Each enemy's graphics are padded with
+; only 40 zeros, so its pointer must be replaced within 40 rows of it: an
+; event row comes at most 41 rows after the previous enemy's feet, and after
+; the last enemy a park record points player 1 at zeros.
 Schedule:
     SUBROUTINE
     lda #0
@@ -715,22 +703,32 @@ Schedule:
     and #$7F
     tay
     lda eTop,y
-    clc
-    adc #1
-    sta temp                    ; event row + 1
-.qDec:
-    dec temp
+    sta temp                    ; the latest usable event row
+    cpx #0
+    beq .qRow                   ; the first enemy: no limit
     lda evPrevF
     clc
-    adc #1
+    adc #41
     cmp temp
-    bcs .qNext                  ; needs event row > previous feet + 1
+    bcs .qRow
+    sta temp                    ; at most 41 rows after the previous feet ...
+    inc temp
+.qDec:
+    dec temp                    ; ... and on a row the kernel allows
     sty temp+1
     ldy temp
     lda RowBad,y
     ldy temp+1
     cmp #0
     bne .qDec
+.qRow:
+    lda evPrevF
+    clc
+    adc #1
+    cmp temp
+    bcc .qOk
+    jmp .qNext                  ; needs event row > previous feet + 1
+.qOk:
     lda #79
     sec
     sbc temp                    ; y of the event row
@@ -769,7 +767,17 @@ Schedule:
     lda R_eType,y
     asl
     ora QUEUE+7,x
-    tay
+    sta QUEUE+7,x
+    lda R_eType,y
+    cmp #5                      ; a knight without its shield: the charge frame
+    bne .frame
+    lda R_eState,y
+    and #$40
+    beq .frame
+    lda #18
+    sta QUEUE+7,x
+.frame:
+    ldy QUEUE+7,x
     lda QUEUE+4,x
     clc
     adc EBaseLo,y
@@ -784,13 +792,52 @@ Schedule:
     adc #8
     tax
     cpx #40
-    bcs .done
+    bcs .park
 .qNext:
     inc temp+3
     lda temp+3
     cmp #NENEMY
-    beq .done
+    beq .park
     jmp .q
+.park:                          ; after the last enemy: point player 1 at zeros
+    cpx #0
+    beq .done
+    lda evPrevF
+    cmp #38
+    bcs .done                   ; the bottom is near enough
+    clc
+    adc #41
+    cmp #78
+    bcc .pRow
+    lda #77
+.pRow:
+    sta temp
+.pDec:
+    ldy temp
+    lda RowBad,y
+    beq .pOk
+    dec temp
+    jmp .pDec
+.pOk:
+    lda #79
+    sec
+    sbc temp
+    sta QUEUE-1,x
+    lda VarLo
+    sta QUEUE,x
+    lda VarHi
+    sta QUEUE+1,x
+    lda #<Zeros
+    sta QUEUE+2,x
+    lda #>Zeros
+    sta QUEUE+3,x
+    lda #0
+    sta QUEUE+4,x
+    sta QUEUE+6,x
+    lda #>ColArr
+    sta QUEUE+5,x
+    lda #$FF
+    sta QUEUE+7,x
 .done:
     rts
 
@@ -923,8 +970,8 @@ PosObject1:
     rts
 
 ;-------------------------------------------------------------------------------
-; the kernel rows: keep in one page so branches take fixed time
-    ALIGN 256
+; the kernel rows (a branch that crosses a page costs a cycle; every branch
+; here is taken only where the line has cycles to spare)
 
     MAC LINE_A                  ; cycles 0-51 of a line A
     sta HMOVE                   ; 0-2
@@ -986,7 +1033,6 @@ StRowA:
 
 ;-------------------------------------------------------------------------------
 ; static rows. Line A tails start on cycle 57.
-    ALIGN 256
 
     MAC ST_SWAP                 ; {1} slot, {2} pointer, {3} next y, {4} next routine
     lda slotPtr+{1}             ; 57-59
