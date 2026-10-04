@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
 import { expectedFrame } from './expect.mjs';
-import { titleLines, gameOverLines, statusLines, TOYS, COLUMN_X, KINDS } from './gen.mjs';
+import { titleLines, gameOverLines, statusLines, gameLines, TOYS, COLUMN_X, KINDS } from './gen.mjs';
 
 const layout = JSON.parse(readFileSync('gen/layout.json'));
 const SYM = Object.fromEntries(readFileSync('tools/build/toywars.sym', 'latin1').split(/\r?\n/)
@@ -25,7 +25,7 @@ function boot() {
   const set = (n, v, i = 0) => m.poke(SYM[`W_${n}`] + i, v);
   const frames = (n, input = {}, each) => {
     for (let k = 0; k < n; k += 1) {
-      m.bus.swcha = input.stick ?? 0xff; m.bus.inpt4 = input.fire ? 0 : 0x80; m.bus.swchb = input.reset ? 0x0a : 0x0b;
+      m.bus.swcha = input.stick ?? 0xff; m.bus.inpt4 = input.fire ? 0 : 0x80; m.bus.swchb = (input.reset ? 0x0a : 0x0b) & (input.select ? 0xfd : 0xff) | (input.diffA ? 0x40 : 0);
       if (each) each();
       m.runFrame();
     }
@@ -53,7 +53,7 @@ function sceneFromRam(g) {
   const score = [0, 1, 2].map((i) => sc('score', i).toString(16).padStart(2, '0')).join('');
   return {
     titleLines: sc('state') === 2 ? gameOverLines() : titleLines(),
-    statusLines: sc('dirty') ? null : statusLines(score, two(sc('batt')), two(Math.min(99, sc('wave')))),
+    statusLines: sc('dirty') ? null : sc('state') === 0 ? gameLines(sc('game')) : statusLines(score, two(sc('batt')), two(Math.min(99, sc('wave')))),
     pfColor: r('pfColor'),
     slots, enemies, shots,
   };
@@ -93,7 +93,7 @@ check('toywars.bin is 16K', ROM.length === 16384, `${ROM.length} bytes`);
   const bad = new Map();
   let input = {}, pixelFrames = 0, pixelBad = 0, firstBad = '', games = 0, maxWave = 0, kills = 0, lastScore = 0;
   for (let f = 0; f < 20000; f += 1) {
-    if (f % 12 === 0) input = { stick: [0xff, 0xff, RIGHT, LEFT, UP, DOWN][rnd(6)], fire: rnd(3) === 0, reset: f % 5000 < 3 };
+    if (f % 12 === 0) input = { stick: [0xff, 0xff, RIGHT, LEFT, UP, DOWN][rnd(6)], fire: rnd(3) === 0, reset: f % 5000 < 3, select: rnd(40) === 0, diffA: f % 8000 > 4000 };
     if (g.sc('state') !== 1 && rnd(30) === 0) { input = { fire: true }; games += 1; }
     if (f < 4000) {
       const d = frameDiffs(g, input);
@@ -344,6 +344,38 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
     g.set('lids', 0);
   }
   check('wave 3 brings wind-up mice, in packs of three, along with dinos', seen.has(4) && seen.has(1) && packs > 0, `kinds ${[...seen].sort().join(',')}`);
+}
+
+// ---------------------------------------------------------------- Game Select and the difficulty switch
+{
+  const g = boot();
+  check('power-on selects game 1', g.sc('state') === 0 && g.sc('game') === 1);
+  const sel = () => { g.frames(1, { select: true }); g.frames(2); };
+  sel(); const a = g.sc('game'); sel(); const b = g.sc('game'); sel(); const c = g.sc('game');
+  check('Game Select steps through games 1, 2, 3 and back to 1', a === 2 && b === 3 && c === 1, `${a} ${b} ${c}`);
+  g.frames(40, { select: true });
+  check('holding Select changes the game once', g.sc('game') === 2);
+  g.frames(2);
+  sel();
+  g.press();
+  check('game 3 starts at wave 9 with 70 batteries and the toys of wave 9', g.sc('state') === 1 && g.sc('wave') === 9 && g.sc('batt') === 70 && g.sc('unlock') === 6, `wave ${g.sc('wave')}, batteries ${g.sc('batt')}, unlock ${g.sc('unlock')}`);
+  g.frames(1, { select: true }); g.frames(2);
+  check('Game Select during a game ends it and shows the selection (game 3 still chosen)', g.sc('state') === 0 && g.sc('game') === 3);
+  g.frames(1, { reset: true }); g.frames(2);
+  check('Game Reset starts the chosen game', g.sc('state') === 1 && g.sc('wave') === 9);
+}
+{
+  // the same dino under each difficulty: B walks at the first-lap pace, A at the second-lap pace
+  const pace = (diffA) => {
+    const g = quietGame();
+    enemy(g, 0, 0, 140, 1, 6);
+    g.run(2, { diffA });
+    const x0 = g.sc('eX', 0);
+    g.run(60, { diffA });
+    return x0 - g.sc('eX', 0);
+  };
+  const b = pace(false), a = pace(true);
+  check('left difficulty A: wave-1 enemies walk at the second-lap pace (twice as fast)', a === 2 * b && b > 0, `B ${b}, A ${a} pixels in 60 frames`);
 }
 
 // ---------------------------------------------------------------- sound

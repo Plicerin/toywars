@@ -141,6 +141,7 @@ const NARROW = {
   W: ['#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'], A: ['.#.', '#.#', '###', '#.#', '#.#'], V: ['#.#', '#.#', '#.#', '#.#', '.#.'],
   E: ['###', '#..', '##.', '#..', '###'],
   w: ['#.#', '#.#', '###', '###', '#.#'], bat: ['.#.', '###', '#.#', '#.#', '###'],
+  G: ['###', '#..', '#.#', '#.#', '###'], M: ['#.#', '###', '###', '#.#', '#.#'],
 };
 // 48-pixel text: an array of rows (top first) of 48-char strings -> six cell tables, bottom row first
 function cells48(lines) {
@@ -159,6 +160,14 @@ export function statusLines(score, batteries, wave) {
     const put = (x, g) => [...NARROW[g][r]].forEach((p, i) => { row[x + i] = p; });
     [...score].forEach((d, i) => put(4 * i, d));
     put(25, 'bat'); put(29, batteries[0]); put(33, batteries[1]); put(37, 'w'); put(41, wave[0]); put(45, wave[1]);
+    return row.join('');
+  });
+}
+// game selection: GAME n centered in the status line
+export function gameLines(n) {
+  return Array.from({ length: 5 }, (_, r) => {
+    const row = Array(48).fill('.');
+    [...`GAME ${n}`].forEach((ch, i) => { if (ch !== ' ') [...NARROW[ch][r]].forEach((p, k) => { row[12 + 4 * i + k] = p; }); });
     return row.join('');
   });
 }
@@ -246,6 +255,9 @@ export function build() {
   out0.push('DigitR:', bytes([...Array(10).keys()].flatMap((d) => nd(d))));
   out0.push('DigitM:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 4))));
   out0.push('IconW:', bytes(nd('bat').map((v) => v << 4)), 'GlyphW:', bytes(nd('w')));
+  // GAME 1-3 for the status line, laid out like W_cells (cell by cell, bottom row first)
+  out0.push('GameText:', bytes([1, 2, 3].flatMap((n) => cells48(gameLines(n)).flat())));
+  out0.push('GameTextAt:', '    .byte 0, 0, 30, 60');
   out0.push('Bin2BCD:', bytes([...Array(100).keys()].map((n) => ((n / 10) | 0) * 16 + (n % 10))));
 
   // scheduler tables (bank 0)

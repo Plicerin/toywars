@@ -21,6 +21,9 @@ place toys in the nine slots (three per shelf) to stop them.
   under the cursor (half its cost back).
 - **Hold fire + left/right:** choose a different toy.
 - **Game Reset / Enter:** new game. Fire also starts one.
+- **Game Select / G:** choose game 1, 2 or 3 (starting at wave 1, 5 or 9, with
+  30, 50 or 70 batteries); pressed during a game, it goes back to choosing.
+- **Left difficulty A:** monsters move at second-lap speed from the start.
 
 Batteries (the number by the battery icon) trickle in and every monster you
 destroy pays some. The first monster that reaches the box slams that shelf's
@@ -40,8 +43,8 @@ tougher; after wave 12 the waves repeat, faster.
 
 Playable: placing toys, batteries, the six toys, all eight monsters, waves
 with unlocks and boss waves, lid slams, game over, sound effects (TIA: your
-actions and the jingles on one channel, the fighting on the other). Still to
-come (see [DESIGN.md](DESIGN.md)): Game Select, the difficulty switch.
+actions and the jingles on one channel, the fighting on the other), Game
+Select and the difficulty switch. See [DESIGN.md](DESIGN.md) for the design.
 
 How the screen is drawn:
 

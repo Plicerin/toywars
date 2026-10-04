@@ -7,8 +7,10 @@ from the right. (The reference mockup is kept locally, not in the repo.)
 
 Status: playable (2026-10-04). Built: board, batteries, all six toys, all
 eight enemies, waves 1-12 with unlocks, boss waves and the second lap, lid
-slams, game over, sound effects, the jet's flight in green. Not yet: music,
-Game Select, difficulty switch.
+slams, game over, sound effects, the jet's flight in green, Game Select
+(games 1-3 start at waves 1/5/9 with 30/50/70 batteries; the status line
+reads GAME n while choosing) and the left difficulty switch (A: second-lap
+pace and spawn gaps from wave 1). Not yet: music.
 As built, the T-Rex is a full-height 8-pixel sprite in orange, not double
 width: setting player 1's width per enemy needs a fifth pull in the event
 row, and the earliest-position variant has no cycles left for it. The

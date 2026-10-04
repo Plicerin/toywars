@@ -60,8 +60,10 @@ LogicInit:
     sta W_rand
     lda #ST_ATTRACT
     sta W_state
+    lda #1
+    sta W_game
     jsr ClearBoard
-    lda #7
+    lda #$20                    ; the status line shows GAME 1
     sta W_dirty
     rts
 
@@ -83,6 +85,20 @@ Logic:
     lda #0
     sta W_swPrev
 .input:
+    jsr GameSelect
+    ; second-lap pace from wave 13, or from the start with the left difficulty on A
+    lda #0
+    sta fast
+    lda R_wave
+    cmp #13
+    bcs .fast
+    lda SWCHB
+    and #$40
+    beq .paced
+.fast:
+    lda #$80
+    sta fast
+.paced:
     jsr ReadInput
     lda R_state
     cmp #ST_PLAY
@@ -126,6 +142,48 @@ Finish:
     jmp SndUpdate
 .oddFinish:
     jmp SlotPointers
+
+;-------------------------------------------------------------------------------
+; GameSelect: on the press, a game in progress (or over) ends and the
+; selection shows; pressed again, the next game (1-3). Reset or fire starts it.
+GameSelect:
+    SUBROUTINE
+    lda SWCHB
+    and #$02
+    bne .released
+    lda R_selPrev
+    bne .done
+    lda #1
+    sta W_selPrev
+    lda R_state
+    cmp #ST_ATTRACT
+    beq .next
+    lda #ST_ATTRACT
+    sta W_state
+    jsr ClearBoard
+    jmp .show
+.next:
+    lda R_game
+    clc
+    adc #1
+    cmp #4
+    bcc .set
+    lda #1
+.set:
+    sta W_game
+.show:
+    lda #$20
+    sta W_dirty
+    SOUND SND_SELECT
+.done:
+    rts
+.released:
+    lda #0
+    sta W_selPrev
+    rts
+
+GameWave:   .byte 0, 1, 5, 9
+GameBatt:   .byte 0, 30, 50, 70
 
 ;-------------------------------------------------------------------------------
 ClearBoard:
@@ -178,10 +236,12 @@ NewGame:
     sta W_battTimer
     sta W_repeat
     sta W_fireState
-    lda #30
+    ldx R_game                  ; games 2 and 3 start later, with more batteries
+    lda GameBatt,x
     sta W_batt
-    lda #1
+    lda GameWave,x
     sta W_wave
+    lda #1
     sta W_toy
     lda #3                      ; cursor on the middle shelf, first column
     sta W_cursor
@@ -680,10 +740,9 @@ Spawner:
     sta W_spawnLeft
     jsr WaveIndex
     lda WaveGap,x
-    ldy R_wave
-    cpy #13
-    bcc .gap
-    lsr                         ; second lap and later: three quarters of the gap
+    bit fast
+    bpl .gap
+    lsr                         ; second lap (or difficulty A): three quarters of the gap
     lsr
     sta lt0
     lda WaveGap,x
@@ -830,10 +889,9 @@ EnemyAct:                       ; enemy X (kept)
     sta W_eState,x
     ; pace: move on updates where (frame/2) & mask = 0, by step pixels
     ldy lt5
-    lda R_wave
-    cmp #13
-    bcc .lap1
-    tya                         ; second lap: the fast table
+    bit fast
+    bpl .lap1
+    tya                         ; second lap (or difficulty A): the fast table
     clc
     adc #NKINDS
     tay

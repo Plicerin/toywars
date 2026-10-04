@@ -35,7 +35,7 @@ export function mountPlayer(root, rom, symbols) {
   const screenCtx = screen.getContext('2d');
   const image = screenCtx.createImageData(160, VISIBLE_LINES);
 
-  let started = false, paused = false, muted = false, resetHold = 0, resetDown = false, selectHold = 0, selectDown = false;
+  let started = false, paused = false, muted = false, resetHold = 0, resetDown = false, selectHold = 0, selectDown = false, difficultyA = false;
   let last = 0, acc = 0, pad = null, lastState = '';
 
   const setHint = (text) => { if (hint) hint.textContent = text; };
@@ -51,8 +51,8 @@ export function mountPlayer(root, rom, symbols) {
     if (on('up')) swcha &= ~0x10;
     game.bus.swcha = swcha;
     game.bus.inpt4 = on('fire') ? 0x00 : 0x80;
-    // SWCHB: bit 0 RESET, bit 1 SELECT (low = pressed)
-    game.bus.swchb = (resetHold > 0 || resetDown ? 0 : 0x01) | (selectHold > 0 || selectDown ? 0 : 0x02) | 0x08;
+    // SWCHB: bit 0 RESET, bit 1 SELECT (low = pressed), bit 3 color, bit 6 left difficulty (1 = A)
+    game.bus.swchb = (resetHold > 0 || resetDown ? 0 : 0x01) | (selectHold > 0 || selectDown ? 0 : 0x02) | 0x08 | (difficultyA ? 0x40 : 0);
     game.runFrame();
     if (resetHold > 0) resetHold -= 1;
     if (selectHold > 0) selectHold -= 1;
@@ -60,9 +60,9 @@ export function mountPlayer(root, rom, symbols) {
     // hints follow the game: before a game, playing, game over
     const state = ['waiting', 'playing', 'over'][sc('state')] ?? 'waiting';
     if (started && state !== lastState) {
-      if (state === 'waiting') setHint('Fire or Enter starts a game.');
+      if (state === 'waiting') setHint('Game Select (G) picks game 1, 2 or 3 (they start at waves 1, 5 and 9). Fire or Enter starts it. Difficulty A: faster monsters from the start.');
       else if (state === 'playing') setHint('Joystick or arrows move the cursor over the nine slots. Space places the chosen toy (or picks one up). Hold Space and press left/right to choose another toy. Enter restarts.');
-      else setHint('Game over. Fire starts a new game.');
+      else setHint('Game over. Fire starts a new game; Game Select (G) goes back to choosing one.');
     }
     lastState = state;
   }
@@ -138,6 +138,14 @@ export function mountPlayer(root, rom, symbols) {
   const resetButton = root.querySelector('[data-reset]');
   resetButton?.addEventListener('pointerdown', () => { if (!started) play(); else pressReset(); resetDown = true; });
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) resetButton?.addEventListener(ev, () => { resetDown = false; });
+  const difficultyButton = root.querySelector('[data-difficulty]');
+  const showDifficulty = () => {
+    if (!difficultyButton) return;
+    difficultyButton.textContent = difficultyA ? 'Difficulty A (fast)' : 'Difficulty B';
+    difficultyButton.setAttribute('aria-pressed', String(difficultyA));
+  };
+  difficultyButton?.addEventListener('click', () => { difficultyA = !difficultyA; showDifficulty(); });
+  showDifficulty();
   const selectButton = root.querySelector('[data-select]');
   selectButton?.addEventListener('pointerdown', () => { if (!started) play(); selectHold = 2; selectDown = true; });
   for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) selectButton?.addEventListener(ev, () => { selectDown = false; });
@@ -187,6 +195,7 @@ export function mountPlayer(root, rom, symbols) {
     step(n = 1) { for (let i = 0; i < n; i += 1) step(); draw(); },
     hold(control, on) { if (on) held.add(control); else held.delete(control); },
     reset: pressReset,
+    setDifficulty(a) { difficultyA = a; showDifficulty(); },
     play,
   };
 }

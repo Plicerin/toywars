@@ -67,6 +67,7 @@ lt4         ds 1
 lt5         ds 1
 sndX        ds 1        ; SndPlay keeps X and Y here
 sndY        ds 1
+fast        ds 1        ; bit 7: enemies at second-lap pace (wave 13+ or left difficulty A)
 QUEUE       ds 48       ; event records, 8 bytes: return lo, hi, gfx lo, hi, color lo, hi, HMP1, next y
 STACKTOP    = $FF
 
@@ -95,6 +96,8 @@ W_bossLeft  ds 1        ; T-Rexes still to come this wave
 W_packLeft  ds 1        ; wind-up mice still to come in the pack
 W_packTimer ds 1
 W_packLane  ds 1
+W_game      ds 1        ; game 1-3 (Game Select): starts at wave 1, 5 or 9
+W_selPrev   ds 1        ; Game Select held last frame
 W_shotDmg   ds 3        ; per shelf: damage of the shot in flight, 0 = none
 W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing crawler)
 W_score     ds 3        ; BCD, most significant first
@@ -115,7 +118,8 @@ W_spawnLeft ds 1
 W_spawnTimer ds 1
 W_rand      ds 1
 W_flash     ds 1
-W_dirty     ds 1        ; status line parts to rebuild: 1/8/16 score cells, 2 batteries, 4 wave
+W_dirty     ds 1        ; status line parts to rebuild: 1/8/16 score cells, 2 batteries, 4 wave,
+                        ; 32 the whole line as GAME n (game selection)
 W_cells     ds 30       ; status line, 6 cells x 5 rows (bottom row first)
 SC_END      = .
 R_eX         = W_eX + $80
@@ -155,6 +159,8 @@ R_bossLeft   = W_bossLeft + $80
 R_packLeft   = W_packLeft + $80
 R_packTimer  = W_packTimer + $80
 R_packLane   = W_packLane + $80
+R_game       = W_game + $80
+R_selPrev    = W_selPrev + $80
 R_cells      = W_cells + $80
     echo "Super Chip RAM used: ", (SC_END - $F000)d, " bytes"
 
@@ -419,6 +425,25 @@ PosObject:                      ; A = x, X = object (0 P0, 1 P1, 2 M0, 3 M1, 4 B
 ; start with a blank column).
 BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     SUBROUTINE
+    lda R_dirty                 ; game selection: the line reads GAME n
+    and #$20
+    beq .notGame
+    ldx R_game
+    lda GameTextAt,x
+    tax
+    ldy #0
+.game:
+    lda GameText,x
+    sta W_cells,y
+    inx
+    iny
+    cpy #30
+    bne .game
+    lda R_dirty
+    and #$DF
+    sta W_dirty
+    rts
+.notGame:
     ; the score's three cells one per frame: dirty bit 0, then 3, then 4
     lda R_dirty
     and #$19
