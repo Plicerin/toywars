@@ -38,8 +38,8 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
   plus a reward for every enemy destroyed (more for armored ones and
   bosses). No collecting (a joystick can't chase falling sun comfortably).
   *(decided 2026-10-04)*
-- The trickle shrinks a little each wave; rewards keep strong defenses
-  self-funding.
+- The trickle is constant, one battery every 90 frames (1.5 s); batteries
+  cap at 99. Rewards keep strong defenses self-funding.
 - Shown on the status line: `00120 W01` in gold (the score's last five digits
   and the wave, 40-pixel text) and the batteries as two big green digits drawn
   with PF1 (4-pixel blocks, x 96-123), set mid-line after the text.
@@ -64,7 +64,8 @@ has one shot in flight at a time, shared by its toys.
 | Jet | wave 9 | 30 | — | Cherry Bomb | One use: takes off from the toy box end of its shelf and flies it in about a second, hitting every monster on it once for 10 damage. It never stands in the slot, so it can launch where a monster stands. | T-Rex, emergencies |
 
 Placing costs batteries only (no per-toy recharge). Picking a toy up gives
-half its cost back. A toy can't go down where a monster stands.
+half its cost back. A toy can't go down where a monster stands (the balloon
+clown floats over toys, so it doesn't count).
 
 Drawing note: the jet flying along its shelf is a moving object, drawn by
 the enemy sprite (player 1) in green, using per-object colors *(decided
@@ -111,27 +112,29 @@ record gains one byte (the page).
 ## Waves and difficulty
 
 Three knobs ramp at different times: count (enemies per wave), pressure
-(spawn gap, most on screen at once), mix (new types, each introduced alone
-first). Speed stays fixed until the second lap.
+(spawn gap, most on screen at once), mix (each wave adds its new kind to the
+kinds chosen at random; mice come in packs of three, and a boss wave starts
+with its T-Rexes). Speed stays fixed until the second lap.
 
 | Wave | New toy | New enemy | Enemies | Spawn gap | Max on screen | Notes |
 |---|---|---|---|---|---|---|
 | 1 | Army Man | Dino | 5 | 6 s | 2 | Placing toys, batteries |
 | 2 | Teddy | — | 7 | 5 s | 3 | Blocking |
 | 3 | — | Mouse | 9 | 5 s | 3 | First pack |
-| 4 | Tank | Crawler | 10 | 4.5 s | 3 | Crawler needs tank or teddy |
-| 5 | Cowboy | Knight | 12 | 4 s | 4 | Lasso the charge; first big-wave finale |
+| 4 | Tank | Crawler | 10 | 4.5 s | 3 | Bullets pass over a chewing crawler: tanks |
+| 5 | Cowboy | Knight | 12 | 4 s | 4 | Lasso the charge |
 | 6 | — | T-Rex | boss + 6 | 4 s | 4 | Boss, then a breather |
 | 7 | Cannon | Helicopter | 12 | 4 s | 4 | Cannon answers flyers |
 | 8 | — | Balloon Clown | 14 | 3.5 s | 4 | |
 | 9 | Jet | Pogo Frog | 15 | 3.5 s | 5 | |
 | 10 | — | — | 18 | 3 s | 5 | Full mix |
-| 11 | — | — | 20 | 3 s | 5 | Two big waves |
+| 11 | — | — | 20 | 3 s | 5 | |
 | 12 | — | 2 × T-Rex | 2 bosses + 10 | 3 s | 5 | Final |
-| 13+ | — | — | waves 1–12 | ×0.8 | 5 | Second lap, 25 % faster; laps repeat |
+| 13+ | — | — | waves 1–12 | ×0.75 | 5 | Second lap: every kind at its fast pace (about twice as fast); laps repeat |
 
-Within a wave: trickle → ramp → final burst, announced by a flash and a
-sound. Score: points per enemy, bonus per shelf never breached.
+Within a wave the spawn gap is constant; the next wave starts when its last
+enemy is gone. The shelves flash white only for a lid slam or a jet. Score:
+points per enemy (5 to 50), no bonuses.
 
 ## Sound
 

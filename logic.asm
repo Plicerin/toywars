@@ -26,6 +26,7 @@ SHOT_TANK   = 2
 SHOT_CANNON = 3
 SPLASH      = 12                ; a cannonball's splash reach, pixels each way
 CANNON_DMG  = 3
+JET_DMG     = 10
 ST_ATTRACT  = 0
 ST_PLAY     = 1
 ST_OVER     = 2
@@ -520,7 +521,8 @@ Act:
     SOUND SND_NOBATT
     rts
 
-; Occupied (X = slot; keeps X and Y): carry set if a monster stands on it,
+; Occupied (X = slot; keeps X and Y): carry set if a monster (not the
+; balloon clown, which floats over) stands on it,
 ; where the toy would stop it (the toy's x to x + 8). Without this a toy
 ; dropped on a monster, or put back each time it is eaten, could hold the
 ; monster out of every shot's reach for good, and the wave would never end.
@@ -532,16 +534,19 @@ Occupied:
     lda ColX,y
     sta lt5                     ; the toy's x
     lda SlotLane,x
+    sta lt4
     ldy #NENEMY-1
 .loop:
-    cmp R_eLane,y               ; (an empty slot's shelf is $FF, a jet's 4-6)
+    lda R_eLane,y               ; (an empty slot's shelf is $FF, a jet's 4-6)
+    cmp lt4
     bne .next
-    pha
+    lda R_eType,y
+    cmp #EN_BALLOON
+    beq .next                   ; (it floats over toys: it never stands there)
     lda R_eX,y
     sec
     sbc lt5
     cmp #9
-    pla
     bcc .yes
 .next:
     dey
@@ -556,7 +561,8 @@ Occupied:
 
 ; JetStrike (X = slot): the jet takes off from the toy box end of the slot's
 ; shelf and flies the whole shelf (JetAct); if every enemy slot is taken, it
-; strikes the whole shelf at once
+; strikes the whole shelf as a burst (Splash: one monster a frame, so five
+; kills never land in one frame)
 JetStrike:
     SUBROUTINE
     SOUND SND_JET
@@ -580,20 +586,10 @@ JetStrike:
     tax
     jmp EnemyRow
 .instant:
-    ldx #NENEMY-1
-.enemy:
-    lda R_eType,x
-    beq .next
-    cmp #EN_JET
-    beq .next
-    lda R_eLane,x
-    cmp lt0
-    bne .next
-    lda #10
-    jsr Damage
-.next:
-    dex
-    bpl .enemy
+    lda lt0
+    sta W_splashL
+    lda #$F0|NENEMY             ; a jet's burst (no monster hit first), all five
+    sta W_splashN               ; (it replaces a cannonball's burst still going)
     rts
 
 SetBatt:                        ; batteries = A (at most 99)
@@ -1342,8 +1338,9 @@ ShotHit:
 
 
 ; Splash (odd frames): a cannonball's burst also hits every other monster on
-; its shelf within SPLASH pixels of the one it hit; one monster is checked a
-; frame (five frames a burst), which keeps the frame time bounded
+; its shelf within SPLASH pixels of the one it hit; a jet's burst (bit 7 of
+; splashN; no monster hit first) hits every monster on its shelf. One monster
+; is checked a frame (five frames a burst), which keeps the frame time bounded
 Splash:
     SUBROUTINE
     lda R_splashN
@@ -1366,7 +1363,7 @@ Splash:
     lsr
     lsr
     lsr
-    sta lt0
+    sta lt0                     ; the monster hit (8-15: a jet's burst)
     cpx lt0
     beq .done                   ; (it took its hit already)
     lda R_eType,x
@@ -1374,6 +1371,9 @@ Splash:
     lda R_eLane,x
     cmp R_splashL
     bne .done                   ; (a flying jet's shelf is 4-6)
+    lda lt0
+    and #8
+    bne .jet
     lda R_eX,x
     sec
     sbc R_splashX
@@ -1384,6 +1384,9 @@ Splash:
     cmp #SPLASH+1
     bcs .done
     lda #CANNON_DMG
+    jmp Damage
+.jet:
+    lda #JET_DMG
     jmp Damage
 .done:
     rts
@@ -1490,7 +1493,7 @@ JetAct:
     bcc .next
     sty lt2
     ldx lt2
-    lda #10
+    lda #JET_DMG
     jsr Damage
     ldy lt2
     ldx lt3

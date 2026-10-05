@@ -262,6 +262,27 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
 }
 {
   const g = quietGame();
+  enemy(g, 0, 1, 52, 6, 2); // a balloon clown floating over slot 3 (middle shelf, x 48-56)
+  g.set('toy', 2); g.set('batt', 40);
+  g.press();
+  check('a toy can go down under a balloon clown (it floats over, it never stands there)', g.sc('slotType', 3) === 2);
+}
+{
+  const g = quietGame();
+  [60, 75, 90, 105, 120].forEach((x, i) => enemy(g, i, 1, x, 4, 5)); // five mice on the middle shelf: every enemy slot taken
+  g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40);
+  g.press();
+  let mistimed = 0, mostKills = 0, prev = 5;
+  for (let f = 0; f < 16; f += 1) {
+    g.run(1);
+    const { vb, total } = g.m.layout(); if (total !== 262 || vb[0][0] !== 40) mistimed += 1;
+    const alive = [0, 1, 2, 3, 4].filter((i) => g.sc('eType', i)).length;
+    mostKills = Math.max(mostKills, prev - alive); prev = alive;
+  }
+  check('a jet with every enemy slot taken strikes the whole shelf, one monster a frame, every frame on time', prev === 0 && mostKills === 1 && mistimed === 0 && g.sc('batt') >= 10, `${prev} left, up to ${mostKills} kills in a frame, ${mistimed} mistimed`);
+}
+{
+  const g = quietGame();
   slot(g, 4, 4, 8); // cowboy, middle shelf, column 1 (x 80)
   enemy(g, 0, 1, 110, 1, 6);
   g.run(4);
