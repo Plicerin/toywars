@@ -141,7 +141,7 @@ const NARROW = {
   9: ['###', '#.#', '###', '..#', '###'],
   W: ['#...#', '#...#', '#.#.#', '#.#.#', '.#.#.'], A: ['.#.', '#.#', '###', '#.#', '#.#'], V: ['#.#', '#.#', '#.#', '#.#', '.#.'],
   E: ['###', '#..', '##.', '#..', '###'],
-  w: ['#.#', '#.#', '###', '###', '#.#'], bat: ['.#.', '###', '#.#', '#.#', '###'],
+  w: ['#.#', '#.#', '###', '###', '#.#'], bat: ['..#', '.#.', '###', '.#.', '#..'],
   G: ['###', '#..', '#.#', '#.#', '###'], M: ['#.#', '###', '###', '#.#', '#.#'],
 };
 // 48-pixel text: an array of rows (top first) of 48-char strings -> six cell tables, bottom row first
@@ -159,8 +159,9 @@ export function statusLines(score, batteries, wave) {
   return Array.from({ length: 5 }, (_, r) => {
     const row = Array(48).fill('.');
     const put = (x, g) => [...NARROW[g][r]].forEach((p, i) => { row[x + i] = p; });
-    [...score].forEach((d, i) => put(4 * i, d));
-    put(25, 'bat'); put(29, batteries[0]); put(33, batteries[1]); put(37, 'w'); put(41, wave[0]); put(45, wave[1]);
+    // the score's last five digits, a gap, the batteries, a gap, the wave
+    [...score.slice(-5)].forEach((d, i) => put(1 + 4 * i, d));
+    put(24, 'bat'); put(28, batteries[0]); put(32, batteries[1]); put(37, 'w'); put(41, wave[0]); put(45, wave[1]);
     return row.join('');
   });
 }
@@ -255,9 +256,9 @@ export function build() {
   const nd = (d) => [...NARROW[d]].reverse().map((s) => parseInt(s.replace(/\./g, '0').replace(/#/g, '1'), 2));
   out0.push('DigitHi:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 5))));
   out0.push('DigitLo:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 1))));
-  out0.push('DigitR:', bytes([...Array(10).keys()].flatMap((d) => nd(d))));
+  out0.push('DigitR:', bytes([...[...Array(10).keys()].flatMap((d) => nd(d)), 0, 0, 0, 0, 0])); // + a blank (index 50)
   out0.push('DigitM:', bytes([...Array(10).keys()].flatMap((d) => nd(d).map((v) => v << 4))));
-  out0.push('IconW:', bytes(nd('bat').map((v) => v << 4)), 'GlyphW:', bytes(nd('w')));
+  out0.push('IconHi:', bytes(nd('bat').map((v) => v << 5)), 'GlyphW:', bytes(nd('w')));
   // GAME 1-3 for the status line, laid out like W_cells (cell by cell, bottom row first)
   out0.push('GameText:', bytes([1, 2, 3].flatMap((n) => cells48(gameLines(n)).flat())));
   out0.push('GameTextAt:', '    .byte 0, 0, 30, 60');

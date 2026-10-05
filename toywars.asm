@@ -226,6 +226,7 @@ MainLoop:
     jsr SelectEnemies
     jsr Schedule
     jsr BuildStatus
+    jsr CallSound               ; bank 2: sound steps or music
     lda #161                    ; defenders: rows 0-16 read the page's zero tail
     sta pc0
     sta pc1
@@ -433,9 +434,10 @@ PosObject:                      ; A = x, X = object (0 P0, 1 P1, 2 M0, 3 M1, 4 B
 
 ;-------------------------------------------------------------------------------
 ; BuildStatus: rebuild the parts of the status line that changed (W_dirty).
-; Cells (narrow 3x5 font, two characters per 8-pixel cell): 0-2 the score,
-; 3 battery icon + tens, 4 ones + "W", 5 the wave's two digits (cells 4-5
-; start with a blank column).
+; Cells (narrow 3x5 font, two characters per 8-pixel cell): 0-2 the score's
+; last five digits (from x 1; cell 2 holds one), 3 battery icon + tens, 4 ones +
+; "W" (from x 5), 5 the wave's two digits (from x 1): gaps of 4 and 2 pixels
+; set the batteries apart.
 BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     SUBROUTINE
     lda R_dirty                 ; game selection: the line reads GAME n
@@ -470,25 +472,29 @@ BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     lsr
     bcs .cell
     inx
-.cell:
-    stx temp+3
+.cell:                          ; cell X: the low digit of score byte X, then
+    stx temp+3                  ; the high digit of byte X+1 (cell 2: a blank)
     lda R_score,x
-    lsr
-    lsr
-    lsr
-    lsr
+    and #$0F
     sta temp
     asl
     asl
     adc temp
-    sta temp                    ; high digit * 5
-    lda R_score,x
-    and #$0F
+    sta temp                    ; first digit * 5
+    lda #50                     ; (DigitR + 50 is blank)
+    cpx #2
+    beq .last
+    lda R_score+1,x
+    lsr
+    lsr
+    lsr
+    lsr
     sta temp+1
     asl
     asl
     adc temp+1
-    sta temp+1                  ; low digit * 5
+.last:
+    sta temp+1                  ; second digit * 5
     lda temp+3
     asl
     asl
@@ -497,9 +503,9 @@ BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     ldy #4
 .row:
     ldx temp
-    lda DigitHi,x
+    lda DigitM,x
     ldx temp+1
-    ora DigitLo,x
+    ora DigitR,x
     ldx temp+2
     sta W_cells,x
     inc temp
@@ -524,11 +530,11 @@ ScoreNext:  .byte $08, $10, $00  ; ... and ask for the next
     ldy #0
 .batt:
     ldx temp
-    lda DigitR,x
-    ora IconW,y
+    lda DigitLo,x
+    ora IconHi,y
     sta W_cells+15,y
     ldx temp+1
-    lda DigitM,x
+    lda DigitHi,x
     ora GlyphW,y
     sta W_cells+20,y
     inc temp
@@ -895,6 +901,12 @@ Schedule:
 ; A switch takes effect on the next fetch, at the same address in the new bank.
 ; Calls into bank 2: bank 0 switches, bank 2 (at the next address) does the
 ; JSR and switches back, and bank 0 returns.
+    ORG $0FB0
+    RORG $FFB0
+CallSound:
+    lda $FFF8                   ; bank 2 runs $FFB3-$FFB8: jsr Sound, lda $FFF6
+    ds 6, $EA
+    rts                         ; $FFB9
     ORG $0FC0
     RORG $FFC0
 CallInit:
@@ -1205,6 +1217,10 @@ Reset1:
     include "logic.asm"
     include "gen/bank2.inc"
 
+    ORG $2FB3
+    RORG $FFB3
+    jsr Sound
+    lda $FFF6                   ; back to bank 0, which returns at $FFB9
     ORG $2FC3
     RORG $FFC3
     jsr LogicInit

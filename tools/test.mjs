@@ -114,12 +114,12 @@ check('toywars.bin is 16K', ROM.length === 16384, `${ROM.length} bytes`);
 }
 
 // ---------------------------------------------------------------- late game: the heaviest frames
-{
+// (the mixed layout, and nine army men: the most shots and sound)
+for (const [name, toys] of [['nine toys acting', [1, 3, 5, 1, 2, 3, 1, 4, 5]], ['nine army men', [1, 1, 1, 1, 1, 1, 1, 1, 1]]]) {
   const g = boot();
   g.press();
   g.frames(2);
   g.set('wave', 14); g.set('unlock', 6); g.set('batt', 99); g.set('dirty', 7);
-  const toys = [1, 3, 5, 1, 2, 3, 1, 4, 5];
   toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', 40, s); g.set('slotCool', 0, s); });
   let bad = 0, mistimed = 0, first = '', most = 0;
   for (let f = 0; f < 1500; f += 1) {
@@ -134,7 +134,7 @@ check('toywars.bin is 16K', ROM.length === 16384, `${ROM.length} bytes`);
     if (total !== 262 || vb[0][0] !== 40) mistimed += 1;
     most = Math.max(most, [0, 1, 2, 3, 4].filter((i) => g.sc('eType', i)).length);
   }
-  check('late game (second lap, nine toys acting, fast enemies and flying jets): 1,500 frames at 262 lines, every pixel as the reference', bad === 0 && mistimed === 0, `${bad} frames differ, ${mistimed} mistimed, up to ${most} enemies${first ? `; ${first}` : ''}`);
+  check(`late game (second lap, ${name}, fast enemies and flying jets): 1,500 frames at 262 lines, every pixel as the reference`, bad === 0 && mistimed === 0, `${bad} frames differ, ${mistimed} mistimed, up to ${most} enemies${first ? `; ${first}` : ''}`);
 }
 
 // ---------------------------------------------------------------- rules

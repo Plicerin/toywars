@@ -139,13 +139,26 @@ Logic:
 .finish:
 Finish:
     jsr Flash
-    lda frame                   ; even frames (with the shots): sound, its
-    lsr                         ; steps are two frames long; odd frames (with
-    bcs .oddFinish              ; the toys): the kernel's toy pointers and
-    jmp SndUpdate               ; the music
-.oddFinish:
-    jsr Music
+    lda frame                   ; odd frames (with the toys): the kernel's toy
+    lsr                         ; pointers
+    bcc .evenFinish
     jmp SlotPointers
+.evenFinish:
+    rts
+
+;-------------------------------------------------------------------------------
+; Sound (VBLANK, after the frame counter steps): after an even frame (the
+; shots) the sound effects' next steps, which are two frames long; after an
+; odd frame (the toys) the music. Here, not in the overscan, to keep the
+; game logic's frames short.
+Sound:
+    SUBROUTINE
+    lda frame
+    lsr
+    bcc .music
+    jmp SndUpdate
+.music:
+    jmp Music
 
 ;-------------------------------------------------------------------------------
 ; GameSelect: on the press, a game in progress (or over) ends and the
@@ -626,20 +639,30 @@ Batteries:                      ; one more every 90 frames
     sta W_battTimer
     rts
 
-CountAlive:                     ; A = enemies on the shelves (Z if none)
-    SUBROUTINE
+CountAlive:                     ; A = enemies on the shelves (Z if none); keeps X
+    SUBROUTINE                  ; (an empty slot's shelf is $FF, a flying jet's 4-6)
     ldy #0
-    ldx #NENEMY-1
-.loop:
-    lda R_eType,x
-    beq .next
-    cmp #EN_JET
-    beq .next
+    lda R_eLane
+    cmp #3
+    bcs .1
     iny
-.next:
-    dex
-    bpl .loop
-    tya
+.1: lda R_eLane+1
+    cmp #3
+    bcs .2
+    iny
+.2: lda R_eLane+2
+    cmp #3
+    bcs .3
+    iny
+.3: lda R_eLane+3
+    cmp #3
+    bcs .4
+    iny
+.4: lda R_eLane+4
+    cmp #3
+    bcs .5
+    iny
+.5: tya
     rts
 
 ; Spawner (even frames): the wave's enemies arrive one by one at the right
@@ -833,9 +856,12 @@ Enemies:
     beq .next
     cmp #EN_JET
     beq .jet
-    jsr EnemyAct
-    jsr EnemyRow
-    jmp .next
+    jsr EnemyAct                ; (it updates the rows when the enemy moves)
+    lda eTop,x
+    cmp #$FF
+    bne .next
+    jsr EnemyRow                ; (rows never worked out: a living enemy's
+    jmp .next                   ; eTop is never $FF otherwise)
 .jet:
     jsr JetAct
 .next:
@@ -863,33 +889,29 @@ EnemyAct:                       ; enemy X (kept)
     lda R_eX,x
     cmp #121
     bcs .walk                   ; right of every toy
-    ldy R_eLane,x
-    lda Lane3,y
-    sta lt0                     ; first slot of the shelf
-    ldy #2
-.block:
-    lda R_eX,x
-    cmp ColX,y
-    bcc .noBlock                ; already left of this column
-    lda ColX,y
-    clc
-    adc #8
-    cmp R_eX,x
-    bcc .noBlock                ; still right of the toy
-    sty lt2
+    sec                         ; the toys stand at x 48, 80, 112 (ColX): a
+    sbc #48                     ; toy blocks an enemy at its x to x + 8
+    bcc .walk                   ; left of every toy
+    tay
+    and #31
+    cmp #9
+    bcs .walk                   ; between two columns
     tya
+    lsr
+    lsr
+    lsr
+    lsr
+    lsr
+    sta lt2                     ; column
+    ldy R_eLane,x
     clc
-    adc lt0
+    adc Lane3,y
     sta lt1                     ; slot
     tay
     lda R_slotType,y
+    beq .walk                   ; (empty)
     ldy lt2
-    cmp #0
-    beq .noBlock
     jmp .blocked
-.noBlock:
-    dey
-    bpl .block
 .walk:
     lda R_eState,x              ; walking: not chewing
     and #$7F
@@ -923,7 +945,10 @@ EnemyAct:                       ; enemy X (kept)
     sbc EnStep,y
     sta W_eX,x
     cmp #BREACH_X
-    bcs .done
+    bcc .breach
+    jmp EnemyRow
+.breach:
+    jsr EnemyRow                ; (the game may end with it in view)
     jmp Breach
 .done:
     rts
@@ -943,7 +968,7 @@ EnemyAct:                       ; enemy X (kept)
     ldy R_eLane,x
     lda NextLane,y
     sta W_eLane,x
-    rts
+    jmp EnemyRow
 .hop:
     lda R_eState,x
     and #$40
@@ -957,15 +982,18 @@ EnemyAct:                       ; enemy X (kept)
     sbc #9
     sta W_eX,x
     cmp #BREACH_X
-    bcs .done
-    jmp Breach
+    bcc .breach
+    jmp EnemyRow
 .chew:
     lda R_eState,x
     ora #$80
     sta W_eState,x
+    stx lt0
     lda frame
     lsr
-    and #7                      ; one bite every 16 frames
+    clc
+    adc lt0                     ; (staggered by slot: bites don't pile up
+    and #7                      ; on one frame) one bite every 16 frames
     bne .done
     SOUND SND_CHEW
     ldy lt1
@@ -1448,7 +1476,7 @@ JetAct:
     rts
 
 ;-------------------------------------------------------------------------------
-; Music (odd frames): an 8-bar toy march, eighth notes of 12 frames. Before a
+; Music (every other frame): an 8-bar toy march, eighth notes of 12 frames. Before a
 ; game and at game over: melody on channel 0 and bass on channel 1; during
 ; play: the melody alone, softly. A sound effect on a channel always wins;
 ; the music picks up again at its next note.
@@ -1573,7 +1601,7 @@ SndPlay:                        ; A = sound id; keeps X and Y
     ldy sndY
     rts
 
-SndUpdate:                      ; even frames: next step when a step's time is up
+SndUpdate:                      ; every other frame: next step when a step's time is up
     SUBROUTINE
     ldx #1
 .chan:

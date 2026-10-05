@@ -40,7 +40,8 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
   *(decided 2026-10-04)*
 - The trickle shrinks a little each wave; rewards keep strong defenses
   self-funding.
-- Shown on the status line (12 narrow characters): `000120 ▮25 W1`.
+- Shown on the status line (11 narrow characters, gaps around the batteries):
+  `00120  ⚡25  W01` (the score's last five digits).
 - Named batteries *(decided 2026-10-04)*.
 
 ## Toys
@@ -128,8 +129,11 @@ player and the game (cursor tick, toy select, place/pick-up chirps, the
 no-batteries buzz, the wave jingle, the game-over tune), channel 1 for the
 fighting (army man pop, tank boom, cannon thump, lasso whip, hit, kill,
 chewing crunch, lid slam, jet strike). A new sound replaces the one on its
-channel unless that one has a higher priority. Steps are two frames long
-and advance on even frames.
+channel unless that one has a higher priority. Steps are two frames long.
+The sound steps and the music run in VBLANK (bank 2 through the CallSound
+stub), on alternate frames, which keeps the overscan game logic short: its
+worst measured frame is about 2,130 cycles of about 2,216 usable
+(tools/budget.mjs).
 
 ## Music
 
