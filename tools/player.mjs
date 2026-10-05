@@ -71,8 +71,8 @@ function profileFrame(m, at) {
 export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 216000, opts = {}, log = false } = {}) {
   // legacy: the old player (repairs by picking up a chewed toy and dropping a
   // fresh one on the monster; the game now refuses that drop)
-  const o = { jetReserve: true, repairAt: 30, upgrade: true, jetX: 90, trexJetX: 110, cowboyTrex: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, ...opts };
-  if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; }
+  const o = { jetReserve: true, repairAt: 30, upgrade: true, jetX: 90, trexJetX: 110, cowboyTrex: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, ...opts };
+  if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; if (!('cover' in opts)) o.cover = false; }
   const strat = STRATEGIES[strategy];
   const m = new Machine(ROM);
   const sc = (n, i = 0) => m.ram(SYM[`W_${n}`] + i);
@@ -258,6 +258,22 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         for (let c = 2; c >= 0; c -= 1) {
           const s = e.lane * 3 + c;
           if (e.x - COLX[c] > (o.legacy ? 24 : 14) && e.x - COLX[c] < 40 && !sl[s].type) { add(120, s, 'place', COWBOY, 'lasso trex'); break; }
+        }
+      }
+    }
+    // cover: every shelf needs a shooter before anything else (the opening:
+    // an army man by the box on each shelf, where it has the longest shot at
+    // whatever comes; later, whenever a shelf's last shooter is eaten)
+    if (o.cover) {
+      const SHOOTS = new Set([ARMY, TANK, CANNON]);
+      for (let L = 0; L < 3; L += 1) {
+        if ([0, 1, 2].some((c) => SHOOTS.has(sl[L * 3 + c].type))) continue;
+        const front = en.filter((e) => e.lane === L);
+        for (let c = 0; c < 3; c += 1) {
+          const s = L * 3 + c;
+          if (sl[s].type || standing(en, s) || front.some((e) => e.x < COLX[c] + 4)) continue; // (it must have something to shoot at ahead)
+          add(170 + (lids & (1 << L) ? 20 : 0) - c * 5, s, 'place', ARMY, `cover shelf ${L}`);
+          break;
         }
       }
     }
