@@ -73,8 +73,11 @@ Drawing note: the jet flying along its shelf is a moving object, drawn by
 the enemy sprite (player 1) in green, using per-object colors *(decided
 2026-10-04; built)*. It takes an enemy slot (kind 9, shelf stored as 4-6 so
 no enemy check matches it), flies 4 pixels per update (about a second across)
-and hits each enemy on its shelf once as its nose passes the enemy's middle;
-with all enemy slots full it strikes the shelf at once instead.
+and hits each enemy on its shelf once its nose has passed the enemy's middle
+(its unused health byte marks the enemy slots hit, so each is hit exactly
+once; at most two an update, so a bunched pack never dies in one frame).
+With all enemy slots full it strikes the shelf as a burst instead: one enemy
+an odd frame, through the cannon's splash sweep (about ten frames).
 
 ## Enemies
 
@@ -120,6 +123,11 @@ Three knobs ramp at different times: count (enemies per wave), pressure
 (spawn gap, most on screen at once), mix (each wave adds its new kind to the
 kinds chosen at random; mice come in packs of three, and a boss wave starts
 with its T-Rexes). Speed stays fixed until the second lap.
+
+"Enemies" counts spawns: a wind-up mouse pack is one spawn of three mice, so
+a wave with mice brings more monsters than its count (wave 3's 9 spawns can
+be about 20 monsters). A wave ends when its last spawn, including the rest of
+a pack, has arrived and every enemy is gone.
 
 | Wave | New toy | New enemy | Enemies | Spawn gap | Max on screen | Notes |
 |---|---|---|---|---|---|---|

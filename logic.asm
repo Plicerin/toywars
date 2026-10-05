@@ -710,6 +710,8 @@ Spawner:
     jsr Pack
     lda R_spawnLeft
     bne .spawning
+    lda R_packLeft
+    bne .done                   ; (a pack's mice still to come belong to this wave)
     jsr CountAlive
     bne .done
     lda R_wave
@@ -1470,8 +1472,10 @@ SlotPointer:                    ; slot X
 
 ;-------------------------------------------------------------------------------
 ; JetAct (X = a launched jet): four pixels right per update; every enemy on
-; its shelf takes 10 damage as the nose passes its middle. Nose and middle
-; close by at most 7 pixels an update, so each enemy is hit exactly once.
+; its shelf takes 10 damage once the nose has passed its middle. The jet's
+; health byte (unused for a jet) marks the enemy slots it has hit, so each is
+; hit exactly once; at most two an update (the rest the next one), so a pack
+; bunched together never dies all in one frame.
 JetAct:
     SUBROUTINE
     stx lt3
@@ -1482,26 +1486,33 @@ JetAct:
     lda R_eLane,x
     and #3
     sta lt1
+    lda #2
+    sta lt5                     ; hits left this update
     ldy #NENEMY-1
 .loop:
-    lda R_eType,y
-    beq .next
-    lda R_eLane,y
+    lda R_eLane,y               ; (an empty slot's shelf is $FF, a jet's 4-6)
     cmp lt1
     bne .next
     lda R_eX,y
     clc
     adc #4
-    sec
-    sbc lt0                     ; enemy middle - nose: passed when -7..-1
-    cmp #$F9
-    bcc .next
+    cmp lt0
+    bcs .next                   ; its middle is still ahead of the nose
+    ldx lt3
+    lda R_eHP,x
+    and KindBit,y               ; (bits 0-4: enemy slots 0-4)
+    bne .next                   ; hit already
+    lda lt5
+    beq .next                   ; two this update: the next one gets it
+    dec lt5
+    lda R_eHP,x
+    ora KindBit,y
+    sta W_eHP,x
     sty lt2
     ldx lt2
     lda #JET_DMG
     jsr Damage
     ldy lt2
-    ldx lt3
 .next:
     dey
     bpl .loop

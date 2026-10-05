@@ -283,6 +283,27 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
 }
 {
   const g = quietGame();
+  [0, 1, 2, 3].forEach((i) => enemy(g, i, 1, 87, 4, 5)); // four mice bunched at one spot, middle shelf (one enemy slot free for the jet)
+  [0, 1, 2, 3].forEach((i) => g.set('eState', 0x80, i)); // (chewing: they stay put)
+  g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40);
+  g.press();
+  let mostKills = 0, prev = 4;
+  for (let f = 0; f < 120; f += 1) {
+    g.run(1);
+    const alive = [0, 1, 2, 3].filter((i) => g.sc('eType', i)).length;
+    mostKills = Math.max(mostKills, prev - alive); prev = alive;
+  }
+  check('a flying jet hits a bunched pack once each, at most two in a frame', prev === 0 && mostKills <= 2, `${prev} left, up to ${mostKills} kills in a frame`);
+}
+{
+  const g = quietGame();
+  g.set('spawnLeft', 0); g.set('packLeft', 2); g.set('packTimer', 3); g.set('packLane', 1); // the wave's last spawn was a pack: two mice still to come
+  const wave = g.sc('wave');
+  g.run(4);
+  check('a wave doesn\'t end while its last pack still has mice to come', g.sc('wave') === wave, `wave ${wave} -> ${g.sc('wave')}`);
+}
+{
+  const g = quietGame();
   slot(g, 4, 4, 8); // cowboy, middle shelf, column 1 (x 80)
   enemy(g, 0, 1, 110, 1, 6);
   g.run(4);
