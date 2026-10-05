@@ -49,17 +49,22 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
 
 Roster (user, 2026-10-04): army man, tank, teddy, cowboy, cannon, jet.
 
-| Toy | Unlocks | PvZ role | Behavior | Best against |
-|---|---|---|---|---|
-| Army Man | wave 1 | Peashooter | Cheap; shoots along its shelf. | Dino, Mouse, Balloon Clown |
-| Teddy | wave 2 | Wall-nut | High health, no attack; enemies stop and chew. | Everything that walks |
-| Tank | wave 4 | Potato Mine / heavy | One heavy shell destroys the first ground enemy hit; long recharge. Can't hit flyers. | Crawler, Knight, Pogo Frog |
-| Cowboy | wave 5 | Snow Pea / crowd control | Lasso: short range (about one slot ahead); ropes an enemy and holds it in place for a few seconds. | Knight's charge, Pogo Frog, packs |
-| Cannon | wave 7 | Melon-pult | Slow, heavy cannonball with a small splash; breaks shields, hits flyers. | Knight, Helicopter, groups |
-| Jet | wave 9 | Cherry Bomb | One-shot air strike: flies the length of its shelf, damaging every enemy on it (flyers too), then it's gone. Expensive, long recharge. | T-Rex, emergencies |
+As built (logic.asm: ToyCost, ToyHP, ToyDmg, ToyPeriod). A toy acts on every
+sixth frame (one shelf per odd frame); its first action comes 30 frames after
+it's placed. Shooters fire only at a monster to their right, and each shelf
+has one shot in flight at a time, shared by its toys.
 
-Each toy has a battery cost and a recharge time before that type can be
-placed again.
+| Toy | Unlocks | Cost | Health | PvZ role | Behavior | Best against |
+|---|---|---|---|---|---|---|
+| Army Man | wave 1 | 10 | 8 | Peashooter | A bullet every 0.7 s (42 frames), 1 damage. Bullets pass over a chewing crawler. | Dino, Mouse, Balloon Clown |
+| Teddy | wave 2 | 5 | 40 | Wall-nut | No attack; walkers stop and chew it (1 health every 16 frames, about 11 s for one chewer). A T-Rex crushes it in one bite. | Holding anything that walks |
+| Tank | wave 4 | 25 | 12 | heavy shooter | A shell every 5 s (300 frames), 8 damage. Shells can't hit the balloon clown. | Knight, Helicopter, Crawler |
+| Cowboy | wave 5 | 15 | 8 | Snow Pea / crowd control | Lassos a monster up to 40 pixels ahead (as far as one chewing the next column's toy) and holds it for 1 s, every 2 s. No damage. | T-Rex, a charging Knight |
+| Cannon | wave 7 | 20 | 10 | Melon-pult | A cannonball every 3.3 s (198 frames), 3 damage, splashing the same to every other monster on the shelf within 12 pixels of the one hit. Hits balloons and chewing crawlers. | Crowds at a teddy, Crawler, Balloon Clown |
+| Jet | wave 9 | 30 | — | Cherry Bomb | One use: takes off from the toy box end of its shelf and flies it in about a second, hitting every monster on it once for 10 damage. It never stands in the slot, so it can launch where a monster stands. | T-Rex, emergencies |
+
+Placing costs batteries only (no per-toy recharge). Picking a toy up gives
+half its cost back. A toy can't go down where a monster stands.
 
 Drawing note: the jet flying along its shelf is a moving object, drawn by
 the enemy sprite (player 1) in green, using per-object colors *(decided
