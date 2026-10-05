@@ -271,6 +271,15 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
 }
 {
   const g = quietGame();
+  slot(g, 4, 4, 8); // cowboy, middle shelf, column 1 (x 80)
+  slot(g, 5, 2, 40); // teddy in front of it, column 2 (x 112)
+  enemy(g, 0, 1, 120, 1, 20); // a dino chewing the teddy: 40 pixels from the cowboy
+  let held = false;
+  for (let f = 0; f < 200 && !held; f += 1) { g.run(1); held = (g.sc('eState', 0) & 0x3f) > 0; }
+  check('it reaches a monster chewing the toy in front of it (40 pixels away)', held && g.sc('eX', 0) === 120, `x ${g.sc('eX', 0)}`);
+}
+{
+  const g = quietGame();
   slot(g, 1, 2, 40); // teddy, top shelf, column 1 (x 80)
   enemy(g, 0, 0, 92, 2, 5); // helicopter
   g.run(30);

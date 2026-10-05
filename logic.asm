@@ -1178,8 +1178,8 @@ ToyAct:                         ; slot X (kept)
     lda R_eX,y
     sec
     sbc lt0
-    cmp #40
-    bcs .next
+    cmp #41                     ; within 40 pixels: up to a monster chewing
+    bcs .next                   ; the next column's toy (x + 32 to x + 40)
     lda R_eState,y
     and #$C0
     ora #30                     ; held for 30 updates (60 frames)

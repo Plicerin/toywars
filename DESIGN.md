@@ -70,16 +70,20 @@ with all enemy slots full it strikes the shelf at once instead.
 
 ## Enemies
 
-| # | Enemy | PvZ equivalent | Health | Speed | Trick |
-|---|---|---|---|---|---|
-| 1 | Dino | Basic | 3 | Slow | Walks; stops to chew toys. |
-| 2 | Wind-up Mouse | Imp | 1 | Fast | Comes in packs of three. |
-| 3 | Crawler | — | 2 | Medium | Low: soldier shots pass over it within 16 px of the toy; only tank/teddy stop it. |
-| 4 | Knight | Newspaper | 2 + 4 shield | Slow | Shield breaks → charges at double speed. |
-| 5 | Helicopter | Pole Vaulter | 3 | Medium | Hops over the first toy it reaches. |
-| 6 | Balloon Clown | Balloon | 2 | Slow | Floats over every toy; only soldiers hit it. |
-| 7 | Pogo Frog | lane changer | 3 | Medium | When blocked, jumps to the next shelf. |
-| 8 | T-Rex (boss) | Gargantuar | 20 | Very slow | Double-width sprite; crushes a toy in one bite. |
+As built (logic.asm: EnHP, EnReward, EnScore, EnMask/EnStep). Speeds in
+pixels per second, first lap / second lap (wave 13+ or difficulty A); every
+enemy gains 1 health every fourth wave (wave / 4), laps included.
+
+| Kind | Enemy | PvZ equivalent | From wave | Health | Speed | Batteries / points | Trick |
+|---|---|---|---|---|---|---|---|
+| 1 | Dino | Basic | 1 | 6 | 15 / 30 | 3 / 10 | Walks; stops to chew toys. |
+| 4 | Wind-up Mouse | Imp | 3 | 1 | 60 / 90 | 1 / 5 | Comes in packs of three. |
+| 3 | Crawler | — | 4 | 3 | 30 / 60 | 2 / 10 | Low: army men's bullets pass over it while it chews; tanks and cannons still hit it. |
+| 5 | Knight | Newspaper | 5 | 6 | 15 / 30; charging 60 / 90 | 4 / 20 | Shield breaks when its health drops below 3, then it charges at four times its pace (three in the second lap). |
+| 8 | T-Rex (boss) | Gargantuar | 6 (and two in 12) | 20 | 7.5 / 15 | 10 / 50 | Crushes a toy in one bite. Single-width (a five-pull variant can't be scheduled). |
+| 2 | Helicopter | Pole Vaulter | 7 | 5 | 30 / 60 | 3 / 15 | Hops over the first toy it reaches, once; then chews. |
+| 6 | Balloon Clown | Balloon | 8 | 2 | 15 / 30 | 3 / 15 | Floats over every toy. Tank shells can't reach it; army men and cannons can. |
+| 7 | Pogo Frog | lane changer | 9 | 3 | 30 / 60 | 3 / 15 | The first time a toy blocks it, it jumps to the next shelf; then it chews. |
 
 All enemies have a two-frame walk (frame chosen by `(x >> 2) & 1`).
 

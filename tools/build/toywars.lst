@@ -3877,8 +3877,8 @@
    1178  2891		       b9 80 f0 	      lda	R_eX,y
    1179  2894		       38		      sec
    1180  2895		       e5 b1		      sbc	lt0
-   1181  2897		       c9 28		      cmp	#40
-   1182  2899		       b0 46		      bcs	.next
+   1181  2897		       c9 29		      cmp	#41	; within 40 pixels: up to a monster chewing
+   1182  2899		       b0 46		      bcs	.next	; the next column's toy (x + 32 to x + 40)
    1183  289b		       b9 94 f0 	      lda	R_eState,y
    1184  289e		       29 c0		      and	#$C0
    1185  28a0		       09 1e		      ora	#30	; held for 30 updates (60 frames)
