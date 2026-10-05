@@ -25,7 +25,7 @@ place toys in the nine slots (three per shelf) to stop them.
   30, 50 or 70 batteries); pressed during a game, it goes back to choosing.
 - **Left difficulty A:** monsters move at second-lap speed from the start.
 
-Batteries (the number after the lightning bolt) trickle in and every monster you
+Batteries (the big green number) trickle in and every monster you
 destroy pays some. The first monster that reaches the box slams that shelf's
 lid and clears it; the second one through the same shelf ends the game.
 

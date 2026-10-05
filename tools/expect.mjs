@@ -53,8 +53,9 @@ export function expectedFrame(scene, frame) {
   const put = (line, x, c) => { if (line >= 0 && line < 192 && x >= 0 && x < 160) px[line][x] = c; };
   for (let l = 0; l < 29; l += 1) px[l].fill(COL.header); // the header panel
   const row2 = (r, x, c) => { put(PLAY + 2 * r, x, c); put(PLAY + 2 * r + 1, x, c); };
-  // header text: title (s1-14, red) and status (s16-25, gold) at x 54-101
-  const text = (lines, s0, rowsPer, c) => lines.forEach((line, r) => [...line].forEach((p, x) => { if (p === '#') for (let k = 0; k < rowsPer; k += 1) put(s0 + rowsPer * r + k, 54 + x, c); }));
+  // header text: title (s1-14, red) at x 54-101; status (s16-25) from x 54, gold text
+  // and the green batteries ('g')
+  const text = (lines, s0, rowsPer, c) => lines.forEach((line, r) => [...line].forEach((p, x) => { if (p === '#' || p === 'g') for (let k = 0; k < rowsPer; k += 1) put(s0 + rowsPer * r + k, 54 + x, p === 'g' ? COL.green : c); }));
   text(scene.titleLines, 1, 2, COL.red);
   if (scene.statusLines) text(scene.statusLines, 16, 2, COL.gold);
   const pf = scene.pfColor ?? COL.gold; // shelves, box and rule (white while flashing)

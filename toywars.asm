@@ -367,36 +367,50 @@ MainLoop:
     lda #COL_GOLD
     sta COLUP0
     sta COLUP1
-    lda #9
-    sta lineCnt
-    ldy #4
+    lda #1                      ; player 1: two copies (the text is 40 pixels)
+    sta NUSIZ1
+    lda #COL_GREEN
+    sta COLUPF
+    ldy #0
 
-    ; s16-25: status line, five font rows of two lines
-.status:
+    ; s16-25: the status line, five font rows of two lines (unrolled): the
+    ; score and wave are 40-pixel text (player 0 three copies, player 1 two,
+    ; x 54-93); the batteries are PF1 blocks in green, x 96-123. PF1 is cleared
+    ; as each line starts, so the left half stays blank, and set after the
+    ; text, before the beam reaches x 96 (cycle 54).
+    MAC STATUSLINE              ; {1} = font row (bottom first)
     sta WSYNC
-    lda R_cells,y
-    sta GRP0
-    lda R_cells+5,y
-    sta GRP1
-    lda R_cells+10,y
-    sta GRP0
-    lda R_cells+20,y
-    tax
-    lda R_cells+25,y
-    sta temp
-    lda R_cells+15,y
-    ldy temp
-    sta GRP1
-    stx GRP0
-    sty GRP1
-    sta GRP0
-    dec lineCnt
-    bmi .statusDone
-    lda lineCnt
-    lsr
-    tay
-    jmp .status
-.statusDone:                    ; still s25, past the text
+    sty PF1                     ; 0-2    (Y = 0)
+    bit $80                     ; 3-5
+    lda R_cells+{1}             ; 6-9
+    sta GRP0                    ; 10-12
+    lda R_cells+5+{1}           ; 13-16
+    sta GRP1                    ; 17-19
+    lda R_cells+10+{1}          ; 20-23
+    sta GRP0                    ; 24-26
+    lda R_cells+15+{1}          ; 27-30  cell 3
+    ldx R_cells+20+{1}          ; 31-34  cell 4
+    ldy R_cells+25+{1}          ; 35-38  PF1: the batteries
+    nop                         ; 39-40
+    sta GRP1                    ; 41-43  cell 2 shows, cell 3 waits
+    stx GRP0                    ; 44-46  cell 3 shows, cell 4 waits
+    sty GRP1                    ; 47-49  cell 4 shows (player 1 has no third copy)
+    sty PF1                     ; 50-52
+    ldy #0                      ; 53-54
+    ENDM
+    STATUSLINE 4
+    STATUSLINE 4
+    STATUSLINE 3
+    STATUSLINE 3
+    STATUSLINE 2
+    STATUSLINE 2
+    STATUSLINE 1
+    STATUSLINE 1
+    STATUSLINE 0
+    STATUSLINE 0
+
+    sta WSYNC                   ; s26
+    sty PF1                     ; (Y = 0)
     lda #0
     sta GRP0
     sta GRP1
@@ -435,9 +449,8 @@ PosObject:                      ; A = x, X = object (0 P0, 1 P1, 2 M0, 3 M1, 4 B
 ;-------------------------------------------------------------------------------
 ; BuildStatus: rebuild the parts of the status line that changed (W_dirty).
 ; Cells (narrow 3x5 font, two characters per 8-pixel cell): 0-2 the score's
-; last five digits (from x 1; cell 2 holds one), 3 battery icon + tens, 4 ones +
-; "W" (from x 5), 5 the wave's two digits (from x 1): gaps of 4 and 2 pixels
-; set the batteries apart.
+; last five digits (cell 2 holds one), 3 "W" + the wave's tens, 4 its ones;
+; the sixth cell's bytes hold PF1: the batteries' two digits, in green.
 BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     SUBROUTINE
     lda R_dirty                 ; game selection: the line reads GAME n
@@ -481,7 +494,7 @@ BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     asl
     adc temp
     sta temp                    ; first digit * 5
-    lda #50                     ; (DigitR + 50 is blank)
+    lda #50                     ; (DigitLo + 50 is blank)
     cpx #2
     beq .last
     lda R_score+1,x
@@ -503,9 +516,9 @@ BuildStatus:                    ; (one part per frame, to keep VBLANK short)
     ldy #4
 .row:
     ldx temp
-    lda DigitM,x
+    lda DigitHi,x
     ldx temp+1
-    ora DigitR,x
+    ora DigitLo,x
     ldx temp+2
     sta W_cells,x
     inc temp
@@ -530,13 +543,10 @@ ScoreNext:  .byte $08, $10, $00  ; ... and ask for the next
     ldy #0
 .batt:
     ldx temp
-    lda DigitLo,x
-    ora IconHi,y
-    sta W_cells+15,y
-    ldx temp+1
     lda DigitHi,x
-    ora GlyphW,y
-    sta W_cells+20,y
+    ldx temp+1
+    ora DigitLo,x
+    sta W_cells+25,y            ; PF1
     inc temp
     inc temp+1
     iny
@@ -559,10 +569,12 @@ ScoreNext:  .byte $08, $10, $00  ; ... and ask for the next
     ldy #0
 .wave:
     ldx temp
-    lda DigitM,x
+    lda DigitLo,x
+    ora WHi,y
+    sta W_cells+15,y
     ldx temp+1
-    ora DigitR,x
-    sta W_cells+25,y
+    lda DigitHi,x
+    sta W_cells+20,y
     inc temp
     inc temp+1
     iny

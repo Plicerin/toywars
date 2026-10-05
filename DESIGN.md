@@ -40,8 +40,9 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
   *(decided 2026-10-04)*
 - The trickle shrinks a little each wave; rewards keep strong defenses
   self-funding.
-- Shown on the status line (11 narrow characters, gaps around the batteries):
-  `00120  ⚡25  W01` (the score's last five digits).
+- Shown on the status line: `00120 W01` in gold (the score's last five digits
+  and the wave, 40-pixel text) and the batteries as two big green digits drawn
+  with PF1 (4-pixel blocks, x 96-123), set mid-line after the text.
 - Named batteries *(decided 2026-10-04)*.
 
 ## Toys
