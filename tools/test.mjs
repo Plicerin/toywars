@@ -301,6 +301,15 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
 }
 {
   const g = quietGame();
+  slot(g, 3, 4, 8); slot(g, 4, 4, 99); // two cowboys, middle shelf, x 48 and x 80: both reach x 81-88
+  g.set('slotCool', 10, 4); // the second half a cycle behind: they take turns
+  enemy(g, 0, 1, 86, 1, 99); // a dino chewing the second one
+  g.run(1200);
+  const bitten = 99 - g.sc('slotHP', 4); // a bite every 16 frames while free: 75 if never held
+  check('two cowboys taking turns can\'t hold a monster for good: after a lasso it can\'t be roped again for a second', bitten >= 25, `${bitten} bites in 1200 frames`);
+}
+{
+  const g = quietGame();
   slot(g, 1, 2, 40); // teddy, top shelf, column 1 (x 80)
   enemy(g, 0, 0, 92, 2, 5); // helicopter
   g.run(30);

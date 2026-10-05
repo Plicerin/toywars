@@ -27,6 +27,8 @@ SHOT_CANNON = 3
 SPLASH      = 12                ; a cannonball's splash reach, pixels each way
 CANNON_DMG  = 3
 JET_DMG     = 10
+LASSO_HOLD  = 30                ; updates a lasso holds (60 frames), then as
+LASSO_FREE  = 30                ;   many it can't be lassoed again (60 frames)
 TRICKLE     = 240               ; frames per battery (one byte: at most 255)
 ST_ATTRACT  = 0
 ST_PLAY     = 1
@@ -912,10 +914,13 @@ EnemyAct:                       ; enemy X (kept)
     lda R_eState,x
     and #$3F
     beq .free
-    lda R_eState,x              ; lassoed: count down, stand still
-    sec
-    sbc #1
-    sta W_eState,x
+    lda R_eState,x              ; the lasso's count down: held for its first
+    sec                         ; LASSO_HOLD updates (standing still), then
+    sbc #1                      ; free but not to be lassoed again until it
+    sta W_eState,x              ; runs out (two cowboys can't hold it for good)
+    and #$3F
+    cmp #LASSO_FREE
+    bcc .free
     rts
 .free:
     lda lt5
@@ -1178,8 +1183,10 @@ ToyAct:                         ; slot X (kept)
     cmp #41                     ; within 40 pixels: up to a monster chewing
     bcs .next                   ; the next column's toy (x + 32 to x + 40)
     lda R_eState,y
-    and #$C0
-    ora #30                     ; held for 30 updates (60 frames)
+    and #$3F
+    bne .next                   ; held, or just let go: not again yet
+    lda R_eState,y
+    ora #LASSO_HOLD+LASSO_FREE  ; held 60 frames, then free (and safe) 60
     sta W_eState,y
     SOUND SND_LASSO
     lda #20                     ; next lasso after 2 seconds
