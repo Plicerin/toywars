@@ -131,7 +131,9 @@ the spawn timer's beat leaned to some shelves.
 "Enemies" counts spawns: a wind-up mouse pack is one spawn of three mice, so
 a wave with mice brings more monsters than its count (wave 3's 9 spawns can
 be about 20 monsters). A wave ends when its last spawn, including the rest of
-a pack, has arrived and every enemy is gone.
+a pack, has arrived and every enemy is gone. "Max on screen" holds back new
+spawns only: a pack's two followers come whenever an enemy slot is free, so a
+pack can briefly take the count to five.
 
 | Wave | New toy | New enemy | Enemies | Spawn gap | Max on screen | Notes |
 |---|---|---|---|---|---|---|
@@ -185,17 +187,22 @@ the melody, at volume 3, and only when no sound effect has channel 0.
   take turns (flicker). The longest any enemy goes undrawn is 6 frames.
 - **Toys**: all green (one color for player 0's three copies), 8 px wide;
   six toy sprites (plus a second frame each where they animate).
-- **RAM** *(Super Chip decided 2026-10-04; done)*: the console's 128 bytes
-  hold the kernel's pointers, the event queue and scratch (88 used); game
-  state lives in the Super Chip's 128 bytes (19 used so far: enemies, score,
-  wave). Super Chip RAM is written at `W_name` and read at `R_name` ($80
-  higher); read-modify-write instructions can't be used on it.
-- **ROM**: the kernel can only read graphics in its own bank (bank 1), which
-  has 3,840 bytes (the Super Chip takes the first 256 of every bank); 761 are
-  free. The full roster (8 enemies × 2 frames + jet) plus color tables and
-  toy sprites needs more, so the plan is: move each enemy's setup row to the
-  middle of the gap before it (halves the zero padding per frame, ~90 → ~50
-  bytes), share color tables, and compact the special-row code.
+- **RAM** *(as built, 2026-10-05)*: the console's 128 bytes hold the
+  kernel's pointers, the event queue and scratch (106 used; the deepest
+  stack outside the kernel leaves about 9 bytes spare). Game state lives in
+  the Super Chip's 128 bytes, now all used (enemies, toys, shots, score,
+  wave, batteries, sound, the splash/jet burst, the spawn bag, the status
+  line). Super Chip RAM is written at `W_name` and read at `R_name` ($80
+  higher); read-modify-write instructions can't be used on it. A new feature
+  needing RAM must free some first.
+- **ROM** *(as built)*: 16K in four 4K banks, each losing its first 256
+  bytes to the Super Chip window. Bank 0: frame loop, header and status
+  kernel, the enemy scheduler (about 950 bytes free). Bank 1: the play
+  kernel and all graphics, which it must read from its own bank (about 40
+  free; enemy frames are padded 40 zeros, setup rows sit mid-gap). Bank 2:
+  game logic, logic.asm (about 490 free). Bank 3: sound steps and music,
+  sound.asm (about 3,250 free). Bank calls go through stubs at $FFB0
+  (sound), $FFC0 (init) and $FFD0 (logic).
 
 ## Open decisions
 

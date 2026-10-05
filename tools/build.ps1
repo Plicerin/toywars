@@ -9,7 +9,7 @@ Push-Location $root
 try { node tools/gen.mjs; if ($LASTEXITCODE -ne 0) { throw 'gen failed' } } finally { Pop-Location }
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'toywars-build'
 New-Item -ItemType Directory -Force (Join-Path $tmp 'gen') | Out-Null
-Copy-Item (Join-Path $root 'toywars.asm'), (Join-Path $root 'logic.asm') $tmp -Force
+Copy-Item (Join-Path $root 'toywars.asm'), (Join-Path $root 'logic.asm'), (Join-Path $root 'sound.asm') $tmp -Force
 Copy-Item (Join-Path $PSScriptRoot 'dasm\vcs.h') $tmp -Force
 Copy-Item (Join-Path $root 'gen\*.inc') (Join-Path $tmp 'gen') -Force
 Push-Location $tmp

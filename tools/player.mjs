@@ -10,15 +10,20 @@
 //    their health; no jet reserve kept), blocks with a teddy dropped in front
 //    of a runaway; cannon strategy, second lap (wave 13+): a cannon by the box too (lap2)
 //    (the previous defaults: OPTS {"jetChew":0,"jetReserve":true,"lap2":null,"repairAt":30})
+//  - trexSalvage (default on): picks up a shooter a T-Rex is about to crush (half its cost back);
+//    bossSave (batteries kept for jets while a lap-2 T-Rex is due), lap2At (wave the lap-2 layout starts)
+//  - checks the jet (hits per update from its hit mask, a monster hit twice, kills per frame on its
+//    shelf, monsters it passed without hitting), mouse packs (followers = 2 x packs per wave, none
+//    left at a wave's end) and the spawn bag (every aligned six spawns: each shelf twice; kind x shelf)
 //  - checks a few rules while it watches (logged as "anomalies"; result.stats:
 //    refused drops, jet take-off x, lasso distances and holds, jet bursts,
 //    batteries spent per toy and refunded, spawns per shelf, frames per wave)
 // usage: node tools/player.mjs [games] [strategy: cannon (best), tank, heavy, cannon0, army, wall, wallArmy, cowboy] [seedBase] [maxFrames]
-//   env: OPTS='{"repairAt":20}' (strategy knobs), LOG=1 (actions), TRACE=a-b (board per frame), PROF_AT=f,f (logic cycle profile)
+//   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
 
-const SYM = Object.fromEntries(readFileSync('tools/build/toywars.sym', 'latin1').split(/\r?\n/).map((l) => /^(\S+)\s+([0-9a-f]{4})/i.exec(l)).filter(Boolean).map((x) => [x[1], parseInt(x[2], 16)]));
+const SYM = Object.fromEntries(readFileSync(process.env.SYM ?? 'tools/build/toywars.sym', 'latin1').split(/\r?\n/).map((l) => /^(\S+)\s+([0-9a-f]{4})/i.exec(l)).filter(Boolean).map((x) => [x[1], parseInt(x[2], 16)]));
 const ROM = readFileSync(process.env.ROM ?? 'toywars.bin'); // (ROM=path: a variant cartridge, same symbols)
 
 const ARMY = 1, TEDDY = 2, TANK = 3, COWBOY = 4, CANNON = 5, JET = 6;
@@ -77,7 +82,7 @@ function profileFrame(m, at) {
 export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 216000, opts = {}, log = false } = {}) {
   // legacy: the old player (repairs by picking up a chewed toy and dropping a
   // fresh one on the monster; the game now refuses that drop)
-  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, cowboyTrex: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, ...opts };
+  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, cowboyTrex: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, ...opts };
   if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; if (!('cover' in opts)) o.cover = false; }
   const strat = STRATEGIES[strategy];
   const m = new Machine(ROM);
@@ -89,7 +94,9 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const jetFrames = [];
   const mistimedAll = [];
   // rule checks for the new rules
-  const stats = { refused: 0, refusedAnom: 0, placedOnMonster: 0, jetLaunchX: {}, jetMissed: 0, jetHits: 0, lassoD: {}, lassoMax: 0, lassos: 0, lassoImmuneBroken: 0, longestHold: 0, jetBursts: 0, balloonDrops: 0, spent: {}, spawns: {}, spawnSeq: {}, waveFrames: {}, longestWave: 0, battAtWave: {}, framesAtCap: 0, playFrames: 0 };
+  const stats = { refused: 0, refusedAnom: 0, placedOnMonster: 0, jetLaunchX: {}, jetMissed: 0, jetHits: 0, lassoD: {}, lassoMax: 0, lassos: 0, lassoImmuneBroken: 0, longestHold: 0, jetBursts: 0, balloonDrops: 0, spent: {}, spawns: {}, spawnSeq: {}, waveFrames: {}, longestWave: 0, battAtWave: {}, framesAtCap: 0, playFrames: 0, jetHitsPerUpdate: {}, jetDouble: 0, jetKillsPerFrame: {}, packLeaders: {}, packFollowers: {}, packSpill: 0, bagLanes: [0, 0, 0], bagBlocksBad: 0, kindLane: {}, battMin: {}, battMax: {} };
+  const bagSeq = [];
+  const birth = [0, 0, 0, 0, 0]; const jetLog = new Map(); stats.jetSkipped = 0;
   let jetWatch = null; let waveStart = 0;
   const note = (s) => { events.push(`f${frames} w${sc('wave')} ${s}`); if (log) console.log(`f${frames} w${sc('wave')} ${s}`); };
   const anomaly = (s) => { if (anomalies.length < 40) anomalies.push(`f${frames} w${sc('wave')} ${s}`); if (log) console.log('ANOMALY', s); };
@@ -99,7 +106,8 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const slots = () => [...Array(9).keys()].map((s) => ({ s, type: sc('slotType', s), hp: sc('slotHP', s) }));
   let prev = null;
   const watch = () => {
-    const cur = { en: enemies(), sl: slots(), batt: sc('batt'), lids: sc('lids'), wave: sc('wave'), state: sc('state') };
+    const cur = { en: enemies(), sl: slots(), batt: sc('batt'), lids: sc('lids'), wave: sc('wave'), state: sc('state'), spawnLeft: sc('spawnLeft'), packLeft: sc('packLeft') };
+    const jetsNow = [0, 1, 2, 3, 4].filter((i) => sc('eType', i) === EJET).map((i) => ({ i, lane: sc('eLane', i) & 3, mask: sc('eHP', i) }));
     if (cur.batt > 99) anomaly(`batteries ${cur.batt} > 99`);
     for (const e of cur.en) {
       if (e.type !== EJET && e.lane > 2) anomaly(`enemy ${ENAME[e.type]} on shelf ${e.lane}`);
@@ -119,6 +127,58 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         if (p.x - e.x > 9 && e.type !== HELI) anomaly(`${ENAME[e.type]} jumped x ${p.x} -> ${e.x}`);
       }
       for (const e of cur.en) if (e.type !== EJET && e.x >= 139 && !prev.en.some((q) => q.i === e.i && q.type === e.type)) { const k = ENAME[e.type]; (stats.spawns[k] ??= [0, 0, 0])[e.lane] += 1; (stats.spawnSeq[cur.wave] ??= []).push(`${k[0]}${k === 'trex' ? 'X' : ''}${e.lane}`); }
+      // births: a slot newly holding a monster
+      const prevBirth = [...birth];
+      for (const e of cur.en) { const p = prev.en.find((q) => q.i === e.i); if (!p || p.type !== e.type || e.x - p.x > 9) birth[e.i] = frames; }
+      for (const j of jetsNow) {
+        const k = j.i + ':' + j.lane; const g = jetLog.get(k) ?? { hit: new Set(), passed: new Map() }; jetLog.set(k, g);
+        const pj = prev.jets?.find((q) => q.i === j.i); const nb = j.mask & ~(pj ? pj.mask : 0) & 31;
+        for (let b = 0; b < 5; b += 1) if (nb & (1 << b)) g.hit.add(b + ':' + prevBirth[b]);
+        const jx = sc('eX', j.i);
+        for (const e of cur.en) if (e.type !== EJET && e.lane === j.lane && e.x + 4 < jx + 8) { const id = e.i + ':' + birth[e.i]; if (!g.passed.has(id)) g.passed.set(id, `${ENAME[e.type]}@${e.x} (jet ${jx})`); }
+      }
+      for (const [k, g] of jetLog) {
+        if (jetsNow.some((j) => j.i + ':' + j.lane === k)) continue;
+        for (const [id, what] of g.passed) if (!g.hit.has(id)) { stats.jetSkipped += 1; anomaly(`jet passed ${what} without hitting it (slot ${id})`); }
+        jetLog.delete(k);
+      }
+      // the jet: hits per update (new bits in its mask), a monster hit twice, kills on its shelf per frame
+      for (const j of jetsNow) {
+        const pj = prev.jets?.find((q) => q.i === j.i);
+        const pm = pj ? pj.mask : 0;
+        const nb = j.mask & ~pm & 31; const n = [0, 1, 2, 3, 4].filter((b) => nb & (1 << b)).length;
+        if (n) stats.jetHitsPerUpdate[n] = (stats.jetHitsPerUpdate[n] ?? 0) + 1;
+        if (n > 2) anomaly(`jet hit ${n} monsters in one update`);
+        for (const e of prev.en) {
+          if (e.type === EJET || e.lane !== j.lane || !(pm & (1 << e.i))) continue;
+          const now = cur.en.find((q) => q.i === e.i && q.type === e.type);
+          if (now && e.hp - now.hp >= 10) { stats.jetDouble += 1; anomaly(`jet hit ${ENAME[e.type]} slot ${e.i} twice`); }
+        }
+        const killed = prev.en.filter((e) => e.type !== EJET && e.lane === j.lane && !cur.en.some((q) => q.i === e.i && q.type === e.type)).length;
+        if (killed) stats.jetKillsPerFrame[killed] = (stats.jetKillsPerFrame[killed] ?? 0) + 1;
+        if (killed > 2) anomaly(`${killed} monsters died in one frame under a jet`);
+      }
+      // spawns: a leader (spawnLeft down) goes through the shelf bag; a follower (packLeft down) is the rest of a pack
+      if (cur.state === 1 && prev.state === 1) {
+        const fresh = cur.en.filter((e) => e.type !== EJET && !prev.en.some((q) => q.i === e.i && q.type === e.type));
+        if (cur.spawnLeft === prev.spawnLeft - 1 && cur.wave === prev.wave) {
+          const e = fresh.find((q) => q.x >= 139);
+          if (e) {
+            stats.bagLanes[e.lane] += 1; bagSeq.push(e.lane); (stats.kindLane[ENAME[e.type]] ??= [0, 0, 0])[e.lane] += 1;
+            if (e.type === MOUSE) stats.packLeaders[cur.wave] = (stats.packLeaders[cur.wave] ?? 0) + 1;
+            if (bagSeq.length % 6 === 0) { const blk = bagSeq.slice(-6); if ([0, 1, 2].some((L) => blk.filter((x) => x === L).length !== 2)) { stats.bagBlocksBad += 1; anomaly(`bag block ${blk.join('')} uneven`); } }
+          } else anomaly('spawnLeft fell with no new monster at the edge');
+        }
+        if (cur.packLeft === prev.packLeft - 1) {
+          if (fresh.some((q) => q.type === MOUSE)) stats.packFollowers[cur.wave] = (stats.packFollowers[cur.wave] ?? 0) + 1;
+        }
+        stats.battMin[cur.wave] = Math.min(stats.battMin[cur.wave] ?? 99, cur.batt); stats.battMax[cur.wave] = Math.max(stats.battMax[cur.wave] ?? 0, cur.batt);
+      }
+      if (cur.wave !== prev.wave && prev.state === 1 && cur.state === 1) {
+        if (prev.packLeft) { stats.packSpill += 1; anomaly(`wave ${prev.wave} ended with ${prev.packLeft} pack mice to come`); }
+        const L = stats.packLeaders[prev.wave] ?? 0, F = stats.packFollowers[prev.wave] ?? 0;
+        if (F !== 2 * L && !anomalies.some((a) => a.includes('LID'))) anomaly(`wave ${prev.wave}: ${L} packs, ${F} followers`);
+      }
       if (cur.state === 1) { stats.playFrames += 1; if (cur.batt >= 95) stats.framesAtCap += 1; } // (95+: at or near the cap)
       if (cur.lids !== prev.lids && cur.state === 1) {
         const lane = [0, 1, 2].find((L) => (cur.lids ^ prev.lids) & (1 << L));
@@ -164,6 +224,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       }
     }
     if (process.env.TRACE && frames >= +process.env.TRACE.split('-')[0] && frames <= +process.env.TRACE.split('-')[1]) console.log('T', frames, sc('batt'), cur.sl.map((q) => q.type + ':' + q.hp).join(' '), '|', cur.en.map((e) => `${ENAME[e.type]}L${e.lane}x${e.x}hp${e.hp}s${e.st.toString(16)}`).join(' '));
+    cur.jets = jetsNow;
     prev = cur;
   };
 
@@ -205,7 +266,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
 
   // ---- the brain
   const unlock = () => sc('unlock');
-  const wanted = (col) => { let t = 0; const st = o.lap2 && sc('wave') >= 13 ? STRATEGIES[o.lap2] : strat; for (const [u, toy] of st.cols[col]) if (u <= unlock()) t = toy; return t; };
+  const wanted = (col) => { let t = 0; const st = o.lap2 && sc('wave') >= o.lap2At && unlock() >= CANNON ? STRATEGIES[o.lap2] : strat; for (const [u, toy] of st.cols[col]) if (u <= unlock()) t = toy; return t; };
   const blockerAt = (en, sl) => { // the column that will next stop this enemy (or -1)
     if (en.type === BALLOON) return -1;
     let hopped = en.type !== HELI || (en.st & 0x40);
@@ -314,6 +375,9 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         } else if (sl[s].type === TEDDY && want === TEDDY && sl[s].hp < o.repairAt && batt >= 6 && !standing(en, s)) {
           // (only between chewers: with one on it the fresh teddy would be refused)
           add(60 + pressure[L], s, 'pick', 0, 'repair teddy');
+        } else if (o.trexSalvage && sl[s].type !== JET && sl[s].type !== TEDDY && front.some((e) => e.type === TREX && e.x >= COLX[c] && e.x - COLX[c] <= 8)) {
+          // a T-Rex crushes it in one bite: take half its cost first
+          add(66, s, 'pick', 0, `salvage ${TOYNAME[sl[s].type]} from trex`);
         } else if (o.salvage && sl[s].type !== JET && sl[s].hp <= 1 && standing(en, s, false)) {
           // about to be eaten anyway, and can't be put back: take half its cost
           add(65, s, 'pick', 0, `salvage ${TOYNAME[sl[s].type]}`);
@@ -357,10 +421,13 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     // the best one; if it's a placement we can't afford, wait for it (unless
     // something cheaper is also urgent), keeping the jet reserve in mind
     const doomed = (slot) => en.some((e) => e.type === TREX && e.lane === Math.floor(slot / 3) && e.x >= COLX[slot % 3] - 2 && e.x <= COLX[slot % 3] + o.trexGap);
+    // boss waves: keep batteries for jets at the T-Rex (bossSave) while one is on the board or still to come
+    const trexAhead = en.some((e) => e.type === TREX) || (wi === 5 || wi === 11) && sc('bossLeft') > 0 || wi === 4 || wi === 10;
+    const bossKeep = o.bossSave && (sc('wave') >= 13 || o.bossSaveLap1) && u >= JET && trexAhead ? o.bossSave : 0;
     for (const c of cands) {
       if (c.op === 'pick') return c;
       if (c.toy !== JET && doomed(c.slot)) continue;
-      const reserve = (u >= JET && o.jetReserve && c.toy !== JET && c.score < 150 && !(c.toy === TEDDY && c.score >= 40)) ? COST[JET] : 0;
+      const reserve = Math.max((u >= JET && o.jetReserve && c.toy !== JET && c.score < 150 && !(c.toy === TEDDY && c.score >= 40)) ? COST[JET] : 0, c.toy !== JET && c.toy !== TEDDY && c.score < 150 ? bossKeep : 0);
       if (batt >= COST[c.toy] + reserve) return c;
       if (c.score >= 100) continue; // emergencies: try the next affordable one
       if (reserve && batt >= COST[c.toy]) continue;

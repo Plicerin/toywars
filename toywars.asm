@@ -9,7 +9,7 @@
 ;
 ; Bank 0: frame loop, game logic, the event scheduler, the header (title and
 ; status line, 48-pixel text). Bank 1: the play kernel and its graphics.
-; Bank 2: game logic (logic.asm). Bank 3: free (reset stub only).
+; Bank 2: game logic (logic.asm). Bank 3: sound steps and music (sound.asm).
 ;
 ; Frame: 3 VSYNC + 37 VBLANK + 192 visible + 30 overscan = 262 lines.
 ; Visible: s0 blank, s1-14 title, s15 setup, s16-25 status, s26-28
@@ -918,7 +918,7 @@ Schedule:
     ORG $0FB0
     RORG $FFB0
 CallSound:
-    lda $FFF8                   ; bank 2 runs $FFB3-$FFB8: jsr Sound, lda $FFF6
+    lda $FFF9                   ; bank 3 runs $FFB3-$FFB8: jsr Sound, lda $FFF6
     ds 6, $EA
     rts                         ; $FFB9
     ORG $0FC0
@@ -1222,7 +1222,7 @@ Reset1:
     .word Reset1, Reset1, Reset1
 
 ;===============================================================================
-; BANKS 2 and 3: free for now (game logic and sound will move here)
+; BANKS 2 and 3: game logic (logic.asm); sound steps and music (sound.asm)
 ;===============================================================================
     SEG bank2
     ORG $2000
@@ -1231,10 +1231,6 @@ Reset1:
     include "logic.asm"
     include "gen/bank2.inc"
 
-    ORG $2FB3
-    RORG $FFB3
-    jsr Sound
-    lda $FFF6                   ; back to bank 0, which returns at $FFB9
     ORG $2FC3
     RORG $FFC3
     jsr LogicInit
@@ -1255,6 +1251,12 @@ Reset2:
     ORG $3000
     RORG $F000
     ds 256, 0                   ; Super Chip RAM window
+    include "sound.asm"
+
+    ORG $3FB3
+    RORG $FFB3
+    jsr Sound
+    lda $FFF6                   ; back to bank 0, which returns at $FFB9
     ORG $3FF0
     RORG $FFF0
 Reset3:

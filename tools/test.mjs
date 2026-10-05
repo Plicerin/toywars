@@ -311,6 +311,34 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('spawns spread evenly over the shelves (each within 3 % of a third)', n > 1000 && count.every((c) => Math.abs(c / n - 1 / 3) < 0.03), `${n} spawns: ${count.map((c) => (100 * c / n).toFixed(1) + ' %').join(', ')}`);
 }
 {
+  // the same in a full-mix wave: every kind spread over the shelves, not tied to one
+  const g = boot();
+  g.press(); g.frames(2);
+  g.set('wave', 10); g.set('unlock', 6);
+  const byKind = new Map();
+  for (let f = 0; f < 12000; f += 1) {
+    g.set('spawnLeft', 50); g.set('spawnTimer', 0); g.set('packLeft', 0); g.set('bossLeft', 0);
+    const before = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i));
+    g.frames(1);
+    [0, 1, 2, 3, 4].forEach((i) => { const k = g.sc('eType', i); if (!before[i] && k) { const c = byKind.get(k) ?? [0, 0, 0]; c[g.sc('eLane', i) & 3] += 1; byKind.set(k, c); } });
+    for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  }
+  const worst = [...byKind].map(([k, c]) => { const n = c[0] + c[1] + c[2]; return [KINDS[k], n, Math.max(...c.map((x) => Math.abs(x / n - 1 / 3)))]; });
+  check('every kind spreads over the shelves (each shelf within 8 % of a third, per kind)', worst.length >= 6 && worst.every(([, n, d]) => n >= 200 && d < 0.08), worst.map(([k, n, d]) => `${k} ${n} ±${(100 * d).toFixed(0)}%`).join(', '));
+}
+{
+  // a monster spawning into a slot a flying jet already hit: the jet hits the newcomer too
+  const g = quietGame();
+  g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40);
+  g.press(); // a jet on the middle shelf (no enemies: it takes slot 0)
+  const j = [0, 1, 2, 3, 4].find((i) => g.sc('eType', i) === 9);
+  g.set('eHP', 0x1f, j); // as if it had hit every slot already
+  g.set('spawnLeft', 5); g.set('spawnTimer', 0);
+  g.frames(2); // (no hush: the spawner runs)
+  const k = [0, 1, 2, 3, 4].find((i) => i !== j && g.sc('eType', i));
+  check('a spawn clears its slot in a flying jet\'s hit mask', j !== undefined && k !== undefined && (g.sc('eHP', j) & (1 << k)) === 0, `jet slot ${j}, newcomer slot ${k}, mask ${g.sc('eHP', j).toString(2)}`);
+}
+{
   const g = quietGame();
   g.set('spawnLeft', 0); g.set('packLeft', 2); g.set('packTimer', 3); g.set('packLane', 1); // the wave's last spawn was a pack: two mice still to come
   const wave = g.sc('wave');
