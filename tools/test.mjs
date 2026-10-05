@@ -462,7 +462,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('Game Reset starts the chosen game', g.sc('state') === 1 && g.sc('wave') === 9);
 }
 {
-  // the same dino under each difficulty: B walks at the first-lap pace, A at the second-lap pace
+  // the same dino under each difficulty: both walk at the first-lap pace
   const pace = (diffA) => {
     const g = quietGame();
     enemy(g, 0, 0, 140, 1, 6);
@@ -472,7 +472,16 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
     return x0 - g.sc('eX', 0);
   };
   const b = pace(false), a = pace(true);
-  check('left difficulty A: wave-1 enemies walk at the second-lap pace (twice as fast)', a === 2 * b && b > 0, `B ${b}, A ${a} pixels in 60 frames`);
+  // and the gap after wave 1's first enemy arrives: A three quarters of B
+  const gap = (diffA) => {
+    const g = boot();
+    g.press({ diffA });
+    let f = 0;
+    while (g.sc('spawnLeft') === 5 && f < 600) { g.frames(1, { diffA }); f += 1; }
+    return g.sc('spawnTimer');
+  };
+  const gb = gap(false), ga = gap(true);
+  check('left difficulty A: enemies come faster (three quarters of the gap) but walk at the first-lap pace', a === b && b > 0 && Math.abs(ga - Math.round(gb * 3 / 4)) <= 1, `pace B ${b}, A ${a} pixels in 60 frames; gap B ${gb}, A ${ga} ticks`);
 }
 
 // ---------------------------------------------------------------- sound

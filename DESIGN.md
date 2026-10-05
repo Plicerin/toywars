@@ -9,8 +9,8 @@ Status: playable (2026-10-04). Built: board, batteries, all six toys, all
 eight enemies, waves 1-12 with unlocks, boss waves and the second lap, lid
 slams, game over, sound effects, the jet's flight in green, Game Select
 (games 1-3 start at waves 1/5/9 with 30/50/70 batteries; the status line
-reads GAME n while choosing) and the left difficulty switch (A: second-lap
-pace and spawn gaps from wave 1), music. Everything in this document is
+reads GAME n while choosing) and the left difficulty switch (A: the second lap's
+shorter spawn gaps from wave 1, at the first-lap pace), music. Everything in this document is
 built.
 As built, the T-Rex is a full-height 8-pixel sprite in orange, not double
 width: setting player 1's width per enemy needs a fifth pull in the event
@@ -79,7 +79,7 @@ with all enemy slots full it strikes the shelf at once instead.
 ## Enemies
 
 As built (logic.asm: EnHP, EnReward, EnScore, EnMask/EnStep). Speeds in
-pixels per second, first lap / second lap (wave 13+ or difficulty A); every
+pixels per second, first lap / second lap (wave 13+); every
 enemy gains 1 health every fourth wave (wave / 4), laps included.
 
 | Kind | Enemy | PvZ equivalent | From wave | Health | Speed | Batteries / points | Trick |
@@ -109,7 +109,10 @@ record gains one byte (the page).
   (costs batteries; not on a monster standing there, which could hold it out
   of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot picks it up (the shovel).
 - Game Reset starts; Game Select picks game 1/2/3 (start at wave 1/5/9);
-  left difficulty A = second-lap speed from the start.
+  left difficulty A = the second lap's shorter spawn gaps (three quarters)
+  from the start; the pace stays the first lap's *(changed 2026-10-05: A
+  used to mean the second-lap pace too, and even a perfect opening lost a
+  lid in wave 1 in 8 of 10 games)*.
 
 ## Waves and difficulty
 

@@ -23,7 +23,7 @@ place toys in the nine slots (three per shelf) to stop them.
 - **Game Reset / Enter:** new game. Fire also starts one.
 - **Game Select / G:** choose game 1, 2 or 3 (starting at wave 1, 5 or 9, with
   30, 50 or 70 batteries); pressed during a game, it goes back to choosing.
-- **Left difficulty A:** monsters move at second-lap speed from the start.
+- **Left difficulty A:** monsters arrive more often (three quarters of the gap) from the start.
 
 Batteries (the big green number) trickle in and every monster you
 destroy pays some. The first monster that reaches the box slams that shelf's

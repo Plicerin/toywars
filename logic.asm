@@ -93,19 +93,16 @@ Logic:
     sta W_swPrev
 .input:
     jsr GameSelect
-    ; second-lap pace from wave 13, or from the start with the left difficulty on A
-    lda #0
-    sta fast
+    ; from wave 13: second-lap pace (bit 7) and shorter spawn gaps (bit 6);
+    ; with the left difficulty on A, the shorter gaps from the start
     lda R_wave
     cmp #13
+    lda #$C0                    ; (lda keeps the carry)
     bcs .fast
     lda SWCHB
-    and #$40
-    beq .paced
+    and #$40                    ; (A: bit 6)
 .fast:
-    lda #$80
     sta fast
-.paced:
     jsr ReadInput
     lda R_state
     cmp #ST_PLAY
@@ -808,7 +805,7 @@ Spawner:
     jsr WaveIndex
     lda WaveGap,x
     bit fast
-    bpl .gap
+    bvc .gap
     lsr                         ; second lap (or difficulty A): three quarters of the gap
     lsr
     sta lt0
@@ -960,7 +957,7 @@ EnemyAct:                       ; enemy X (kept)
     ldy lt5
     bit fast
     bpl .lap1
-    tya                         ; second lap (or difficulty A): the fast table
+    tya                         ; second lap: the fast table
     clc
     adc #NKINDS
     tay
