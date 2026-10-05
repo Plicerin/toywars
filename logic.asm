@@ -234,6 +234,7 @@ ClearBoard:
     lda #0
     ldx #2
     sta W_splashN
+    sta W_bag
 .shots:
     lda #0
     sta W_shotDmg,x
@@ -700,8 +701,9 @@ CountAlive:                     ; A = enemies on the shelves (Z if none); keeps 
     rts
 
 ; Spawner (even frames): the wave's enemies arrive one by one at the right
-; edge of a random shelf (a boss wave starts with its T-Rexes; wind-up mice
-; come in packs of three); when all have come and gone, the next wave starts
+; edge of a shelf drawn from a shuffle bag (a boss wave starts with its
+; T-Rexes; wind-up mice come in packs of three); when all have come and gone,
+; the next wave starts
 Spawner:
     SUBROUTINE
     lda frame
@@ -780,14 +782,38 @@ Spawner:
     adc #1                      ; type = 1-7
 .kindOk:
     sta lt5
+    ; shelf: a shuffle bag of six, each shelf twice, so the shelves stay even
+    ; (an 8-bit LFSR read on the spawn timer's beat leans to some shelves).
+    ; The random pick is only where the search for one still in the bag starts.
     lda R_rand
-    lsr
-    lsr
-    lsr
-    and #31
-    tax
-    lda Mod3,x
-    sta lt0                     ; shelf
+    and #3
+    cmp #3
+    bcc .first
+    lda #0
+.first:
+    sta lt0                     ; first choice
+.bag:
+    ldx lt0
+    lda R_bag
+    and BagMask,x
+    cmp BagTwo,x
+    bcc .take                   ; drawn less than twice this bag
+    inx
+    cpx #3
+    bcc .nextShelf
+    ldx #0
+.nextShelf:
+    stx lt0
+    jmp .bag
+.take:
+    lda R_bag
+    clc
+    adc BagOne,x
+    cmp #$2A                    ; every shelf twice: a new bag
+    bne .keep
+    lda #0
+.keep:
+    sta W_bag                   ; shelf: lt0
     lda lt5
     cmp #EN_MOUSE
     bne .one
@@ -1423,10 +1449,7 @@ SlotPointers:
     SUBROUTINE
     ldx R_cursor
     jsr SlotPointer
-    lda frame
-    and #31
-    tay
-    ldx Mod3,y
+    ldx R_toyShelf              ; (the shelf the toys just took their turn on)
     lda Lane3,x
     tax
     jsr SlotPointer
@@ -1811,5 +1834,7 @@ WaveKinds:  .byte 1, 1, 9, 13, 29, 29, 31, 63, 127, 127, 127, 127
 WaveUnlock: .byte 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6
 Lane3:      .byte 0, 3, 6
 Bit:        .byte 1, 2, 4
-Mod3:       .byte 0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,1
+BagMask:    .byte $03, $0C, $30                     ; a shelf's two bits in the bag
+BagTwo:     .byte $02, $08, $20
+BagOne:     .byte $01, $04, $10
 Mod7:       .byte 0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3

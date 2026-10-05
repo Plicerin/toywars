@@ -124,6 +124,10 @@ Three knobs ramp at different times: count (enemies per wave), pressure
 kinds chosen at random; mice come in packs of three, and a boss wave starts
 with its T-Rexes). Speed stays fixed until the second lap.
 
+Each spawn's shelf comes from a shuffle bag of six (each shelf twice, in
+random order), so the shelves get exactly even shares; an 8-bit LFSR read on
+the spawn timer's beat leaned to some shelves.
+
 "Enemies" counts spawns: a wind-up mouse pack is one spawn of three mice, so
 a wave with mice brings more monsters than its count (wave 3's 9 spawns can
 be about 20 monsters). A wave ends when its last spawn, including the rest of

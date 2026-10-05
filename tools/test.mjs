@@ -296,6 +296,21 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a flying jet hits a bunched pack once each, at most two in a frame', prev === 0 && mostKills <= 2, `${prev} left, up to ${mostKills} kills in a frame`);
 }
 {
+  // spawn after spawn (the board cleared each frame): each shelf gets about a third
+  const g = boot();
+  g.press(); g.frames(2);
+  const count = [0, 0, 0];
+  for (let f = 0; f < 6000; f += 1) {
+    g.set('spawnLeft', 50); g.set('spawnTimer', 0); g.set('packLeft', 0);
+    const before = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i));
+    g.frames(1);
+    [0, 1, 2, 3, 4].forEach((i) => { if (!before[i] && g.sc('eType', i)) count[g.sc('eLane', i) & 3] += 1; });
+    for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  }
+  const n = count[0] + count[1] + count[2];
+  check('spawns spread evenly over the shelves (each within 3 % of a third)', n > 1000 && count.every((c) => Math.abs(c / n - 1 / 3) < 0.03), `${n} spawns: ${count.map((c) => (100 * c / n).toFixed(1) + ' %').join(', ')}`);
+}
+{
   const g = quietGame();
   g.set('spawnLeft', 0); g.set('packLeft', 2); g.set('packTimer', 3); g.set('packLane', 1); // the wave's last spawn was a pack: two mice still to come
   const wave = g.sc('wave');

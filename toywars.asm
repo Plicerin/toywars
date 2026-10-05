@@ -108,6 +108,7 @@ W_shotKind  ds 3        ;   1 = an army man's bullet (passes over a chewing craw
 W_splashX   ds 1        ; a cannonball's burst being swept (odd frames): x of the monster hit,
 W_splashL   ds 1        ;   its shelf,
 W_splashN   ds 1        ;   that monster << 4 | monsters left to check (0 = none)
+W_bag       ds 1        ; spawn shelves drawn this bag (2 bits a shelf; six to a bag)
 W_score     ds 3        ; BCD, most significant first
 W_wave      ds 1        ; binary, from 1
 W_batt      ds 1        ; batteries, binary 0-99
@@ -143,6 +144,7 @@ R_shotKind   = W_shotKind + $80
 R_splashX    = W_splashX + $80
 R_splashL    = W_splashL + $80
 R_splashN    = W_splashN + $80
+R_bag        = W_bag + $80
 R_score      = W_score + $80
 R_wave       = W_wave + $80
 R_batt       = W_batt + $80
