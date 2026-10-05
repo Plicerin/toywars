@@ -31,6 +31,7 @@ ST_PLAY     = 1
 ST_OVER     = 2
 COL_WHITE   = $0E
 BREACH_X    = 41                ; an enemy left of this is at the toy box
+JET_X0      = BREACH_X - 1      ; where a jet takes off
 
 ; sound effects (ids into SndStart/SndChan/SndPri)
 SND_CURSOR  = 0
@@ -476,7 +477,8 @@ PrevToy:
     rts
 
 ; Act: on the cursor's slot, place the chosen toy (if there are batteries
-; for it) or pick up the toy there (half its cost back)
+; for it, and no monster stands there) or pick up the toy there (half its
+; cost back)
 Act:
     SUBROUTINE
     ldx R_cursor
@@ -494,6 +496,11 @@ Act:
     rts
 .place:
     ldy R_toy
+    cpy #TOY_JET
+    beq .afford                 ; (a jet takes off: it never stands there)
+    jsr Occupied
+    bcs .cant                   ; a toy can't go down on a monster
+.afford:
     lda R_batt
     cmp ToyCost,y
     bcc .cant
@@ -513,10 +520,43 @@ Act:
     SOUND SND_NOBATT
     rts
 
-; JetStrike (X = slot): ten damage to every enemy on the slot's shelf; the
-; jet is spent
-; JetStrike (X = slot): the jet takes off and flies its shelf (JetAct); if
-; every enemy slot is taken, it strikes the whole shelf at once
+; Occupied (X = slot; keeps X and Y): carry set if a monster stands on it,
+; where the toy would stop it (the toy's x to x + 8). Without this a toy
+; dropped on a monster, or put back each time it is eaten, could hold the
+; monster out of every shot's reach for good, and the wave would never end.
+Occupied:
+    SUBROUTINE
+    sty lt0
+    lda SlotCol,x
+    tay
+    lda ColX,y
+    sta lt5                     ; the toy's x
+    lda SlotLane,x
+    ldy #NENEMY-1
+.loop:
+    cmp R_eLane,y               ; (an empty slot's shelf is $FF, a jet's 4-6)
+    bne .next
+    pha
+    lda R_eX,y
+    sec
+    sbc lt5
+    cmp #9
+    pla
+    bcc .yes
+.next:
+    dey
+    bpl .loop
+    ldy lt0
+    clc
+    rts
+.yes:
+    ldy lt0
+    sec
+    rts
+
+; JetStrike (X = slot): the jet takes off from the toy box end of the slot's
+; shelf and flies the whole shelf (JetAct); if every enemy slot is taken, it
+; strikes the whole shelf at once
 JetStrike:
     SUBROUTINE
     SOUND SND_JET
@@ -531,10 +571,8 @@ JetStrike:
     lda lt0
     ora #4                      ; shelves 4-6: never matches an enemy's shelf
     sta W_eLane,y
-    lda SlotCol,x
-    tax
-    lda ColX,x
-    sta W_eX,y
+    lda #JET_X0                 ; left of every enemy: its first step's nose
+    sta W_eX,y                  ; passes the middle of one at BREACH_X
     lda #0
     sta W_eState,y
     sta W_eHP,y

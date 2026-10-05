@@ -93,7 +93,8 @@ record gains one byte (the page).
 - Joystick moves a cursor over the 9 slots; the slot shows a flashing ghost
   of the toy about to be placed.
 - Hold fire + left/right cycles the toy; fire on an empty slot places it
-  (costs batteries); fire on an occupied slot picks it up (the shovel).
+  (costs batteries; not on a monster standing there, which could hold it out
+  of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot picks it up (the shovel).
 - Game Reset starts; Game Select picks game 1/2/3 (start at wave 1/5/9);
   left difficulty A = second-lap speed from the start.
 

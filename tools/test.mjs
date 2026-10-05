@@ -225,11 +225,40 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   g.press();
   const jet = () => [0, 1, 2, 3, 4].find((i) => g.sc('eType', i) === 9);
   const j = jet(), x0 = j === undefined ? -1 : g.sc('eX', j);
-  check('placing a jet launches it from its slot (30 batteries; the slot stays empty)', j !== undefined && x0 >= 48 && x0 < 60 && g.sc('slotType', 3) === 0 && g.sc('batt') === 10, `x ${x0}`);
+  check('placing a jet launches it from the toy box end of its shelf (30 batteries; the slot stays empty)', j !== undefined && x0 >= 40 && x0 < 48 && g.sc('slotType', 3) === 0 && g.sc('batt') === 10, `x ${x0}`);
   let diffs = 0, frames = 0, path = [];
   while (jet() !== undefined && frames < 120) { const dd = frameDiffs(g, {}); if (dd.length && process.env.WHY) console.log('jet frame', frames, dd.length, dd.slice(0, 4).join('; '), JSON.stringify([0,1,2,3,4].map((i) => [g.sc('eType', i), g.sc('eX', i), g.sc('eLane', i)]))); diffs += dd.length ? 1 : 0; frames += 1; if (jet() !== undefined) path.push(g.sc('eX', jet())); g.set('spawnTimer', 200); }
   check('it flies right along its shelf, drawn in green, and is gone past the right edge', jet() === undefined && path.every((x, i) => i === 0 || x >= path[i - 1]) && frames > 40 && diffs === 0, `${frames} frames, ${diffs} frames off the reference`);
   check('every enemy it passes on that shelf takes 10 damage, once; other shelves are untouched', g.sc('eType', 0) === 0 && g.sc('eHP', 1) === 2 && g.sc('eType', 2) === 1 && g.sc('eHP', 2) === 6, `hp ${g.sc('eHP', 1)}`);
+}
+{
+  const g = quietGame();
+  enemy(g, 0, 1, 44, 1, 20); enemy(g, 1, 1, 70, 1, 20); enemy(g, 2, 1, 140, 1, 20); // by the box, mid-shelf, far right
+  g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40);
+  g.frames(1, { stick: RIGHT }); g.run(2); g.frames(1, { stick: RIGHT }); g.run(2); // cursor to slot 5 (middle shelf, column 2)
+  const cur = g.sc('cursor');
+  g.press();
+  g.run(4);
+  const first = g.sc('eHP', 0); // (hit at take-off, before it reaches the box and slams the lid)
+  g.set('eType', 0, 0); g.set('eLane', 0xff, 0);
+  g.run(120);
+  const hp = [first, g.sc('eHP', 1), g.sc('eHP', 2)];
+  check('a jet placed in the last column still flies the whole shelf: monsters left of its slot are hit too', cur === 5 && hp.join() === '10,10,10', `cursor ${cur}, health ${hp.join(', ')}`);
+}
+{
+  const g = quietGame();
+  enemy(g, 0, 1, 51, 1, 20); // a dino standing on slot 3 (middle shelf, column 0, x 48)
+  g.set('toy', 2); g.set('batt', 40); // teddy; the cursor is on slot 3
+  g.press();
+  check('a toy cannot be put down on a monster (the buzz; no batteries spent)', g.sc('slotType', 3) === 0 && g.sc('batt') === 40, `slot ${g.sc('slotType', 3)}, batteries ${g.sc('batt')}`);
+  g.set('toy', 6); g.set('unlock', 6);
+  g.press();
+  check('a jet still takes off from there', g.sc('batt') === 10 && [0, 1, 2, 3, 4].some((i) => g.sc('eType', i) === 9));
+  g.run(90); // (the jet's gone)
+  g.set('eType', 0, 0); g.set('eLane', 0xff, 0);
+  g.set('toy', 2); g.set('batt', 40);
+  g.press();
+  check('once the slot is clear, the toy goes down', g.sc('slotType', 3) === 2);
 }
 {
   const g = quietGame();
