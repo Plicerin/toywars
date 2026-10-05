@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
 
 const SYM = Object.fromEntries(readFileSync('tools/build/toywars.sym', 'latin1').split(/\r?\n/).map((l) => /^(\S+)\s+([0-9a-f]{4})/i.exec(l)).filter(Boolean).map((x) => [x[1], parseInt(x[2], 16)]));
-const ROM = readFileSync('toywars.bin');
+const ROM = readFileSync(process.env.ROM ?? 'toywars.bin'); // (ROM=path: a variant cartridge, same symbols)
 
 const ARMY = 1, TEDDY = 2, TANK = 3, COWBOY = 4, CANNON = 5, JET = 6;
 const COST = [0, 10, 5, 25, 15, 20, 30];
@@ -83,7 +83,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const jetFrames = [];
   const mistimedAll = [];
   // rule checks for the new rules
-  const stats = { refused: 0, refusedAnom: 0, placedOnMonster: 0, jetLaunchX: {}, jetMissed: 0, jetHits: 0, lassoD: {}, lassoMax: 0, waveFrames: {}, longestWave: 0 };
+  const stats = { refused: 0, refusedAnom: 0, placedOnMonster: 0, jetLaunchX: {}, jetMissed: 0, jetHits: 0, lassoD: {}, lassoMax: 0, waveFrames: {}, longestWave: 0, battAtWave: {}, framesAtCap: 0, playFrames: 0 };
   let jetWatch = null; let waveStart = 0;
   const note = (s) => { events.push(`f${frames} w${sc('wave')} ${s}`); if (log) console.log(`f${frames} w${sc('wave')} ${s}`); };
   const anomaly = (s) => { if (anomalies.length < 40) anomalies.push(`f${frames} w${sc('wave')} ${s}`); if (log) console.log('ANOMALY', s); };
@@ -112,6 +112,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         }
         if (p.x - e.x > 9 && e.type !== HELI) anomaly(`${ENAME[e.type]} jumped x ${p.x} -> ${e.x}`);
       }
+      if (cur.state === 1) { stats.playFrames += 1; if (cur.batt >= 95) stats.framesAtCap += 1; } // (95+: at or near the cap)
       if (cur.lids !== prev.lids && cur.state === 1) {
         const lane = [0, 1, 2].find((L) => (cur.lids ^ prev.lids) & (1 << L));
         note(`LID slammed on shelf ${lane}; enemies there before: ${prev.en.filter((e) => e.lane === lane).map((e) => `${ENAME[e.type]}@${e.x}hp${e.hp}`).join(' ')}; toys ${[0, 1, 2].map((c) => TOYNAME[prev.sl[lane * 3 + c].type]).join('/')}`);
@@ -122,6 +123,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       if (cur.wave !== prev.wave) {
         note(`wave ${cur.wave} starts; batt ${cur.batt}; toys ${cur.sl.map((s) => TOYNAME[s.type]).join(',')}`);
         stats.waveFrames[prev.wave] = frames - waveStart; waveStart = frames;
+        stats.battAtWave[cur.wave] = cur.batt;
       }
       // a lasso thrown this update: how far ahead of the nearest cowboy behind it
       for (const e of cur.en) {

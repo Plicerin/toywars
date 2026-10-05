@@ -62,7 +62,8 @@ How the screen is drawn:
   share lines take turns; no monster goes more than six frames undrawn.
   Each picks its color through the queue.
 - Shots: missile 1, one per shelf.
-- Header: 48-pixel text (title or GAME OVER, then score, batteries, wave).
+- Header: 48-pixel text (title or GAME OVER), then the status line: score and
+  wave as 40-pixel text, and the batteries as big green playfield digits.
 
 ## Files
 

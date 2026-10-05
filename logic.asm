@@ -27,6 +27,7 @@ SHOT_CANNON = 3
 SPLASH      = 12                ; a cannonball's splash reach, pixels each way
 CANNON_DMG  = 3
 JET_DMG     = 10
+TRICKLE     = 240               ; frames per battery (one byte: at most 255)
 ST_ATTRACT  = 0
 ST_PLAY     = 1
 ST_OVER     = 2
@@ -657,12 +658,12 @@ Kill:                           ; enemy X destroyed: batteries and score
     rts
 
 ;-------------------------------------------------------------------------------
-Batteries:                      ; one more every 90 frames
+Batteries:                      ; one more every 240 frames (4 s)
     SUBROUTINE
     lda R_battTimer
     clc
     adc #1
-    cmp #90
+    cmp #TRICKLE
     bcc .store
     lda R_batt
     clc
@@ -1770,7 +1771,7 @@ ToyPeriod:  .byte 0, 7, 0, 50, 20, 33, 0        ; visits (6 frames) between shot
 ToyDmg:     .byte 0, 1, 0, 8, 0, CANNON_DMG, 0
 ; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
 EnHP:       .byte 0,   6,   5,   3,    1,    6,     2,     3,  20
-EnReward:   .byte 0,   3,   3,   2,    1,    4,     3,     3,  10   ; batteries
+EnReward:   .byte 0,   2,   2,   1,    1,    2,     2,     2,   5   ; batteries
 EnScore:    .byte 0, $10, $15, $10,  $05,  $20,   $15,   $15, $50   ; BCD points
 ; pace (updates are two frames): move when (frame/2) & mask = 0, by step
 ; pixels; four blocks: first lap, second lap, knight charging (first lap,

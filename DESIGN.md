@@ -38,8 +38,10 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
   plus a reward for every enemy destroyed (more for armored ones and
   bosses). No collecting (a joystick can't chase falling sun comfortably).
   *(decided 2026-10-04)*
-- The trickle is constant, one battery every 90 frames (1.5 s); batteries
-  cap at 99. Rewards keep strong defenses self-funding.
+- The trickle is constant, one battery every 240 frames (4 s); batteries
+  cap at 99. Rewards are small (1-2, the T-Rex 5) *(tuned 2026-10-04 with
+  tools/player.mjs: at 1.5 s and the old rewards, 3/3/2/1/4/3/3/10, batteries
+  sat near the cap 44% of the time and spending was never a choice)*.
 - Shown on the status line: `00120 W01` in gold (the score's last five digits
   and the wave, 40-pixel text) and the batteries as two big green digits drawn
   with PF1 (4-pixel blocks, x 96-123), set mid-line after the text.
@@ -82,14 +84,14 @@ enemy gains 1 health every fourth wave (wave / 4), laps included.
 
 | Kind | Enemy | PvZ equivalent | From wave | Health | Speed | Batteries / points | Trick |
 |---|---|---|---|---|---|---|---|
-| 1 | Dino | Basic | 1 | 6 | 15 / 30 | 3 / 10 | Walks; stops to chew toys. |
+| 1 | Dino | Basic | 1 | 6 | 15 / 30 | 2 / 10 | Walks; stops to chew toys. |
 | 4 | Wind-up Mouse | Imp | 3 | 1 | 60 / 90 | 1 / 5 | Comes in packs of three. |
-| 3 | Crawler | — | 4 | 3 | 30 / 60 | 2 / 10 | Low: army men's bullets pass over it while it chews; tanks and cannons still hit it. |
-| 5 | Knight | Newspaper | 5 | 6 | 15 / 30; charging 60 / 90 | 4 / 20 | Shield breaks when its health drops below 3, then it charges at four times its pace (three in the second lap). |
-| 8 | T-Rex (boss) | Gargantuar | 6 (and two in 12) | 20 | 7.5 / 15 | 10 / 50 | Crushes a toy in one bite. Single-width (a five-pull variant can't be scheduled). |
-| 2 | Helicopter | Pole Vaulter | 7 | 5 | 30 / 60 | 3 / 15 | Hops over the first toy it reaches, once; then chews. |
-| 6 | Balloon Clown | Balloon | 8 | 2 | 15 / 30 | 3 / 15 | Floats over every toy. Tank shells can't reach it; army men and cannons can. |
-| 7 | Pogo Frog | lane changer | 9 | 3 | 30 / 60 | 3 / 15 | The first time a toy blocks it, it jumps to the next shelf; then it chews. |
+| 3 | Crawler | — | 4 | 3 | 30 / 60 | 1 / 10 | Low: army men's bullets pass over it while it chews; tanks and cannons still hit it. |
+| 5 | Knight | Newspaper | 5 | 6 | 15 / 30; charging 60 / 90 | 2 / 20 | Shield breaks when its health drops below 3, then it charges at four times its pace (three in the second lap). |
+| 8 | T-Rex (boss) | Gargantuar | 6 (and two in 12) | 20 | 7.5 / 15 | 5 / 50 | Crushes a toy in one bite. Single-width (a five-pull variant can't be scheduled). |
+| 2 | Helicopter | Pole Vaulter | 7 | 5 | 30 / 60 | 2 / 15 | Hops over the first toy it reaches, once; then chews. |
+| 6 | Balloon Clown | Balloon | 8 | 2 | 15 / 30 | 2 / 15 | Floats over every toy. Tank shells can't reach it; army men and cannons can. |
+| 7 | Pogo Frog | lane changer | 9 | 3 | 30 / 60 | 2 / 15 | The first time a toy blocks it, it jumps to the next shelf; then it chews. |
 
 All enemies have a two-frame walk (frame chosen by `(x >> 2) & 1`).
 
