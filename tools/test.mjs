@@ -348,16 +348,16 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
 {
   const g = quietGame();
   slot(g, 4, 4, 8); // a jack-in-the-box, middle shelf, column 1 (x 80)
-  enemy(g, 0, 1, 100, 1, 20); // a dino walking at it
+  enemy(g, 0, 1, 100, 1, 30); // a dino walking at it
   let f = 0;
   while (g.sc('slotType', 4) === 4 && f < 600) { g.run(1); f += 1; }
   g.run(14); // (the burst sweeps one enemy an odd frame)
-  check('a jack-in-the-box springs when a monster reaches it: 10 damage, thrown back up the shelf, and it\'s gone', g.sc('slotType', 4) === 0 && g.sc('eHP', 0) === 10 && g.sc('eX', 0) > 100, `health ${g.sc('eHP', 0)}, x ${g.sc('eX', 0)} after ${f} frames`);
+  check('a jack-in-the-box springs when a monster reaches it: 20 damage, thrown back up the shelf, and it\'s gone', g.sc('slotType', 4) === 0 && g.sc('eHP', 0) === 10 && g.sc('eX', 0) > 96, `health ${g.sc('eHP', 0)}, x ${g.sc('eX', 0)} after ${f} frames`);
 }
 {
   const g = quietGame();
   slot(g, 4, 4, 8); // a jack at x 80
-  [0, 1, 2].forEach((i) => enemy(g, i, 1, 94, 4, 12)); // a pack of three mice, stacked, walking at it
+  [0, 1, 2].forEach((i) => enemy(g, i, 1, 94, 4, 30)); // a pack of three mice, stacked, walking at it
   enemy(g, 3, 1, 140, 1, 20); // a dino far behind: out of reach
   let mostKills = 0, prev = 4, mistimed = 0, f0 = 0;
   while (g.sc('slotType', 4) === 4 && f0 < 600) { g.run(1); f0 += 1; } // until it springs
@@ -368,7 +368,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   }
   const hp = [0, 1, 2, 3].map((i) => (g.sc('eType', i) ? g.sc('eHP', i) : 0));
   const xs = [0, 1, 2].map((i) => g.sc('eX', i)); // (they sprang it at x 88 at most; mice walk 2 pixels an update back)
-  check('it hits and throws back a whole stacked pack, one a frame, and nothing out of reach', hp.slice(0, 3).every((h) => h === 2) && xs.every((x) => x > 92) && hp[3] === 20 && mostKills <= 1 && mistimed === 0, `health ${hp.join(', ')}, mice at x ${xs.join(', ')}, up to ${mostKills} kills in a frame`);
+  check('it hits and throws back a whole stacked pack, one a frame, and nothing out of reach', hp.slice(0, 3).every((h) => h === 10) && xs.every((x) => x > 88) && hp[3] === 20 && mostKills <= 1 && mistimed === 0, `health ${hp.join(', ')}, mice at x ${xs.join(', ')}, up to ${mostKills} kills in a frame`);
 }
 {
   const g = quietGame();
@@ -376,6 +376,28 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   enemy(g, 0, 1, 100, 6, 9); // a balloon clown
   g.run(200);
   check('a balloon clown floats over a jack-in-the-box without springing it', g.sc('slotType', 4) === 4 && g.sc('eHP', 0) === 9, `jack ${g.sc('slotType', 4)}, balloon health ${g.sc('eHP', 0)}`);
+}
+{
+  // a burst still being swept (a cannonball's, another shelf): the monster waits at the jack, then springs it
+  const g = quietGame();
+  slot(g, 4, 4, 8); // a jack at x 80
+  enemy(g, 0, 1, 92, 8, 40); // a T-Rex walking at it
+  let f = 0;
+  const busy = () => { g.set('splashN', 0x05); g.set('splashL', 0); g.set('splashX', 150); };
+  while (f < 240) { busy(); g.run(1); f += 1; }
+  const waited = g.sc('slotType', 4) === 4 && g.sc('eX', 0) >= 80;
+  g.set('splashN', 0);
+  f = 0;
+  while (g.sc('slotType', 4) === 4 && f < 200) { g.run(1); f += 1; }
+  check('a monster at a jack waits while another burst is being swept (a T-Rex doesn\'t crush it), then springs it', waited && g.sc('slotType', 4) === 0 && f < 200, `waited ${waited}, sprang after ${f} frames`);
+}
+{
+  // no jet while a jack's spring is being swept
+  const g = quietGame();
+  g.set('splashN', 0x75); g.set('splashL', 2); g.set('splashX', 90); // a jack's burst
+  g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40);
+  g.press();
+  check('a jet can\'t take off while a jack\'s spring is being swept (the buzz, no batteries spent)', g.sc('batt') === 40 && ![0, 1, 2, 3, 4].some((i) => g.sc('eType', i) === 9), `batteries ${g.sc('batt')}`);
 }
 {
   const g = quietGame();

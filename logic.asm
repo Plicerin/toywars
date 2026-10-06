@@ -29,9 +29,10 @@ CANNON_DMG  = 3
 JET_DMG     = 10
 KILLED      = temp+3            ; this frame an enemy died (overscan only: VBLANK
                                 ;   uses temp for the status line)
-JACK_DMG    = 10                ; a jack-in-the-box's spring: damage to each enemy
-JACK_REACH  = 8                 ;   within this many pixels of the box's middle,
-JACK_THROW  = 24                ;   thrown this many pixels back up the shelf
+JACK_DMG    = 20                ; a jack-in-the-box's spring: damage to each enemy
+JACK_REACH  = 8                 ;   within this many pixels of the one that sprang it,
+JACK_THROW  = 16                ;   thrown this many pixels back up the shelf (short of
+                                ;   the next column's toy: it springs at x + 8 at most)
 TRICKLE     = 240               ; frames per battery (one byte: at most 255)
 A_LAP2_HP   = 1                 ; extra health for every enemy in the second lap on difficulty A
 TRICKLE2    = 150               ;   in the second lap (2.5 s)
@@ -504,7 +505,13 @@ Act:
 .place:
     ldy R_toy
     cpy #TOY_JET
-    beq .afford                 ; (a jet takes off: it never stands there)
+    bne .standing
+    lda R_splashN               ; (no jet while a jack's spring is being swept:
+    and #$F0                    ; with every enemy slot taken its strike would
+    cmp #$70                    ; cut the sweep short)
+    beq .cant
+    bne .afford                 ; (a jet takes off: it never stands there)
+.standing:
     jsr Occupied
     bcs .cant                   ; a toy can't go down on a monster
 .afford:
@@ -1076,8 +1083,10 @@ EnemyAct:                       ; enemy X (kept)
     cmp #TOY_JACK
     bne .notJack
     lda R_splashN
-    bne .notJack                ; (a burst still going: it gets chewed meanwhile)
+    bne .waitJack               ; a burst is still being swept: wait for it
     jmp JackSpring
+.waitJack:
+    rts
 .notJack:
     ldy lt2
     lda lt5
@@ -1138,16 +1147,13 @@ EnemyAct:                       ; enemy X (kept)
     sta W_slotType,y
     rts
 
-; JackSpring (X = the enemy that reached it, lt1 = its slot, lt2 = column):
-; the jack-in-the-box springs, hitting every enemy at it (the burst sweep:
-; one a frame), and is gone
+; JackSpring (X = the enemy that reached it, lt1 = its slot): the
+; jack-in-the-box springs, hitting every enemy within JACK_REACH of that one
+; (the burst sweep: one a frame), and is gone
 JackSpring:
     SUBROUTINE
-    ldy lt2
-    lda ColX,y
-    clc
-    adc #4
-    sta W_splashX               ; the box's middle
+    lda R_eX,x
+    sta W_splashX               ; (centred on the enemy that sprang it)
     lda R_eLane,x
     sta W_splashL
     lda #$70|NENEMY             ; (monster hit 7: a jack's burst)

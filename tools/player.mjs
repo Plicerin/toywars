@@ -16,7 +16,7 @@
 //    shelf, monsters it passed without hitting), mouse packs (followers = 2 x packs per wave, none
 //    left at a wave's end) and the spawn bag (every aligned six spawns: each shelf twice; kind x shelf)
 //  - checks a few rules while it watches (logged as "anomalies"; result.stats:
-//    refused drops, jet take-off x, lasso distances and holds, jet bursts,
+//    refused drops, jet take-off x, jet bursts,
 //    batteries spent per toy and refunded, spawns per shelf, frames per wave)
 //  - result.stats.killSkips: even frames with a kill (KILLED), on which the spawner waits (each delays spawning 2 frames)
 //  - the per-frame cap at the toy box: stats.boxHeld (frames an enemy one step from the box sat out its
@@ -25,7 +25,17 @@
 //    something else killed before the jet's hit landed (not counted as skipped)
 //  - runway (off: on baf0363 heavy B +0.3 waves, heavy A -0.6, cannon B 0, paired seeds): with no free
 //    slot for a jet, pick up the cheapest toy nothing stands on (balloonRunway: only for balloons)
-// usage: node tools/player.mjs [games] [strategy: heavy (best on baf0363: B median 20.5 vs tank 20, cannon 19, 30 games each), cannon, tank, cannon0, army, wall, wallArmy, cowboy] [seedBase] [maxFrames]
+//  - result.stats.jack: jack-in-the-box springs (placed, sprung, by: the kind that sprang it), every
+//    sweep check (hits, kills, thrown, capped at x 151, landedOn: a toy whose slot a thrown monster
+//    landed in, missOut/missD: monsters on the shelf out of reach and their distance, escaped: in
+//    reach at the spring but not at its check), bites (taken while another burst was busy) and
+//    eaten (gone without springing), cut (its sweep replaced by a jet's full-slots burst)
+//  - jackTrap knobs: jackBunch (walkers within jackSpan pixels of the lead, default 2 within 10),
+//    jackTrex (a T-Rex on the shelf, default on). On a328fe5 every jack the cannon player placed came
+//    from the T-Rex rule (jackBunch 99: identical games; jackTrex false: identical to no jacks)
+//  - probes (not play): probeCut (a jet placed during a jack's sweep with every enemy slot taken),
+//    probeLand (a jack in the middle slot and a teddy behind a T-Rex: the throw lands on the teddy)
+// usage: node tools/player.mjs [games] [strategy: heavy (best on a328fe5: B mean 22.4, median 22, 16 games), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
 //   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board, shots and splash per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
@@ -64,6 +74,10 @@ const STRATEGIES = {
   // two cannons behind a teddy (used for the second lap: OPTS lap2)
   cannon2: { cols: [[[1, ARMY], [5, CANNON]], [[1, ARMY], [5, CANNON]], [[2, TEDDY]]] },
   wallArmy: { cols: [[[1, ARMY]], [[1, ARMY], [2, TEDDY]], [[2, TEDDY]]] },
+  // jack stress layouts (playtest probes, not contenders): a jack kept in the front slot (rebuilt
+  // after every spring) in place of the teddy, or in the middle behind a front teddy
+  jackFront: { cols: [[[1, ARMY], [3, TANK]], [[1, ARMY], [5, CANNON]], [[2, TEDDY], [5, JACK]]] },
+  jackMid: { cols: [[[1, ARMY], [3, TANK]], [[1, ARMY], [5, JACK]], [[2, TEDDY]]] },
 };
 
 // debugging: PROF_AT=frame,frame,... prints where the overscan logic spends its cycles on those frames
@@ -113,13 +127,76 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const enemies = () => [0, 1, 2, 3, 4].filter((i) => sc('eType', i)).map((i) => ({ i, type: sc('eType', i), lane: sc('eLane', i), x: sc('eX', i), hp: sc('eHP', i), st: sc('eState', i) }));
   const slots = () => [...Array(9).keys()].map((s) => ({ s, type: sc('slotType', s), hp: sc('slotHP', s) }));
   let prev = null;
+  // ---- the jack-in-the-box (read only): springs (by what), every sweep check (hit, killed,
+  // thrown, where it landed, out of reach), bites taken while another burst was busy, jacks
+  // eaten, a jack's sweep cut short by a jet's full-slots burst
+  const jk = { placed: 0, sprung: 0, by: {}, hits: 0, kills: 0, thrown: 0, capped: 0, dmg: 0, missOut: 0, missD: {}, escaped: {}, landedOn: {}, landedRight: 0, bites: 0, eaten: 0, eatenBy: {}, cut: 0, cutLeft: 0, picked: 0, perSpring: {}, killsBy: {}, thrownBy: {}, thrownInto: 0, chewBusyBy: {} };
+  stats.jack = jk;
+  let pickSlot = -1; let curJack = null;
+  const jackWatch = (cur, checked) => {
+    if (cur.state !== 1 || prev.state !== 1) { curJack = null; return; }
+    // a jack's sweep replaced by a jet's burst (all enemy slots taken)
+    if (prev.splash >> 4 === 7 && cur.splash >> 4 === 0xF) { jk.cut += 1; jk.cutLeft += prev.splash & 15; anomaly(`jack sweep on shelf ${curJack?.lane} cut by a jet burst with ${prev.splash & 15} slots unchecked`); if (curJack) jk.perSpring[curJack.hit] = (jk.perSpring[curJack.hit] ?? 0) + 1; curJack = null; }
+    for (let s = 0; s < 9; s += 1) {
+      if (prev.sl[s].type !== JACK) continue;
+      if (cur.sl[s].type === JACK) { if (cur.sl[s].hp < prev.sl[s].hp) { jk.bites += prev.sl[s].hp - cur.sl[s].hp; const k = prev.splash >> 4 === 7 ? 'jack' : prev.splash >> 4 === 0xF ? 'jet' : prev.splash ? 'cannon' : 'none?'; jk.chewBusyBy[k] = (jk.chewBusyBy[k] ?? 0) + 1; if (k === 'none?') anomaly(`jack at slot ${s} chewed with no burst going`); } continue; }
+      if (s === pickSlot) { jk.picked += 1; continue; }
+      const L = Math.floor(s / 3), c = s % 3, mid = COLX[c] + 4;
+      const sprang = cur.splash >> 4 === 7 && prev.splash >> 4 !== 7;
+      const inSpan = prev.en.concat(cur.en).filter((e) => e.type !== EJET && e.type !== BALLOON && e.lane === L && e.x >= COLX[c] && e.x <= COLX[c] + 8);
+      if (sprang) {
+        jk.sprung += 1;
+        const trig = inSpan.sort((a, b) => Math.abs(a.x - mid) - Math.abs(b.x - mid))[0];
+        const by = trig ? ENAME[trig.type] : '?';
+        jk.by[by] = (jk.by[by] ?? 0) + 1;
+        curJack = { lane: L, col: c, mid, at: frames, by, cands: prev.en.filter((e) => e.type !== EJET && e.lane === L && Math.abs(e.x - mid) <= 8).map((e) => ({ i: e.i, type: e.type })), hit: 0 };
+        note(`jack sprung at slot ${s} by ${by}; in reach ${curJack.cands.map((e) => ENAME[e.type]).join(',')}`);
+      } else { jk.eaten += 1; const by = inSpan[0] ? ENAME[inSpan[0].type] : '?'; jk.eatenBy[by] = (jk.eatenBy[by] ?? 0) + 1; note(`jack at slot ${s} eaten by ${by} (burst ${prev.splash.toString(16)})`); }
+    }
+    if (checked >= 0 && curJack && cur.splash !== prev.splash) {
+      const pe = prev.en.find((q) => q.i === checked && q.type !== EJET && q.lane === curJack.lane), ce = cur.en.find((q) => q.i === checked);
+      if (pe) {
+        if (!ce || ce.type !== pe.type) { jk.kills += 1; jk.hits += 1; jk.dmg += pe.hp; curJack.hit += 1; jk.killsBy[ENAME[pe.type]] = (jk.killsBy[ENAME[pe.type]] ?? 0) + 1; }
+        else if (ce.hp <= pe.hp - 10) {
+          jk.hits += 1; jk.dmg += 10; curJack.hit += 1;
+          if (ce.x > pe.x || pe.x >= 151) {
+            jk.thrown += 1; jk.thrownBy[ENAME[pe.type]] = (jk.thrownBy[ENAME[pe.type]] ?? 0) + 1;
+            if (ce.x === 151) jk.capped += 1;
+            for (let c2 = 0; c2 < 3; c2 += 1) {
+              const t = cur.sl[curJack.lane * 3 + c2].type;
+              if (t && ce.x >= COLX[c2] && ce.x <= COLX[c2] + 8) { const k = TOYNAME[t] + '@c' + c2; jk.landedOn[k] = (jk.landedOn[k] ?? 0) + 1; note(`thrown ${ENAME[ce.type]} landed on ${k} (x ${pe.x} -> ${ce.x})`); }
+            }
+            // a jet in flight on the shelf: the thrown monster lands ahead of its nose (hit again?)
+            if (cur.en.some((q) => q.type === EJET && (q.lane & 3) === curJack.lane)) { jk.thrownInto += 1; note(`thrown ${ENAME[ce.type]} on shelf ${curJack.lane} with a jet in flight`); }
+          } else anomaly(`jack hit ${ENAME[ce.type]} slot ${checked} but didn't throw it (x ${pe.x} -> ${ce.x})`);
+        } else {
+          jk.missOut += 1; const d = Math.abs(ce.x - curJack.mid); jk.missD[d] = (jk.missD[d] ?? 0) + 1;
+          if (curJack.cands.some((q) => q.i === checked && q.type === ce.type)) { jk.escaped[ENAME[ce.type]] = (jk.escaped[ENAME[ce.type]] ?? 0) + 1; note(`${ENAME[ce.type]} escaped the jack: in reach at the spring, ${d} px off at its check`); }
+          if (d <= 8) anomaly(`jack missed ${ENAME[ce.type]} ${d} px from its middle`);
+        }
+      }
+      if (cur.splash === 0) { jk.perSpring[curJack.hit] = (jk.perSpring[curJack.hit] ?? 0) + 1; curJack = null; }
+    }
+  };
   const watch = () => {
-    const cur = { en: enemies(), sl: slots(), batt: sc('batt'), lids: sc('lids'), wave: sc('wave'), state: sc('state'), spawnLeft: sc('spawnLeft'), packLeft: sc('packLeft') };
+    const cur = { en: enemies(), sl: slots(), batt: sc('batt'), lids: sc('lids'), wave: sc('wave'), state: sc('state'), spawnLeft: sc('spawnLeft'), packLeft: sc('packLeft'), splash: sc('splashN') };
     const jetsNow = [0, 1, 2, 3, 4].filter((i) => sc('eType', i) === EJET).map((i) => ({ i, lane: sc('eLane', i) & 3, mask: sc('eHP', i) }));
     if (cur.batt > 99) anomaly(`batteries ${cur.batt} > 99`);
     for (const e of cur.en) {
       if (e.type !== EJET && e.lane > 2) anomaly(`enemy ${ENAME[e.type]} on shelf ${e.lane}`);
       if (e.type !== EJET && e.x < BREACH_X && cur.state === 1) anomaly(`enemy ${ENAME[e.type]} alive at x ${e.x}`);
+    }
+    // a jack's throw this frame: the slot its sweep checked (the low nibble of splashN once
+    // a jack's burst, $7x, is going; $71 -> 0 checks slot 0) moved right
+    let thrownI = -1;
+    if (prev) {
+      const pj = prev.splash >> 4 === 7, cj = cur.splash >> 4 === 7;
+      const checked = cj && (cur.splash & 15) < 5 ? cur.splash & 15 : pj && cur.splash === 0 ? 0 : -1;
+      if (checked >= 0 && (cur.splash !== prev.splash)) {
+        const pe = prev.en.find((q) => q.i === checked), ce = cur.en.find((q) => q.i === checked);
+        if (pe && ce && pe.type === ce.type && pe.lane === ce.lane && ce.x > pe.x) thrownI = checked;
+      }
+      jackWatch(cur, checked);
     }
     if (prev) {
       for (const e of cur.en) {
@@ -134,10 +211,10 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         }
         if (p.x - e.x > 9 && e.type !== HELI) anomaly(`${ENAME[e.type]} jumped x ${p.x} -> ${e.x}`);
       }
-      for (const e of cur.en) if (e.type !== EJET && e.x >= 139 && !prev.en.some((q) => q.i === e.i && q.type === e.type && e.x - q.x <= 9)) { const k = ENAME[e.type]; (stats.spawns[k] ??= [0, 0, 0])[e.lane] += 1; (stats.spawnSeq[cur.wave] ??= []).push(`${k[0]}${k === 'trex' ? 'X' : ''}${e.lane}`); }
+      for (const e of cur.en) if (e.type !== EJET && e.x >= 139 && e.i !== thrownI && !prev.en.some((q) => q.i === e.i && q.type === e.type && e.x - q.x <= 9)) { const k = ENAME[e.type]; (stats.spawns[k] ??= [0, 0, 0])[e.lane] += 1; (stats.spawnSeq[cur.wave] ??= []).push(`${k[0]}${k === 'trex' ? 'X' : ''}${e.lane}`); }
       // births: a slot newly holding a monster
       const prevBirth = [...birth];
-      for (const e of cur.en) { const p = prev.en.find((q) => q.i === e.i); if (!p || p.type !== e.type || e.x - p.x > 9) birth[e.i] = frames; }
+      for (const e of cur.en) { const p = prev.en.find((q) => q.i === e.i); if (!p || p.type !== e.type || (e.x - p.x > 9 && e.i !== thrownI)) birth[e.i] = frames; }
       for (const j of jetsNow) {
         const k = j.i + ':' + j.lane; const g = jetLog.get(k) ?? { hit: new Set(), passed: new Map() }; jetLog.set(k, g);
         const pj = prev.jets?.find((q) => q.i === j.i); const nb = j.mask & ~(pj ? pj.mask : 0) & 31;
@@ -371,7 +448,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         const walkers = en.filter((e) => e.lane === L && e.type !== BALLOON).sort((p, q) => p.x - q.x);
         const lead = walkers[0];
         if (!lead) continue;
-        const bunch = walkers.filter((e) => e.x - lead.x <= 10).length >= 2 || walkers.some((e) => e.type === TREX);
+        const bunch = walkers.filter((e) => e.x - lead.x <= (o.jackSpan ?? 10)).length >= (o.jackBunch ?? 2) || (o.jackTrex ?? true) && walkers.some((e) => e.type === TREX);
         if (!bunch) continue;
         for (let c = 2; c >= 0; c -= 1) {
           const s = L * 3 + c;
@@ -464,6 +541,15 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         else if (sl[s1].type !== TEDDY) add(80, s1, 'pick', 0, 'clear runway for jet');
       }
     }
+    // probeLand (a rule probe, not play): a T-Rex between the front and middle columns gets a
+    // jack in the middle slot and a teddy behind it in the front slot, to see where the throw lands
+    if (o.probeLand && u >= JACK) {
+      for (const t of en.filter((e) => e.type === TREX && e.x < COLX[2] - 1 && e.x > COLX[1] + 12)) {
+        const s1 = t.lane * 3 + 1, s2 = t.lane * 3 + 2;
+        if (sl[s1].type !== JACK) add(500, s1, sl[s1].type ? 'pick' : 'place', JACK, 'probe: jack in the middle');
+        else if (!sl[s2].type && !standing(en, s2)) add(499, s2, 'place', TEDDY, 'probe: teddy behind the T-Rex');
+      }
+    }
     cands.sort((a, b) => b.score - a.score);
     // the best one; if it's a placement we can't afford, wait for it (unless
     // something cheaper is also urgent), keeping the jet reserve in mind
@@ -484,7 +570,29 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   };
 
   let pickedFor = null; // after a repair pick-up, put a teddy straight back
+  // probeCut (a rule probe, not play): with every enemy slot taken and a walker about to reach a
+  // jack, stand ready on a free slot with the jet chosen and place it right after the spring,
+  // to see a jet's full-slots burst land on the jack's sweep
+  const probeCut = () => {
+    if (unlock() < JET || sc('batt') < COST[JET]) return null;
+    const en = enemies(), sl = slots(); const sweep = sc('splashN') >> 4 === 7;
+    if (en.length < 5 && !sweep) return null;
+    const near = sl.some((q) => q.type === JACK && en.some((e) => e.type !== BALLOON && e.type !== EJET && e.lane === Math.floor(q.s / 3) && e.x >= COLX[q.s % 3] && e.x - COLX[q.s % 3] <= 24));
+    if (!near && !sweep) return null;
+    const free = sl.find((q) => !q.type);
+    return free ? { slot: free.s, fire: sweep && en.length === 5 } : null;
+  };
   while (sc('state') === 1 && frames < maxFrames) {
+    if (o.probeCut) {
+      const p = probeCut();
+      if (p) {
+        if (sc('cursor') !== p.slot) moveTo(p.slot);
+        else if (sc('toy') !== JET) selectToy(JET);
+        else if (p.fire) { stats.probeFired = (stats.probeFired ?? 0) + 1; note(`probe: jet placed during a jack sweep (splashN ${sc('splashN').toString(16)})`); run(0, true); run(); }
+        else run();
+        continue;
+      }
+    }
     let act = decide();
     if (pickedFor !== null) {
       if (!sc('slotType', pickedFor.slot) && sc('batt') >= COST[pickedFor.toy] && frames - pickedFor.at < 90) act = { slot: pickedFor.slot, op: 'place', toy: pickedFor.toy, why: 'replace' };
@@ -505,7 +613,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       run(0, true);
       const during = standRaw();
       run();
-      if (sc('batt') < b0) stats.spent[TOYNAME[act.toy]] = (stats.spent[TOYNAME[act.toy]] ?? 0) + COST[act.toy];
+      if (sc('batt') < b0) { stats.spent[TOYNAME[act.toy]] = (stats.spent[TOYNAME[act.toy]] ?? 0) + COST[act.toy]; if (act.toy === JACK) jk.placed += 1; }
       if (act.toy === JET) { if (sc('batt') < b0) jetAt[Math.floor(act.slot / 3)] = frames; jetFrames.push(frames); if (full && sc('batt') < b0) { stats.jetBursts += 1; note(`jet burst on shelf ${Math.floor(act.slot / 3)}`); } }
       else {
         if (balloonUnder && sc('slotType', act.slot) === act.toy) stats.balloonDrops += 1;
@@ -521,7 +629,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       const pre = act.why.startsWith('repair ') && !act.why.startsWith('salvage') ? t : act.why === 'clear runway for jet' ? JET : 0;
       if (pre && sc('toy') !== pre) { selectToy(pre); continue; }
       if (log) console.log(`f${frames} pick ${TOYNAME[t]} at ${act.slot} (${act.why})`);
-      const bp = sc('batt'); tap(); stats.refund = (stats.refund ?? 0) + Math.max(0, sc('batt') - bp);
+      const bp = sc('batt'); pickSlot = act.slot; tap(); pickSlot = -1; stats.refund = (stats.refund ?? 0) + Math.max(0, sc('batt') - bp);
       if (act.why.startsWith('repair ')) pickedFor = { slot: act.slot, toy: t, at: frames };
       if (act.why === 'clear runway for jet') pickedFor = { slot: act.slot, toy: JET, at: frames };
     }
