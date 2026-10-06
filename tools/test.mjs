@@ -616,6 +616,27 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
     while (g.sc('batt') === 10 && f < 400) { g.run(1); f += 1; }
     return f;
   };
+  // at the cap: the trickle and kill rewards become points (one a battery); a pick-up's refund doesn't
+  {
+    const g = quietGame();
+    g.set('wave', 5); g.set('batt', 99); g.set('battTimer', 0);
+    const s0 = score(g);
+    g.run(245);
+    const trickled = score(g) - s0;
+    enemy(g, 0, 1, 60, 1, 1); slot(g, 3, 1, 8); // a dino with 1 health in front of an army man (reward 2)
+    const s1 = score(g);
+    let f = 0;
+    while (g.sc('eType', 0) && f < 300) { g.run(1); f += 1; }
+    const killed = score(g) - s1; // 10 points for the dino + 2 for its batteries
+    slot(g, 3, 1, 8); g.set('batt', 99); g.set('cursor', 3);
+    const s2 = score(g);
+    g.press(); // pick the army man up: half its cost back, but at the cap
+    check('batteries over the cap become points: 1 from the trickle, 2 from a dino\'s reward; a pick-up\'s refund doesn\'t count', trickled === 1 && killed === 12 && score(g) === s2 && g.sc('batt') === 99, `trickle +${trickled}, kill +${killed}, pick-up +${score(g) - s2}`);
+  }
+  // balloon clowns keep their first-lap pace in the second lap
+  const balloon = (wave) => { const g = quietGame(); g.set('wave', wave); enemy(g, 0, 0, 140, 6, 9); g.run(2); const x0 = g.sc('eX', 0); g.run(60); return x0 - g.sc('eX', 0); };
+  const bl1 = balloon(5), bl2 = balloon(14);
+  check('balloon clowns float at the same pace in the second lap', bl1 === bl2 && bl1 > 0, `${bl1} and ${bl2} pixels in 60 frames`);
   const t1 = trickle(5), t2 = trickle(14);
   check('a battery every 240 frames in the first lap, every 150 in the second', Math.abs(t1 - 240) <= 2 && Math.abs(t2 - 150) <= 2, `${t1} and ${t2} frames`);
 }

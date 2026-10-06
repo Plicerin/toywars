@@ -605,6 +605,28 @@ JetStrike:
     sta W_splashN               ; (it replaces a cannonball's burst still going)
     rts
 
+; GainBatt: batteries = A, earned (the trickle, a kill's reward): any over
+; the cap of 99 become points, one each, instead of being lost. Keeps X, Y.
+GainBatt:
+    SUBROUTINE
+    cmp #100
+    bcc SetBatt
+    sbc #99                     ; (carry set) the batteries over the cap, 1-10
+    sed
+    clc
+    adc R_score+2
+    sta W_score+2
+    lda R_score+1
+    adc #0
+    sta W_score+1
+    lda R_score
+    adc #0
+    sta W_score
+    cld
+    lda R_dirty
+    ora #1
+    sta W_dirty
+    lda #99
 SetBatt:                        ; batteries = A (at most 99)
     SUBROUTINE
     cmp #100
@@ -646,7 +668,7 @@ Kill:                           ; enemy X destroyed: batteries and score
     lda EnReward,y
     clc
     adc R_batt
-    jsr SetBatt
+    jsr GainBatt
     sed
     lda R_score+2
     clc
@@ -687,7 +709,7 @@ Batteries:                      ; one more every TRICKLE frames (TRICKLE2 in the
     lda R_batt
     clc
     adc #1
-    jsr SetBatt
+    jsr GainBatt
     lda #0
 .store:
     sta W_battTimer
@@ -1701,7 +1723,7 @@ EnScore:    .byte 0, $10, $15, $10,  $05,  $20,   $15,   $15, $50   ; BCD points
 ; pixels; four blocks: first lap, second lap, knight charging (first lap,
 ; second lap)
 EnMask:     .byte 0,   1,   0,   0,    0,    1,     1,     0,   3
-            .byte 0,   0,   0,   0,    0,    0,     0,     0,   1
+            .byte 0,   0,   0,   0,    0,    0,     1,     0,   1   ; (balloon: its first-lap pace)
             .byte 0,   0,   0,   0,    0,    0,     0,     0,   0
             .byte 0,   0,   0,   0,    0,    0,     0,     0,   0
 EnStep:     .byte 0,   1,   1,   1,    2,    1,     1,     1,   1

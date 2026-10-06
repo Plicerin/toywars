@@ -44,7 +44,9 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave
   *(decided 2026-10-04)*
 - The trickle is one battery every 240 frames (4 s) in the first lap and
   every 150 (2.5 s) in the second, where the cannon layout ran short
-  *(2026-10-05)*; batteries cap at 99. Rewards are small (1-2, the T-Rex 5) *(tuned 2026-10-04 with
+  *(2026-10-05)*; batteries cap at 99, and any the trickle or a kill would
+  add over the cap become points, one each (a pick-up's refund doesn't)
+  *(2026-10-06: strong layouts sat at the cap a third of the second lap)*. Rewards are small (1-2, the T-Rex 5) *(tuned 2026-10-04 with
   tools/player.mjs: at 1.5 s and the old rewards, 3/3/2/1/4/3/3/10, batteries
   sat near the cap 44% of the time and spending was never a choice)*.
 - Shown on the status line: `00120 W01` in gold (the score's last five digits
@@ -91,7 +93,10 @@ an odd frame, through the cannon's splash sweep (about ten frames).
 As built (logic.asm: EnHP, EnReward, EnScore, EnMask/EnStep). Speeds in
 pixels per second, first lap / second lap (wave 13+); every
 enemy gains 1 health every fourth wave (wave / 4), laps included; wind-up mice
-and balloon clowns every eighth (wave / 8) *(2026-10-05: at wave / 4 a wave-20
+and balloon clowns every eighth (wave / 8); balloon clowns also keep their
+first-lap pace in the second lap *(2026-10-06: they ended 46 of 47 lid slams
+for the strongest layout, crossing before army men and cannons could hit
+them enough)* *(2026-10-05: at wave / 4 a wave-20
 mouse had six times its base health and a balloon three and a half, and the
 two caused about three quarters of the bot's second-lap losses)*.
 
@@ -103,7 +108,7 @@ two caused about three quarters of the bot's second-lap losses)*.
 | 5 | Knight | Newspaper | 5 | 6 | 15 / 30; charging 60 / 90 | 2 / 20 | Shield breaks when its health drops below 3, then it charges at four times its pace (three in the second lap). |
 | 8 | T-Rex (boss) | Gargantuar | 6 (and two in 12) | 20 | 7.5 / 15 | 5 / 50 | Crushes a toy in one bite. Single-width (a five-pull variant can't be scheduled). |
 | 2 | Helicopter | Pole Vaulter | 7 | 5 | 30 / 60 | 2 / 15 | Hops over the first toy it reaches, once; then chews. |
-| 6 | Balloon Clown | Balloon | 8 | 2 | 15 / 30 | 2 / 15 | Floats over every toy. Tank shells can't reach it; army men and cannons can. |
+| 6 | Balloon Clown | Balloon | 8 | 2 | 15 / 15 | 2 / 15 | Floats over every toy. Tank shells can't reach it; army men and cannons can. |
 | 7 | Pogo Frog | lane changer | 9 | 3 | 30 / 60 | 2 / 15 | The first time a toy blocks it, it jumps to the next shelf; then it chews. |
 
 All enemies have a two-frame walk (frame chosen by `(x >> 2) & 1`).
