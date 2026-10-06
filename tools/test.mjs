@@ -556,11 +556,29 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
     let f = 0;
     while (g.sc('spawnLeft') === 5 && f < 60) { g.frames(1, { diffA }); f += 1; }
     const i = [0, 1, 2, 3, 4].find((k) => g.sc('eType', k));
-    return { gap: g.sc('spawnTimer'), extra: g.sc('eHP', i) - [0, 6, 5, 3, 1, 6, 2, 3, 20][g.sc('eType', i)] - (14 >> 2) };
+    const kind = g.sc('eType', i);
+    return { gap: g.sc('spawnTimer'), extra: g.sc('eHP', i) - [0, 6, 5, 3, 1, 6, 2, 3, 20][kind] - (kind === 4 || kind === 6 ? 14 >> 3 : 14 >> 2) };
   };
   const b2 = gap2(false), a2 = gap2(true), g2b = b2.gap, g2a = a2.gap;
   check('second lap: B three quarters of the gap, A five eighths', Math.abs(g2b - 113) <= 1 && Math.abs(g2a - 95) <= 1, `B ${g2b}, A ${g2a} ticks (base 150)`);
   check('second lap on A: every enemy one health tougher', b2.extra === 0 && a2.extra === 1, `extra health B ${b2.extra}, A ${a2.extra}`);
+}
+{
+  // the health ramp in wave 20 (difficulty B): wave / 4 more, wave / 8 for mice and balloon clowns
+  const g = boot();
+  g.press(); g.frames(2);
+  g.set('wave', 20);
+  const seen = new Map();
+  for (let f = 0; f < 3000 && seen.size < 7; f += 1) {
+    g.set('spawnLeft', 50); g.set('spawnTimer', 0); g.set('packLeft', 0); g.set('bossLeft', 0);
+    const before = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i));
+    g.frames(1);
+    [0, 1, 2, 3, 4].forEach((i) => { const k = g.sc('eType', i); if (!before[i] && k && k !== 9) seen.set(k, g.sc('eHP', i)); });
+    for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  }
+  const base = [0, 6, 5, 3, 1, 6, 2, 3, 20];
+  const wrong = [...seen].filter(([k, hp]) => hp !== base[k] + (k === 4 || k === 6 ? 2 : 5));
+  check('wave 20: enemies five health tougher, wind-up mice and balloon clowns two', seen.size >= 6 && wrong.length === 0, [...seen].map(([k, hp]) => `${KINDS[k]} ${hp}`).join(', '));
 }
 {
   // batteries trickle faster in the second lap: one every 150 frames (240 in the first)

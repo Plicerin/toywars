@@ -38,7 +38,8 @@ while it chews), knight (charges once its shield breaks), helicopter (hops
 over the first toy), balloon clown (floats over every toy; tank shells can't
 reach it), pogo frog (jumps to the next shelf once), and the T-Rex boss of
 waves 6 and 12 (crushes a toy in one bite). Every fourth wave they get
-tougher; after wave 12 the waves repeat, faster.
+tougher (mice and balloon clowns every eighth); after wave 12 the waves
+repeat, faster.
 
 ## Status
 

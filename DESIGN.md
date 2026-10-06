@@ -9,8 +9,9 @@ Status: playable (2026-10-04). Built: board, batteries, all six toys, all
 eight enemies, waves 1-12 with unlocks, boss waves and the second lap, lid
 slams, game over, sound effects, the jet's flight in green, Game Select
 (games 1-3 start at waves 1/5/9 with 30/50/70 batteries; the status line
-reads GAME n while choosing) and the left difficulty switch (A: the second lap's
-shorter spawn gaps from wave 1, at the first-lap pace), music. Everything in this document is
+reads GAME n while choosing) and the left difficulty switch (A: shorter spawn
+gaps from wave 1 at the first-lap pace; in the second lap shorter still, and
+every enemy one health tougher), music. Everything in this document is
 built.
 As built, the T-Rex is a full-height 8-pixel sprite in orange, not double
 width: setting player 1's width per enemy needs a fifth pull in the event
@@ -21,7 +22,8 @@ Numbers as built: army man fires every 42 frames (1 damage), tank every 300
 (8), cannon every 198 (3, and the same to every other monster on the shelf
 within 12 pixels of the one hit: the burst is swept one monster per odd frame,
 so its cost stays bounded); cowboy lasso holds 60 frames, every 120; chewing
-takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
+takes 1 health every 16 frames; enemies gain 1 health every fourth wave
+(wind-up mice and balloon clowns every eighth).
 
 ## Board
 
@@ -84,7 +86,10 @@ an odd frame, through the cannon's splash sweep (about ten frames).
 
 As built (logic.asm: EnHP, EnReward, EnScore, EnMask/EnStep). Speeds in
 pixels per second, first lap / second lap (wave 13+); every
-enemy gains 1 health every fourth wave (wave / 4), laps included.
+enemy gains 1 health every fourth wave (wave / 4), laps included; wind-up mice
+and balloon clowns every eighth (wave / 8) *(2026-10-05: at wave / 4 a wave-20
+mouse had six times its base health and a balloon three and a half, and the
+two caused about three quarters of the bot's second-lap losses)*.
 
 | Kind | Enemy | PvZ equivalent | From wave | Health | Speed | Batteries / points | Trick |
 |---|---|---|---|---|---|---|---|
@@ -207,7 +212,7 @@ the melody, at volume 3, and only when no sound effect has channel 0.
   kernel, the enemy scheduler (about 950 bytes free). Bank 1: the play
   kernel and all graphics, which it must read from its own bank (about 40
   free; enemy frames are padded 40 zeros, setup rows sit mid-gap). Bank 2:
-  game logic, logic.asm (about 490 free). Bank 3: sound steps and music,
+  game logic, logic.asm (about 400 free). Bank 3: sound steps and music,
   sound.asm (about 3,250 free). Bank calls go through stubs at $FFB0
   (sound), $FFC0 (init) and $FFD0 (logic).
 

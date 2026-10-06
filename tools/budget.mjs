@@ -49,4 +49,4 @@ for (let f = 0; f < 3000; f += 1) {
   if (c > worst[odd][0]) { worst[odd] = [c, f]; if (PROF) worst[odd][2] = [...prof].sort((a, b) => b[1] - a[1]).slice(0, 14).map(([n, v]) => `${n} ${v}`).join(', '); }
 }
 if (PROF) console.log(worst.map((w) => w[2]).join('\n'));
-console.log(`budget about ${35 * 64} cycles; worst logic: even ${worst[0][0]} (frame ${worst[0][1]}), odd ${worst[1][0]} (frame ${worst[1][1]}); VBLANK ${vbWorst} of about ${44 * 64}`);
+console.log(`timer ${35 * 64} cycles (about 2216 usable for the logic); worst logic: even ${worst[0][0]} (frame ${worst[0][1]}), odd ${worst[1][0]} (frame ${worst[1][1]}); VBLANK ${vbWorst} of about ${44 * 64}`);

@@ -914,9 +914,16 @@ Spawn:
     SUBROUTINE
     sta W_eType,y
     tax
-    lda R_wave                  ; one more health every fourth wave
+    lda R_wave                  ; one more health every fourth wave (every
+    lsr                         ; eighth for the light ones: wind-up mice and
+    lsr                         ; balloon clowns, which a ramp of wave / 4
+    cpx #EN_MOUSE               ; made six and three times as tough by wave 20)
+    beq .light
+    cpx #EN_BALLOON
+    bne .ramp
+.light:
     lsr
-    lsr
+.ramp:
     clc
     adc EnHP,x
     sta lt4                     ; health
