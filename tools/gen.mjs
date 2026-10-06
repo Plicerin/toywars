@@ -42,16 +42,16 @@ export const DEFENDERS = {
   teddy: bits([
     '.##..##.', '.######.', '.#.##.#.', '.######.', '..####..', '########',
     '.######.', '.######.', '###..###']),
-  cowboy: bits([
-    '...##...', '..####..', '########', '..####..', '...##...', '.######.',
-    '#.####.#', '..####..', '..#..#..', '.##..##.']),
+  jack: bits([ // jack-in-the-box: the clown's head on its spring, over the box with its crank
+    '..###...', '.#.#.#..', '..###...', '...#....', '..#.....', '...#....',
+    '######..', '##..####', '##..##.#', '######..']),
   cannon: bits([ // barrel aimed up and right, over a spoked wheel
     '.......#', '......##', '.....##.', '....##..', '..###...', '.#####..',
     '#.#.#...', '#####...', '#.#.#...', '.###....']),
   jet: bits([ // seen from above, nose to the right: swept wings, tail fins
     '...#....', '#..##...', '##.###..', '.#######', '.#######', '##.###..', '#..##...', '...#....']),
 };
-export const TOYS = ['army', 'teddy', 'tank', 'cowboy', 'cannon', 'jet']; // toy type 1-6
+export const TOYS = ['army', 'teddy', 'tank', 'jack', 'cannon', 'jet']; // toy type 1-6
 // two walking frames each; the kernel shows frame 2 while (x >> 2) is odd
 export const ENEMIES = {
   dino: bits([

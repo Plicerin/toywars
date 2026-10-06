@@ -347,30 +347,35 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
 }
 {
   const g = quietGame();
-  slot(g, 4, 4, 8); // cowboy, middle shelf, column 1 (x 80)
-  enemy(g, 0, 1, 110, 1, 6);
-  g.run(4);
-  const x0 = g.sc('eX', 0);
-  g.run(40);
-  check('a cowboy lassoes an enemy within 40 pixels and holds it', (g.sc('eState', 0) & 0x3f) > 0 && g.sc('eX', 0) === x0, `x ${x0} -> ${g.sc('eX', 0)}`);
+  slot(g, 4, 4, 8); // a jack-in-the-box, middle shelf, column 1 (x 80)
+  enemy(g, 0, 1, 100, 1, 20); // a dino walking at it
+  let f = 0;
+  while (g.sc('slotType', 4) === 4 && f < 600) { g.run(1); f += 1; }
+  g.run(14); // (the burst sweeps one enemy an odd frame)
+  check('a jack-in-the-box springs when a monster reaches it: 10 damage, thrown back up the shelf, and it\'s gone', g.sc('slotType', 4) === 0 && g.sc('eHP', 0) === 10 && g.sc('eX', 0) > 100, `health ${g.sc('eHP', 0)}, x ${g.sc('eX', 0)} after ${f} frames`);
 }
 {
   const g = quietGame();
-  slot(g, 4, 4, 8); // cowboy, middle shelf, column 1 (x 80)
-  slot(g, 5, 2, 40); // teddy in front of it, column 2 (x 112)
-  enemy(g, 0, 1, 120, 1, 20); // a dino chewing the teddy: 40 pixels from the cowboy
-  let held = false;
-  for (let f = 0; f < 200 && !held; f += 1) { g.run(1); held = (g.sc('eState', 0) & 0x3f) > 0; }
-  check('it reaches a monster chewing the toy in front of it (40 pixels away)', held && g.sc('eX', 0) === 120, `x ${g.sc('eX', 0)}`);
+  slot(g, 4, 4, 8); // a jack at x 80
+  [0, 1, 2].forEach((i) => enemy(g, i, 1, 94, 4, 12)); // a pack of three mice, stacked, walking at it
+  enemy(g, 3, 1, 140, 1, 20); // a dino far behind: out of reach
+  let mostKills = 0, prev = 4, mistimed = 0, f0 = 0;
+  while (g.sc('slotType', 4) === 4 && f0 < 600) { g.run(1); f0 += 1; } // until it springs
+  for (let f = 0; f < 14; f += 1) { // the sweep (then the survivors walk on to the box)
+    g.run(1);
+    const { vb, total } = g.m.layout(); if (total !== 262 || vb[0][0] !== 40) mistimed += 1;
+    const alive = [0, 1, 2, 3].filter((i) => g.sc('eType', i)).length; mostKills = Math.max(mostKills, prev - alive); prev = alive;
+  }
+  const hp = [0, 1, 2, 3].map((i) => (g.sc('eType', i) ? g.sc('eHP', i) : 0));
+  const xs = [0, 1, 2].map((i) => g.sc('eX', i)); // (they sprang it at x 88 at most; mice walk 2 pixels an update back)
+  check('it hits and throws back a whole stacked pack, one a frame, and nothing out of reach', hp.slice(0, 3).every((h) => h === 2) && xs.every((x) => x > 92) && hp[3] === 20 && mostKills <= 1 && mistimed === 0, `health ${hp.join(', ')}, mice at x ${xs.join(', ')}, up to ${mostKills} kills in a frame`);
 }
 {
   const g = quietGame();
-  slot(g, 3, 4, 8); slot(g, 4, 4, 99); // two cowboys, middle shelf, x 48 and x 80: both reach x 81-88
-  g.set('slotCool', 10, 4); // the second half a cycle behind: they take turns
-  enemy(g, 0, 1, 86, 1, 99); // a dino chewing the second one
-  g.run(1200);
-  const bitten = 99 - g.sc('slotHP', 4); // a bite every 16 frames while free: 75 if never held
-  check('two cowboys taking turns can\'t hold a monster for good: after a lasso it can\'t be roped again for a second', bitten >= 25, `${bitten} bites in 1200 frames`);
+  slot(g, 4, 4, 8); // a jack at x 80
+  enemy(g, 0, 1, 100, 6, 9); // a balloon clown
+  g.run(200);
+  check('a balloon clown floats over a jack-in-the-box without springing it', g.sc('slotType', 4) === 4 && g.sc('eHP', 0) === 9, `jack ${g.sc('slotType', 4)}, balloon health ${g.sc('eHP', 0)}`);
 }
 {
   const g = quietGame();

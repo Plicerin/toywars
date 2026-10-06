@@ -33,10 +33,10 @@ import { Machine } from './atari/machine.mjs';
 const SYM = Object.fromEntries(readFileSync(process.env.SYM ?? 'tools/build/toywars.sym', 'latin1').split(/\r?\n/).map((l) => /^(\S+)\s+([0-9a-f]{4})/i.exec(l)).filter(Boolean).map((x) => [x[1], parseInt(x[2], 16)]));
 const ROM = readFileSync(process.env.ROM ?? 'toywars.bin'); // (ROM=path: a variant cartridge, same symbols)
 
-const ARMY = 1, TEDDY = 2, TANK = 3, COWBOY = 4, CANNON = 5, JET = 6;
+const ARMY = 1, TEDDY = 2, TANK = 3, JACK = 4, CANNON = 5, JET = 6;
 const COST = [0, 10, 5, 25, 15, 20, 30];
 const TOYHP = [0, 8, 40, 12, 8, 10, 1];
-const TOYNAME = ['-', 'army', 'teddy', 'tank', 'cowboy', 'cannon', 'jet'];
+const TOYNAME = ['-', 'army', 'teddy', 'tank', 'jack', 'cannon', 'jet'];
 const DINO = 1, HELI = 2, CRAWL = 3, MOUSE = 4, KNIGHT = 5, BALLOON = 6, POGO = 7, TREX = 8, EJET = 9;
 const ENAME = ['-', 'dino', 'heli', 'crawler', 'mouse', 'knight', 'balloon', 'pogo', 'trex', 'jet'];
 const COLX = [48, 80, 112];
@@ -61,8 +61,6 @@ const STRATEGIES = {
   // two teddy walls (monsters chewing the second while the first is put back), cannon by the box
   wall: { cols: [[[1, ARMY], [5, CANNON]], [[1, ARMY], [2, TEDDY]], [[2, TEDDY]]] },
   // the same with an army man by the box
-  // a cowboy in the middle lassoes whatever chews the front teddy (40 pixels ahead); cannon by the box
-  cowboy: { cols: [[[1, ARMY], [5, CANNON]], [[1, ARMY], [4, COWBOY]], [[2, TEDDY]]] },
   // two cannons behind a teddy (used for the second lap: OPTS lap2)
   cannon2: { cols: [[[1, ARMY], [5, CANNON]], [[1, ARMY], [5, CANNON]], [[2, TEDDY]]] },
   wallArmy: { cols: [[[1, ARMY]], [[1, ARMY], [2, TEDDY]], [[2, TEDDY]]] },
@@ -91,7 +89,7 @@ function profileFrame(m, at) {
 export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 216000, opts = {}, log = false } = {}) {
   // legacy: the old player (repairs by picking up a chewed toy and dropping a
   // fresh one on the monster; the game now refuses that drop)
-  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, cowboyTrex: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, ...opts };
+  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: strategy !== 'heavy', bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, ...opts };
   if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; if (!('cover' in opts)) o.cover = false; }
   const strat = STRATEGIES[strategy];
   const m = new Machine(ROM);
@@ -204,24 +202,6 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         note(`wave ${cur.wave} starts; batt ${cur.batt}; toys ${cur.sl.map((s) => TOYNAME[s.type]).join(',')}`);
         stats.waveFrames[prev.wave] = frames - waveStart; waveStart = frames;
         stats.battAtWave[cur.wave] = cur.batt;
-      }
-      // a lasso thrown this update (its count set to 60: held 60 frames, then
-      // 60 frames it can't be roped again): how far ahead of the nearest cowboy
-      for (const e of cur.en) {
-        const p = prev.en.find((q) => q.i === e.i && q.type === e.type);
-        if (!p || e.type === EJET) continue;
-        const c = e.st & 0x3f, pc = p.st & 0x3f;
-        // held: count 30-59 after the throw; track the longest unbroken hold
-        const held = c >= 30;
-        if (held) { e.holdSince = p.holdSince ?? frames; stats.longestHold = Math.max(stats.longestHold, frames - e.holdSince + 1); }
-        if (c !== 60 || pc === 60) continue;
-        stats.lassos += 1;
-        if (pc !== 0) { stats.lassoImmuneBroken += 1; anomaly(`${ENAME[e.type]} lassoed again while its count was ${pc}`); }
-        const ds = [0, 1, 2].filter((c) => cur.sl[e.lane * 3 + c].type === COWBOY && e.x > COLX[c]).map((c) => e.x - COLX[c]);
-        if (!ds.length) { anomaly(`${ENAME[e.type]} lassoed at x ${e.x} with no cowboy behind it`); continue; }
-        const d = Math.min(...ds);
-        stats.lassoD[d] = (stats.lassoD[d] ?? 0) + 1; stats.lassoMax = Math.max(stats.lassoMax, d);
-        if (d > 40) anomaly(`${ENAME[e.type]} lassoed ${d} px ahead of a cowboy`);
       }
       // a launched jet: where it took off, and whether it hit everything on its shelf
       if (jetWatch) {
@@ -383,12 +363,23 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         }
       }
     }
-    // a T-Rex: cowboy within lasso reach behind it
-    if (o.cowboyTrex && u >= COWBOY) {
-      for (const e of en.filter((q) => q.type === TREX)) {
+    // a jack-in-the-box where a bunch (two or more within 10 pixels) or a
+    // T-Rex will reach first: the first empty slot ahead of them that they
+    // get to before anything else stops them (balloons float over: not counted)
+    if (o.jackTrap && u >= JACK && batt >= COST[JACK]) {
+      for (let L = 0; L < 3; L += 1) {
+        const walkers = en.filter((e) => e.lane === L && e.type !== BALLOON).sort((p, q) => p.x - q.x);
+        const lead = walkers[0];
+        if (!lead) continue;
+        const bunch = walkers.filter((e) => e.x - lead.x <= 10).length >= 2 || walkers.some((e) => e.type === TREX);
+        if (!bunch) continue;
         for (let c = 2; c >= 0; c -= 1) {
-          const s = e.lane * 3 + c;
-          if (e.x - COLX[c] > (o.legacy ? 24 : 14) && e.x - COLX[c] < 40 && !sl[s].type) { add(120, s, 'place', COWBOY, 'lasso trex'); break; }
+          const s = L * 3 + c;
+          if (COLX[c] > lead.x) continue; // already behind them
+          // the front teddy, while they're still a way off: make room (half its cost back)
+          if (o.jackSwap && sl[s].type === TEDDY && lead.x - COLX[c] >= 30 && batt + (COST[TEDDY] >> 1) >= COST[JACK] && !standing(en, s)) { add(150, s, 'pick', 0, 'room for a jack'); break; }
+          if (sl[s].type) break; // a toy stops them first
+          if (lead.x - COLX[c] >= 14 && !standing(en, s)) { add(155, s, 'place', JACK, `jack for ${walkers.length} on shelf ${L}`); break; }
         }
       }
     }
@@ -426,16 +417,16 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         } else if (sl[s].type === TEDDY && want === TEDDY && sl[s].hp < o.repairAt && batt >= 6 && !standing(en, s)) {
           // (only between chewers: with one on it the fresh teddy would be refused)
           add(60 + pressure[L], s, 'pick', 0, 'repair teddy');
-        } else if (o.trexSalvage && sl[s].type !== JET && sl[s].type !== TEDDY && front.some((e) => e.type === TREX && e.x >= COLX[c] && e.x - COLX[c] <= 8)) {
+        } else if (o.trexSalvage && sl[s].type !== JET && sl[s].type !== TEDDY && sl[s].type !== JACK && front.some((e) => e.type === TREX && e.x >= COLX[c] && e.x - COLX[c] <= 8)) {
           // a T-Rex crushes it in one bite: take half its cost first
           add(66, s, 'pick', 0, `salvage ${TOYNAME[sl[s].type]} from trex`);
-        } else if (o.salvage && sl[s].type !== JET && sl[s].hp <= 1 && standing(en, s, false)) {
+        } else if (o.salvage && sl[s].type !== JET && sl[s].type !== JACK && sl[s].hp <= 1 && standing(en, s, false)) {
           // about to be eaten anyway, and can't be put back: take half its cost
           add(65, s, 'pick', 0, `salvage ${TOYNAME[sl[s].type]}`);
         } else if (o.repairShooters && sl[s].type !== TEDDY && sl[s].type !== JET && sl[s].hp <= o.shooterRepairAt && batt >= COST[sl[s].type] - (COST[sl[s].type] >> 1) + 1
           && front.some((e) => e.x >= COLX[c] && e.x <= COLX[c] + 8 && e.type !== TREX)) {
           add(70 + pressure[L], s, 'pick', 0, `repair ${TOYNAME[sl[s].type]}`);
-        } else if (o.upgrade && !bossSoon && sl[s].type !== want && sl[s].type !== JET && (want !== TEDDY || c < 2)) {
+        } else if (o.upgrade && !bossSoon && sl[s].type !== want && sl[s].type !== JET && sl[s].type !== JACK && (want !== TEDDY || c < 2)) {
           const quiet = !front.some((e) => e.x < 140);
           if (quiet && batt + (COST[sl[s].type] >> 1) >= COST[want] + (u >= JET && o.jetReserve ? COST[JET] : 0)) add(10, s, 'pick', 0, `upgrade to ${TOYNAME[want]}`);
         }
@@ -482,7 +473,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     const bossKeep = o.bossSave && (sc('wave') >= 13 || o.bossSaveLap1) && u >= JET && trexAhead ? o.bossSave : 0;
     for (const c of cands) {
       if (c.op === 'pick') return c;
-      if (c.toy !== JET && doomed(c.slot)) continue;
+      if (c.toy !== JET && c.toy !== JACK && doomed(c.slot)) continue; // (a jack springs on a T-Rex: that's its job)
       const reserve = Math.max((u >= JET && o.jetReserve && c.toy !== JET && c.score < 150 && !(c.toy === TEDDY && c.score >= 40)) ? COST[JET] : 0, c.toy !== JET && c.toy !== TEDDY && c.score < 150 ? bossKeep : 0);
       if (batt >= COST[c.toy] + reserve) return c;
       if (c.score >= 100) continue; // emergencies: try the next affordable one

@@ -305,7 +305,7 @@
      87 Uf005		       00 00 00 00*W_eLane    ds	NENEMY	;   shelf 0-2
      88 Uf00a		       00 00 00 00*W_eType    ds	NENEMY	;   0 none, 1 dino, 2 helicopter, 3 crawler
      89 Uf00f		       00 00 00 00*W_eHP      ds	NENEMY	;   health
-     90 Uf014		       00 00 00 00*W_eState   ds	NENEMY	;   bit 7 chewing, bit 6 hopped, bits 0-5 lasso frames left
+     90 Uf014		       00 00 00 00*W_eState   ds	NENEMY	;   bit 7 chewing, bit 6 hopped (knight: shield broken; pogo: jumped)
      91 Uf019		       00 00 00 00*W_slotType ds	9	; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
      92 Uf022		       00 00 00 00*W_slotHP   ds	9
      93 Uf02b		       00 00 00 00*W_slotCool ds	9	; visits (6 frames) until the toy acts again
@@ -1566,7 +1566,7 @@
      70  1560		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
      71  1570		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$FE,$FE,$00,$78,$7F,$38,$00,$00,$00,$00,$00,$00
      72  1580		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-     73  1590		       00 66 24 3c*	      .byte.b	$00,$66,$24,$3C,$BD,$7E,$18,$3C,$FF,$3C,$18,$00,$00,$00,$00,$00
+     73  1590		       00 fc cd cf*	      .byte.b	$00,$FC,$CD,$CF,$FC,$10,$20,$10,$38,$54,$38,$00,$00,$00,$00,$00
      74  15a0		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$70,$A8
      75  15b0		       f8 a8 7c 38*	      .byte.b	$F8,$A8,$7C,$38,$0C,$06,$03,$01,$00,$00,$00,$00,$00,$00,$00,$00
      76  15c0		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$10,$98,$DC,$7F,$7F
@@ -1576,7 +1576,7 @@
      80  15f0		       f5 3a	   D_ARMY     =	DefPage + 58
      81  15f0		       f5 57	   D_TEDDY    =	DefPage + 87
      82  15f0		       f5 74	   D_TANK     =	DefPage + 116
-     83  15f0		       f5 91	   D_COWBOY   =	DefPage + 145
+     83  15f0		       f5 91	   D_JACK     =	DefPage + 145
      84  15f0		       f5 ae	   D_CANNON   =	DefPage + 174
      85  15f0		       f5 cb	   D_JET      =	DefPage + 203
      86  1600				   EnemyGfx
@@ -2681,7 +2681,7 @@
       8  2100		       00 01	   TOY_ARMY   =	1
       9  2100		       00 02	   TOY_TEDDY  =	2
      10  2100		       00 03	   TOY_TANK   =	3
-     11  2100		       00 04	   TOY_COWBOY =	4
+     11  2100		       00 04	   TOY_JACK   =	4
      12  2100		       00 05	   TOY_CANNON =	5
      13  2100		       00 06	   TOY_JET    =	6
      14  2100		       00 01	   EN_DINO    =	1
@@ -2702,1746 +2702,1769 @@
      29  2100		       00 0a	   JET_DMG    =	10
      30  2100		       00 b0	   KILLED     =	temp+3	; this frame an enemy died (overscan only: VBLANK
      31  2100							;   uses temp for the status line)
-     32  2100		       00 1e	   LASSO_HOLD =	30	; updates a lasso holds (60 frames), then as
-     33  2100		       00 1e	   LASSO_FREE =	30	;   many it can't be lassoed again (60 frames)
-     34  2100		       00 f0	   TRICKLE    =	240	; frames per battery (one byte: at most 255)
-     35  2100		       00 01	   A_LAP2_HP  =	1	; extra health for every enemy in the second lap on difficulty A
-     36  2100		       00 96	   TRICKLE2   =	150	;   in the second lap (2.5 s)
-     37  2100		       00 00	   ST_ATTRACT =	0
-     38  2100		       00 01	   ST_PLAY    =	1
-     39  2100		       00 02	   ST_OVER    =	2
-     40  2100		       00 0e	   COL_WHITE  =	$0E
-     41  2100		       00 29	   BREACH_X   =	41	; an enemy left of this is at the toy box
-     42  2100		       00 28	   JET_X0     =	BREACH_X - 1	; where a jet takes off
-     43  2100
-     44  2100							; sound effects (ids into SndStart/SndChan/SndPri)
-     45  2100		       00 00	   SND_CURSOR =	0
-     46  2100		       00 01	   SND_SELECT =	1
-     47  2100		       00 02	   SND_PLACE  =	2
-     48  2100		       00 03	   SND_PICK   =	3
-     49  2100		       00 04	   SND_NOBATT =	4
-     50  2100		       00 05	   SND_WAVE   =	5
-     51  2100		       00 06	   SND_OVER   =	6
-     52  2100		       00 07	   SND_POP    =	7
-     53  2100		       00 08	   SND_BOOM   =	8
-     54  2100		       00 09	   SND_THUMP  =	9
-     55  2100		       00 0a	   SND_LASSO  =	10
-     56  2100		       00 0b	   SND_HIT    =	11
-     57  2100		       00 0c	   SND_KILL   =	12
-     58  2100		       00 0d	   SND_CHEW   =	13
-     59  2100		       00 0e	   SND_SLAM   =	14
-     60  2100		       00 0f	   SND_JET    =	15
-     61  2100
-     62  2100					      MAC	sound
-     63  2100					      lda	#{1}
-     64  2100					      jsr	SndPlay
-     65  2100					      ENDM		; play sound {1} (keeps X and Y)
-     66  2100
-     67  2100							;-------------------------------------------------------------------------------
-     68  2100				   LogicInit
-     69  2100					      SUBROUTINE
-     70  2100		       a9 01		      lda	#1
-     71  2102		       8d 5f f0 	      sta	W_rand
-     72  2105		       a9 00		      lda	#ST_ATTRACT
-     73  2107		       8d 5b f0 	      sta	W_state
-     74  210a		       a9 01		      lda	#1
-     75  210c		       8d 3f f0 	      sta	W_game
-     76  210f		       20 fa f1 	      jsr	ClearBoard
-     77  2112		       a9 20		      lda	#$20	; the status line shows GAME 1
-     78  2114		       8d 61 f0 	      sta	W_dirty
-     79  2117		       60		      rts
-     80  2118
-     81  2118							;-------------------------------------------------------------------------------
-     82  2118				   Logic
-     83  2118					      SUBROUTINE
-     84  2118		       20 d0 f2 	      jsr	Random
-     85  211b							; Game Reset starts a new game (on the press)
-     86  211b		       ad 82 02 	      lda	SWCHB
-     87  211e		       4a		      lsr
-     88  211f		       b0 10		      bcs	.noReset
-     89  2121		       ad d9 f0 	      lda	R_swPrev
-     90  2124		       d0 10		      bne	.input
-     91  2126		       a9 01		      lda	#1
-     92  2128		       8d 59 f0 	      sta	W_swPrev
-     93  212b		       20 47 f2 	      jsr	NewGame
-     94  212e		       4c 36 f1 	      jmp	.input
-     95  2131				   .noReset
-     96  2131		       a9 00		      lda	#0
-     97  2133		       8d 59 f0 	      sta	W_swPrev
-     98  2136				   .input
-     99  2136		       20 af f1 	      jsr	GameSelect
-    100  2139							; from wave 13: second-lap pace (bit 7) and shorter spawn gaps (bit 6);
-    101  2139							; the left difficulty on A: the shorter gaps from the start, and bit 5
-    102  2139							; (shorter still in the second lap)
-    103  2139		       ad 82 02 	      lda	SWCHB
-    104  213c		       29 40		      and	#$40
-    105  213e		       f0 02		      beq	.difficultyB
-    106  2140		       a9 60		      lda	#$60
-    107  2142				   .difficultyB
-    108  2142		       a8		      tay
-    109  2143		       ad d0 f0 	      lda	R_wave
-    110  2146		       c9 0d		      cmp	#13
-    111  2148		       98		      tya		; (keeps the carry)
-    112  2149		       90 02		      bcc	.fast
-    113  214b		       09 c0		      ora	#$C0
-    114  214d				   .fast
-    115  214d		       85 b9		      sta	fast
-    116  214f		       20 dc f2 	      jsr	ReadInput
-    117  2152		       ad db f0 	      lda	R_state
-    118  2155		       c9 01		      cmp	#ST_PLAY
-    119  2157		       f0 26		      beq	.play
-    120  2159		       c9 02		      cmp	#ST_OVER
-    121  215b		       f0 0a		      beq	.over
-    122  215d		       a5 b3		      lda	lt2	; attract: fire starts a game
-    123  215f		       10 42		      bpl	.finish
-    124  2161		       20 47 f2 	      jsr	NewGame
-    125  2164		       4c a3 f1 	      jmp	.finish
-    126  2167				   .over
-    127  2167		       ad dc f0 	      lda	R_overTimer	; game over: fire again after two seconds
-    128  216a		       f0 09		      beq	.overReady
-    129  216c		       38		      sec
-    130  216d		       e9 01		      sbc	#1
-    131  216f		       8d 5c f0 	      sta	W_overTimer
-    132  2172		       4c a3 f1 	      jmp	.finish
-    133  2175				   .overReady
-    134  2175		       a5 b3		      lda	lt2
-    135  2177		       10 2a		      bpl	.finish
-    136  2179		       20 47 f2 	      jsr	NewGame
-    137  217c		       4c a3 f1 	      jmp	.finish
-    138  217f				   .play
-    139  217f		       a9 00		      lda	#0
-    140  2181		       85 b0		      sta	KILLED
-    141  2183		       20 02 f3 	      jsr	Cursor
-    142  2186		       20 19 f5 	      jsr	Batteries
-    143  2189							; one frame's heavy work is bounded: the shots go first, and once an enemy
-    144  2189							; has died (KILLED) a jet hits one enemy, not two, an enemy waits an update
-    145  2189							; before reaching the toy box, and the spawner waits for the next frame
-    146  2189		       a5 9c		      lda	frame
-    147  218b		       4a		      lsr
-    148  218c		       b0 0c		      bcs	.odd
-    149  218e		       20 9b f9 	      jsr	Shots
-    150  2191		       20 13 f7 	      jsr	Enemies
-    151  2194		       20 68 f5 	      jsr	Spawner
-    152  2197		       4c a3 f1 	      jmp	.finish
-    153  219a				   .odd
-    154  219a		       20 13 f7 	      jsr	Enemies
-    155  219d		       20 c8 f8 	      jsr	Toys
-    156  21a0		       20 4d fa 	      jsr	Splash
-    157  21a3				   .finish
-    158  21a3				   Finish
-    159  21a3		       20 a1 fa 	      jsr	Flash
-    160  21a6		       a5 9c		      lda	frame	; odd frames (with the toys): the kernel's toy
-    161  21a8		       4a		      lsr		; pointers
-    162  21a9		       90 03		      bcc	.evenFinish
-    163  21ab		       4c ba fa 	      jmp	SlotPointers
-    164  21ae				   .evenFinish
-    165  21ae		       60		      rts
-    166  21af
-    167  21af							;-------------------------------------------------------------------------------
-    168  21af
-    169  21af							;-------------------------------------------------------------------------------
-    170  21af							; GameSelect: on the press, a game in progress (or over) ends and the
-    171  21af							; selection shows; pressed again, the next game (1-3). Reset or fire starts it.
-    172  21af				   GameSelect
-    173  21af					      SUBROUTINE
-    174  21af		       ad 82 02 	      lda	SWCHB
-    175  21b2		       29 02		      and	#$02
-    176  21b4		       d0 36		      bne	.released
-    177  21b6		       ad c0 f0 	      lda	R_selPrev
-    178  21b9		       d0 30		      bne	.done
-    179  21bb		       a9 01		      lda	#1
-    180  21bd		       8d 40 f0 	      sta	W_selPrev
-    181  21c0		       ad db f0 	      lda	R_state
-    182  21c3		       c9 00		      cmp	#ST_ATTRACT
-    183  21c5		       f0 0b		      beq	.next
-    184  21c7		       a9 00		      lda	#ST_ATTRACT
-    185  21c9		       8d 5b f0 	      sta	W_state
-    186  21cc		       20 fa f1 	      jsr	ClearBoard
-    187  21cf		       4c e1 f1 	      jmp	.show
-    188  21d2				   .next
-    189  21d2		       ad bf f0 	      lda	R_game
-    190  21d5		       18		      clc
-    191  21d6		       69 01		      adc	#1
-    192  21d8		       c9 04		      cmp	#4
-    193  21da		       90 02		      bcc	.set
-    194  21dc		       a9 01		      lda	#1
-    195  21de				   .set
-    196  21de		       8d 3f f0 	      sta	W_game
-    197  21e1				   .show
-    198  21e1		       a9 20		      lda	#$20
-    199  21e3		       8d 61 f0 	      sta	W_dirty
+     32  2100		       00 0a	   JACK_DMG   =	10	; a jack-in-the-box's spring: damage to each enemy
+     33  2100		       00 08	   JACK_REACH =	8	;   within this many pixels of the box's middle,
+     34  2100		       00 18	   JACK_THROW =	24	;   thrown this many pixels back up the shelf
+     35  2100		       00 f0	   TRICKLE    =	240	; frames per battery (one byte: at most 255)
+     36  2100		       00 01	   A_LAP2_HP  =	1	; extra health for every enemy in the second lap on difficulty A
+     37  2100		       00 96	   TRICKLE2   =	150	;   in the second lap (2.5 s)
+     38  2100		       00 00	   ST_ATTRACT =	0
+     39  2100		       00 01	   ST_PLAY    =	1
+     40  2100		       00 02	   ST_OVER    =	2
+     41  2100		       00 0e	   COL_WHITE  =	$0E
+     42  2100		       00 29	   BREACH_X   =	41	; an enemy left of this is at the toy box
+     43  2100		       00 28	   JET_X0     =	BREACH_X - 1	; where a jet takes off
+     44  2100
+     45  2100							; sound effects (ids into SndStart/SndChan/SndPri)
+     46  2100		       00 00	   SND_CURSOR =	0
+     47  2100		       00 01	   SND_SELECT =	1
+     48  2100		       00 02	   SND_PLACE  =	2
+     49  2100		       00 03	   SND_PICK   =	3
+     50  2100		       00 04	   SND_NOBATT =	4
+     51  2100		       00 05	   SND_WAVE   =	5
+     52  2100		       00 06	   SND_OVER   =	6
+     53  2100		       00 07	   SND_POP    =	7
+     54  2100		       00 08	   SND_BOOM   =	8
+     55  2100		       00 09	   SND_THUMP  =	9
+     56  2100		       00 0a	   SND_SPRING =	10
+     57  2100		       00 0b	   SND_HIT    =	11
+     58  2100		       00 0c	   SND_KILL   =	12
+     59  2100		       00 0d	   SND_CHEW   =	13
+     60  2100		       00 0e	   SND_SLAM   =	14
+     61  2100		       00 0f	   SND_JET    =	15
+     62  2100
+     63  2100					      MAC	sound
+     64  2100					      lda	#{1}
+     65  2100					      jsr	SndPlay
+     66  2100					      ENDM		; play sound {1} (keeps X and Y)
+     67  2100
+     68  2100							;-------------------------------------------------------------------------------
+     69  2100				   LogicInit
+     70  2100					      SUBROUTINE
+     71  2100		       a9 01		      lda	#1
+     72  2102		       8d 5f f0 	      sta	W_rand
+     73  2105		       a9 00		      lda	#ST_ATTRACT
+     74  2107		       8d 5b f0 	      sta	W_state
+     75  210a		       a9 01		      lda	#1
+     76  210c		       8d 3f f0 	      sta	W_game
+     77  210f		       20 fa f1 	      jsr	ClearBoard
+     78  2112		       a9 20		      lda	#$20	; the status line shows GAME 1
+     79  2114		       8d 61 f0 	      sta	W_dirty
+     80  2117		       60		      rts
+     81  2118
+     82  2118							;-------------------------------------------------------------------------------
+     83  2118				   Logic
+     84  2118					      SUBROUTINE
+     85  2118		       20 d0 f2 	      jsr	Random
+     86  211b							; Game Reset starts a new game (on the press)
+     87  211b		       ad 82 02 	      lda	SWCHB
+     88  211e		       4a		      lsr
+     89  211f		       b0 10		      bcs	.noReset
+     90  2121		       ad d9 f0 	      lda	R_swPrev
+     91  2124		       d0 10		      bne	.input
+     92  2126		       a9 01		      lda	#1
+     93  2128		       8d 59 f0 	      sta	W_swPrev
+     94  212b		       20 47 f2 	      jsr	NewGame
+     95  212e		       4c 36 f1 	      jmp	.input
+     96  2131				   .noReset
+     97  2131		       a9 00		      lda	#0
+     98  2133		       8d 59 f0 	      sta	W_swPrev
+     99  2136				   .input
+    100  2136		       20 af f1 	      jsr	GameSelect
+    101  2139							; from wave 13: second-lap pace (bit 7) and shorter spawn gaps (bit 6);
+    102  2139							; the left difficulty on A: the shorter gaps from the start, and bit 5
+    103  2139							; (shorter still in the second lap)
+    104  2139		       ad 82 02 	      lda	SWCHB
+    105  213c		       29 40		      and	#$40
+    106  213e		       f0 02		      beq	.difficultyB
+    107  2140		       a9 60		      lda	#$60
+    108  2142				   .difficultyB
+    109  2142		       a8		      tay
+    110  2143		       ad d0 f0 	      lda	R_wave
+    111  2146		       c9 0d		      cmp	#13
+    112  2148		       98		      tya		; (keeps the carry)
+    113  2149		       90 02		      bcc	.fast
+    114  214b		       09 c0		      ora	#$C0
+    115  214d				   .fast
+    116  214d		       85 b9		      sta	fast
+    117  214f		       20 dc f2 	      jsr	ReadInput
+    118  2152		       ad db f0 	      lda	R_state
+    119  2155		       c9 01		      cmp	#ST_PLAY
+    120  2157		       f0 26		      beq	.play
+    121  2159		       c9 02		      cmp	#ST_OVER
+    122  215b		       f0 0a		      beq	.over
+    123  215d		       a5 b3		      lda	lt2	; attract: fire starts a game
+    124  215f		       10 42		      bpl	.finish
+    125  2161		       20 47 f2 	      jsr	NewGame
+    126  2164		       4c a3 f1 	      jmp	.finish
+    127  2167				   .over
+    128  2167		       ad dc f0 	      lda	R_overTimer	; game over: fire again after two seconds
+    129  216a		       f0 09		      beq	.overReady
+    130  216c		       38		      sec
+    131  216d		       e9 01		      sbc	#1
+    132  216f		       8d 5c f0 	      sta	W_overTimer
+    133  2172		       4c a3 f1 	      jmp	.finish
+    134  2175				   .overReady
+    135  2175		       a5 b3		      lda	lt2
+    136  2177		       10 2a		      bpl	.finish
+    137  2179		       20 47 f2 	      jsr	NewGame
+    138  217c		       4c a3 f1 	      jmp	.finish
+    139  217f				   .play
+    140  217f		       a9 00		      lda	#0
+    141  2181		       85 b0		      sta	KILLED
+    142  2183		       20 02 f3 	      jsr	Cursor
+    143  2186		       20 19 f5 	      jsr	Batteries
+    144  2189							; one frame's heavy work is bounded: the shots go first, and once an enemy
+    145  2189							; has died (KILLED) a jet hits one enemy, not two, an enemy waits an update
+    146  2189							; before reaching the toy box, and the spawner waits for the next frame
+    147  2189		       a5 9c		      lda	frame
+    148  218b		       4a		      lsr
+    149  218c		       b0 0c		      bcs	.odd
+    150  218e		       20 93 f9 	      jsr	Shots
+    151  2191		       20 13 f7 	      jsr	Enemies
+    152  2194		       20 68 f5 	      jsr	Spawner
+    153  2197		       4c a3 f1 	      jmp	.finish
+    154  219a				   .odd
+    155  219a		       20 13 f7 	      jsr	Enemies
+    156  219d		       20 e8 f8 	      jsr	Toys
+    157  21a0		       20 45 fa 	      jsr	Splash
+    158  21a3				   .finish
+    159  21a3				   Finish
+    160  21a3		       20 bf fa 	      jsr	Flash
+    161  21a6		       a5 9c		      lda	frame	; odd frames (with the toys): the kernel's toy
+    162  21a8		       4a		      lsr		; pointers
+    163  21a9		       90 03		      bcc	.evenFinish
+    164  21ab		       4c d8 fa 	      jmp	SlotPointers
+    165  21ae				   .evenFinish
+    166  21ae		       60		      rts
+    167  21af
+    168  21af							;-------------------------------------------------------------------------------
+    169  21af
+    170  21af							;-------------------------------------------------------------------------------
+    171  21af							; GameSelect: on the press, a game in progress (or over) ends and the
+    172  21af							; selection shows; pressed again, the next game (1-3). Reset or fire starts it.
+    173  21af				   GameSelect
+    174  21af					      SUBROUTINE
+    175  21af		       ad 82 02 	      lda	SWCHB
+    176  21b2		       29 02		      and	#$02
+    177  21b4		       d0 36		      bne	.released
+    178  21b6		       ad c0 f0 	      lda	R_selPrev
+    179  21b9		       d0 30		      bne	.done
+    180  21bb		       a9 01		      lda	#1
+    181  21bd		       8d 40 f0 	      sta	W_selPrev
+    182  21c0		       ad db f0 	      lda	R_state
+    183  21c3		       c9 00		      cmp	#ST_ATTRACT
+    184  21c5		       f0 0b		      beq	.next
+    185  21c7		       a9 00		      lda	#ST_ATTRACT
+    186  21c9		       8d 5b f0 	      sta	W_state
+    187  21cc		       20 fa f1 	      jsr	ClearBoard
+    188  21cf		       4c e1 f1 	      jmp	.show
+    189  21d2				   .next
+    190  21d2		       ad bf f0 	      lda	R_game
+    191  21d5		       18		      clc
+    192  21d6		       69 01		      adc	#1
+    193  21d8		       c9 04		      cmp	#4
+    194  21da		       90 02		      bcc	.set
+    195  21dc		       a9 01		      lda	#1
+    196  21de				   .set
+    197  21de		       8d 3f f0 	      sta	W_game
+    198  21e1				   .show
+    199  21e1		       a9 20		      lda	#$20
+    200  21e3		       8d 61 f0 	      sta	W_dirty
       0  21e6					      SOUND	SND_SELECT
       1  21e6		       a9 01		      lda	#SND_SELECT
-      2  21e8		       20 86 fb 	      jsr	SndPlay
-    201  21eb				   .done
-    202  21eb		       60		      rts
-    203  21ec				   .released
-    204  21ec		       a9 00		      lda	#0
-    205  21ee		       8d 40 f0 	      sta	W_selPrev
-    206  21f1		       60		      rts
-    207  21f2
-    208  21f2		       00 01 05 09 GameWave   .byte.b	0, 1, 5, 9
-    209  21f6		       00 1e 32 46 GameBatt   .byte.b	0, 30, 50, 70
-    210  21fa
-    211  21fa							;-------------------------------------------------------------------------------
-    212  21fa				   ClearBoard
-    213  21fa					      SUBROUTINE
-    214  21fa		       a2 08		      ldx	#8
-    215  21fc				   .slots
-    216  21fc		       a9 00		      lda	#0
-    217  21fe		       9d 19 f0 	      sta	W_slotType,x
-    218  2201		       9d 22 f0 	      sta	W_slotHP,x
-    219  2204		       9d 2b f0 	      sta	W_slotCool,x
-    220  2207		       bd f7 fc 	      lda	EmptyLo,x	; and the kernel's pointer, right away
-    221  220a		       95 90		      sta	slotPtr,x
-    222  220c		       ca		      dex
-    223  220d		       10 ed		      bpl	.slots
-    224  220f		       a9 00		      lda	#0
-    225  2211		       a2 04		      ldx	#NENEMY-1
-    226  2213				   .enemies
-    227  2213		       9d 0a f0 	      sta	W_eType,x
-    228  2216		       9d 14 f0 	      sta	W_eState,x
-    229  2219		       ca		      dex
-    230  221a		       10 f7		      bpl	.enemies
-    231  221c		       a9 ff		      lda	#$FF
-    232  221e		       a2 04		      ldx	#NENEMY-1
-    233  2220				   .rows
-    234  2220		       95 9e		      sta	eTop,x
-    235  2222		       9d 05 f0 	      sta	W_eLane,x
-    236  2225		       ca		      dex
-    237  2226		       10 f8		      bpl	.rows
-    238  2228		       a9 00		      lda	#0
-    239  222a		       a2 02		      ldx	#2
-    240  222c		       8d 4b f0 	      sta	W_splashN
-    241  222f		       8d 4c f0 	      sta	W_bag
-    242  2232				   .shots
-    243  2232		       a9 00		      lda	#0
-    244  2234		       9d 43 f0 	      sta	W_shotDmg,x
-    245  2237		       a9 50		      lda	#80	; 80 = no shot (the pointer reads zeros)
-    246  2239		       95 99		      sta	shotPtr,x
-    247  223b		       ca		      dex
-    248  223c		       10 f4		      bpl	.shots
-    249  223e		       a9 00		      lda	#0
-    250  2240		       8d 60 f0 	      sta	W_flash
-    251  2243		       8d 3c f0 	      sta	W_packLeft
-    252  2246		       60		      rts
-    253  2247
-    254  2247				   NewGame
-    255  2247					      SUBROUTINE
-    256  2247		       20 fa f1 	      jsr	ClearBoard
-    257  224a		       a9 00		      lda	#0
-    258  224c		       8d 4d f0 	      sta	W_score
-    259  224f		       8d 4e f0 	      sta	W_score+1
-    260  2252		       8d 4f f0 	      sta	W_score+2
-    261  2255		       8d 5a f0 	      sta	W_lids
-    262  2258		       8d 52 f0 	      sta	W_battTimer
-    263  225b		       8d 57 f0 	      sta	W_repeat
-    264  225e		       8d 58 f0 	      sta	W_fireState
-    265  2261		       ae bf f0 	      ldx	R_game	; games 2 and 3 start later, with more batteries
-    266  2264		       bd f6 f1 	      lda	GameBatt,x
-    267  2267		       8d 51 f0 	      sta	W_batt
-    268  226a		       bd f2 f1 	      lda	GameWave,x
-    269  226d		       8d 50 f0 	      sta	W_wave
-    270  2270		       a9 01		      lda	#1
-    271  2272		       8d 54 f0 	      sta	W_toy
-    272  2275		       a9 03		      lda	#3	; cursor on the middle shelf, first column
-    273  2277		       8d 53 f0 	      sta	W_cursor
-    274  227a		       a9 01		      lda	#ST_PLAY
-    275  227c		       8d 5b f0 	      sta	W_state
-    276  227f		       a9 80		      lda	#$80	; fire counts as held: the press that started the game does nothing
-    277  2281		       8d 56 f0 	      sta	W_input
-    278  2284		       a9 07		      lda	#7
-    279  2286		       8d 61 f0 	      sta	W_dirty
-    280  2289		       4c 8c f2 	      jmp	StartWave
-    281  228c
-    282  228c							; StartWave: set up the wave in W_wave (enemy count, the toys unlocked)
-    283  228c				   StartWave
-    284  228c					      SUBROUTINE
-    285  228c		       20 bf f2 	      jsr	WaveIndex
-    286  228f		       bd 70 fc 	      lda	WaveCount,x
-    287  2292		       8d 5d f0 	      sta	W_spawnLeft
-    288  2295		       bd 7c fc 	      lda	WaveBoss,x
-    289  2298		       8d 3b f0 	      sta	W_bossLeft
-    290  229b		       a9 5a		      lda	#90	; a three-second breather (ticks of 2 frames)
-    291  229d		       8d 5e f0 	      sta	W_spawnTimer
-    292  22a0		       ad d0 f0 	      lda	R_wave
-    293  22a3		       c9 0d		      cmp	#13
-    294  22a5		       90 04		      bcc	.lap1
-    295  22a7		       a9 06		      lda	#TOY_JET	; second lap and later: every toy
-    296  22a9		       d0 03		      bne	.unlock
-    297  22ab				   .lap1
-    298  22ab		       bd ac fc 	      lda	WaveUnlock,x
-    299  22ae				   .unlock
-    300  22ae		       8d 55 f0 	      sta	W_unlock
-    301  22b1		       ad e1 f0 	      lda	R_dirty
-    302  22b4		       09 04		      ora	#4
-    303  22b6		       8d 61 f0 	      sta	W_dirty
+      2  21e8		       20 a4 fb 	      jsr	SndPlay
+    202  21eb				   .done
+    203  21eb		       60		      rts
+    204  21ec				   .released
+    205  21ec		       a9 00		      lda	#0
+    206  21ee		       8d 40 f0 	      sta	W_selPrev
+    207  21f1		       60		      rts
+    208  21f2
+    209  21f2		       00 01 05 09 GameWave   .byte.b	0, 1, 5, 9
+    210  21f6		       00 1e 32 46 GameBatt   .byte.b	0, 30, 50, 70
+    211  21fa
+    212  21fa							;-------------------------------------------------------------------------------
+    213  21fa				   ClearBoard
+    214  21fa					      SUBROUTINE
+    215  21fa		       a2 08		      ldx	#8
+    216  21fc				   .slots
+    217  21fc		       a9 00		      lda	#0
+    218  21fe		       9d 19 f0 	      sta	W_slotType,x
+    219  2201		       9d 22 f0 	      sta	W_slotHP,x
+    220  2204		       9d 2b f0 	      sta	W_slotCool,x
+    221  2207		       bd 15 fd 	      lda	EmptyLo,x	; and the kernel's pointer, right away
+    222  220a		       95 90		      sta	slotPtr,x
+    223  220c		       ca		      dex
+    224  220d		       10 ed		      bpl	.slots
+    225  220f		       a9 00		      lda	#0
+    226  2211		       a2 04		      ldx	#NENEMY-1
+    227  2213				   .enemies
+    228  2213		       9d 0a f0 	      sta	W_eType,x
+    229  2216		       9d 14 f0 	      sta	W_eState,x
+    230  2219		       ca		      dex
+    231  221a		       10 f7		      bpl	.enemies
+    232  221c		       a9 ff		      lda	#$FF
+    233  221e		       a2 04		      ldx	#NENEMY-1
+    234  2220				   .rows
+    235  2220		       95 9e		      sta	eTop,x
+    236  2222		       9d 05 f0 	      sta	W_eLane,x
+    237  2225		       ca		      dex
+    238  2226		       10 f8		      bpl	.rows
+    239  2228		       a9 00		      lda	#0
+    240  222a		       a2 02		      ldx	#2
+    241  222c		       8d 4b f0 	      sta	W_splashN
+    242  222f		       8d 4c f0 	      sta	W_bag
+    243  2232				   .shots
+    244  2232		       a9 00		      lda	#0
+    245  2234		       9d 43 f0 	      sta	W_shotDmg,x
+    246  2237		       a9 50		      lda	#80	; 80 = no shot (the pointer reads zeros)
+    247  2239		       95 99		      sta	shotPtr,x
+    248  223b		       ca		      dex
+    249  223c		       10 f4		      bpl	.shots
+    250  223e		       a9 00		      lda	#0
+    251  2240		       8d 60 f0 	      sta	W_flash
+    252  2243		       8d 3c f0 	      sta	W_packLeft
+    253  2246		       60		      rts
+    254  2247
+    255  2247				   NewGame
+    256  2247					      SUBROUTINE
+    257  2247		       20 fa f1 	      jsr	ClearBoard
+    258  224a		       a9 00		      lda	#0
+    259  224c		       8d 4d f0 	      sta	W_score
+    260  224f		       8d 4e f0 	      sta	W_score+1
+    261  2252		       8d 4f f0 	      sta	W_score+2
+    262  2255		       8d 5a f0 	      sta	W_lids
+    263  2258		       8d 52 f0 	      sta	W_battTimer
+    264  225b		       8d 57 f0 	      sta	W_repeat
+    265  225e		       8d 58 f0 	      sta	W_fireState
+    266  2261		       ae bf f0 	      ldx	R_game	; games 2 and 3 start later, with more batteries
+    267  2264		       bd f6 f1 	      lda	GameBatt,x
+    268  2267		       8d 51 f0 	      sta	W_batt
+    269  226a		       bd f2 f1 	      lda	GameWave,x
+    270  226d		       8d 50 f0 	      sta	W_wave
+    271  2270		       a9 01		      lda	#1
+    272  2272		       8d 54 f0 	      sta	W_toy
+    273  2275		       a9 03		      lda	#3	; cursor on the middle shelf, first column
+    274  2277		       8d 53 f0 	      sta	W_cursor
+    275  227a		       a9 01		      lda	#ST_PLAY
+    276  227c		       8d 5b f0 	      sta	W_state
+    277  227f		       a9 80		      lda	#$80	; fire counts as held: the press that started the game does nothing
+    278  2281		       8d 56 f0 	      sta	W_input
+    279  2284		       a9 07		      lda	#7
+    280  2286		       8d 61 f0 	      sta	W_dirty
+    281  2289		       4c 8c f2 	      jmp	StartWave
+    282  228c
+    283  228c							; StartWave: set up the wave in W_wave (enemy count, the toys unlocked)
+    284  228c				   StartWave
+    285  228c					      SUBROUTINE
+    286  228c		       20 bf f2 	      jsr	WaveIndex
+    287  228f		       bd 8e fc 	      lda	WaveCount,x
+    288  2292		       8d 5d f0 	      sta	W_spawnLeft
+    289  2295		       bd 9a fc 	      lda	WaveBoss,x
+    290  2298		       8d 3b f0 	      sta	W_bossLeft
+    291  229b		       a9 5a		      lda	#90	; a three-second breather (ticks of 2 frames)
+    292  229d		       8d 5e f0 	      sta	W_spawnTimer
+    293  22a0		       ad d0 f0 	      lda	R_wave
+    294  22a3		       c9 0d		      cmp	#13
+    295  22a5		       90 04		      bcc	.lap1
+    296  22a7		       a9 06		      lda	#TOY_JET	; second lap and later: every toy
+    297  22a9		       d0 03		      bne	.unlock
+    298  22ab				   .lap1
+    299  22ab		       bd ca fc 	      lda	WaveUnlock,x
+    300  22ae				   .unlock
+    301  22ae		       8d 55 f0 	      sta	W_unlock
+    302  22b1		       ad e1 f0 	      lda	R_dirty
+    303  22b4		       09 04		      ora	#4
+    304  22b6		       8d 61 f0 	      sta	W_dirty
       0  22b9					      SOUND	SND_WAVE
       1  22b9		       a9 05		      lda	#SND_WAVE
-      2  22bb		       20 86 fb 	      jsr	SndPlay
-    305  22be		       60		      rts
-    306  22bf
-    307  22bf				   WaveIndex		; X = (wave - 1) mod 12
-    308  22bf					      SUBROUTINE
-    309  22bf		       ad d0 f0 	      lda	R_wave
-    310  22c2		       38		      sec
-    311  22c3		       e9 01		      sbc	#1
-    312  22c5				   .mod
-    313  22c5		       c9 0c		      cmp	#12
-    314  22c7		       90 05		      bcc	.done
-    315  22c9		       e9 0c		      sbc	#12
-    316  22cb		       4c c5 f2 	      jmp	.mod
-    317  22ce				   .done
-    318  22ce		       aa		      tax
-    319  22cf		       60		      rts
-    320  22d0
-    321  22d0							;-------------------------------------------------------------------------------
-    322  22d0				   Random		; 8-bit Galois LFSR
-    323  22d0					      SUBROUTINE
-    324  22d0		       ad df f0 	      lda	R_rand
-    325  22d3		       4a		      lsr
-    326  22d4		       90 02		      bcc	.noEor
-    327  22d6		       49 b4		      eor	#$B4
-    328  22d8				   .noEor
-    329  22d8		       8d 5f f0 	      sta	W_rand
-    330  22db		       60		      rts
-    331  22dc
-    332  22dc							; ReadInput: lt1 = this frame's input (bits 3-0 right left down up, bit 7
-    333  22dc							; fire; 1 = pressed), lt2 = pressed since last frame, lt3 = last frame's
-    334  22dc				   ReadInput
-    335  22dc					      SUBROUTINE
-    336  22dc		       ad 80 02 	      lda	SWCHA
-    337  22df		       49 ff		      eor	#$FF
-    338  22e1		       4a		      lsr
-    339  22e2		       4a		      lsr
-    340  22e3		       4a		      lsr
-    341  22e4		       4a		      lsr
-    342  22e5		       85 b2		      sta	lt1
-    343  22e7		       a5 0c		      lda	INPT4
-    344  22e9		       30 06		      bmi	.noFire
-    345  22eb		       a5 b2		      lda	lt1
-    346  22ed		       09 80		      ora	#$80
-    347  22ef		       85 b2		      sta	lt1
-    348  22f1				   .noFire
-    349  22f1		       ad d6 f0 	      lda	R_input
-    350  22f4		       85 b4		      sta	lt3
-    351  22f6		       49 ff		      eor	#$FF
-    352  22f8		       25 b2		      and	lt1
-    353  22fa		       85 b3		      sta	lt2
-    354  22fc		       a5 b2		      lda	lt1
-    355  22fe		       8d 56 f0 	      sta	W_input
-    356  2301		       60		      rts
-    357  2302
-    358  2302							;-------------------------------------------------------------------------------
-    359  2302							; Cursor: the joystick moves the cursor over the nine slots (auto-repeat
-    360  2302							; when held). Holding fire, left/right choose the toy instead; releasing fire
-    361  2302							; without having changed toys places the toy (or picks one up).
-    362  2302				   Cursor
-    363  2302					      SUBROUTINE
-    364  2302		       a5 b3		      lda	lt2
-    365  2304		       10 05		      bpl	.noPress
-    366  2306		       a9 01		      lda	#1
-    367  2308		       8d 58 f0 	      sta	W_fireState
-    368  230b				   .noPress
-    369  230b		       a5 b2		      lda	lt1
-    370  230d		       10 1b		      bpl	.notHeld
-    371  230f		       a5 b3		      lda	lt2
-    372  2311		       29 08		      and	#$08
-    373  2313		       f0 06		      beq	.noNext
-    374  2315		       20 a4 f3 	      jsr	NextToy
-    375  2318		       4c 24 f3 	      jmp	.changed
-    376  231b				   .noNext
-    377  231b		       a5 b3		      lda	lt2
-    378  231d		       29 04		      and	#$04
-    379  231f		       f0 08		      beq	.heldDone
-    380  2321		       20 bc f3 	      jsr	PrevToy
-    381  2324				   .changed
-    382  2324		       a9 02		      lda	#2
-    383  2326		       8d 58 f0 	      sta	W_fireState
-    384  2329				   .heldDone
-    385  2329		       60		      rts
-    386  232a				   .notHeld
-    387  232a		       a5 b4		      lda	lt3
-    388  232c		       10 0f		      bpl	.move	; fire wasn't down last frame
-    389  232e		       ad d8 f0 	      lda	R_fireState
-    390  2331		       c9 01		      cmp	#1
-    391  2333		       d0 03		      bne	.clear
-    392  2335		       20 d0 f3 	      jsr	Act
-    393  2338				   .clear
-    394  2338		       a9 00		      lda	#0
-    395  233a		       8d 58 f0 	      sta	W_fireState
-    396  233d				   .move
-    397  233d		       a5 b2		      lda	lt1
-    398  233f		       29 0f		      and	#$0F
-    399  2341		       d0 06		      bne	.dir
-    400  2343		       a9 00		      lda	#0
-    401  2345		       8d 57 f0 	      sta	W_repeat
-    402  2348		       60		      rts
-    403  2349				   .dir
-    404  2349		       a5 b3		      lda	lt2
-    405  234b		       29 0f		      and	#$0F
-    406  234d		       f0 0a		      beq	.held
-    407  234f		       a9 12		      lda	#18	; first repeat after 18 frames
-    408  2351		       8d 57 f0 	      sta	W_repeat
-    409  2354		       a5 b3		      lda	lt2
-    410  2356		       4c 6b f3 	      jmp	.step
-    411  2359				   .held
-    412  2359		       ad d7 f0 	      lda	R_repeat
-    413  235c		       38		      sec
-    414  235d		       e9 01		      sbc	#1
-    415  235f		       8d 57 f0 	      sta	W_repeat
-    416  2362		       d0 3f		      bne	.done
-    417  2364		       a9 06		      lda	#6	; then every 6
-    418  2366		       8d 57 f0 	      sta	W_repeat
-    419  2369		       a5 b2		      lda	lt1
-    420  236b				   .step
-    421  236b		       ae d3 f0 	      ldx	R_cursor
-    422  236e		       4a		      lsr
-    423  236f		       90 07		      bcc	.noUp
-    424  2371		       e0 03		      cpx	#3
-    425  2373		       90 03		      bcc	.noUp
-    426  2375		       ca		      dex
-    427  2376		       ca		      dex
-    428  2377		       ca		      dex
-    429  2378				   .noUp
-    430  2378		       4a		      lsr
-    431  2379		       90 07		      bcc	.noDown
-    432  237b		       e0 06		      cpx	#6
-    433  237d		       b0 03		      bcs	.noDown
-    434  237f		       e8		      inx
-    435  2380		       e8		      inx
-    436  2381		       e8		      inx
-    437  2382				   .noDown
-    438  2382		       4a		      lsr
-    439  2383		       90 06		      bcc	.noLeft
-    440  2385		       bc 09 fd 	      ldy	SlotCol,x
-    441  2388		       f0 01		      beq	.noLeft
-    442  238a		       ca		      dex
-    443  238b				   .noLeft
-    444  238b		       4a		      lsr
-    445  238c		       90 08		      bcc	.noRight
-    446  238e		       bc 09 fd 	      ldy	SlotCol,x
-    447  2391		       c0 02		      cpy	#2
-    448  2393		       f0 01		      beq	.noRight
-    449  2395		       e8		      inx
-    450  2396				   .noRight
-    451  2396		       ec d3 f0 	      cpx	R_cursor
-    452  2399		       f0 05		      beq	.same
+      2  22bb		       20 a4 fb 	      jsr	SndPlay
+    306  22be		       60		      rts
+    307  22bf
+    308  22bf				   WaveIndex		; X = (wave - 1) mod 12
+    309  22bf					      SUBROUTINE
+    310  22bf		       ad d0 f0 	      lda	R_wave
+    311  22c2		       38		      sec
+    312  22c3		       e9 01		      sbc	#1
+    313  22c5				   .mod
+    314  22c5		       c9 0c		      cmp	#12
+    315  22c7		       90 05		      bcc	.done
+    316  22c9		       e9 0c		      sbc	#12
+    317  22cb		       4c c5 f2 	      jmp	.mod
+    318  22ce				   .done
+    319  22ce		       aa		      tax
+    320  22cf		       60		      rts
+    321  22d0
+    322  22d0							;-------------------------------------------------------------------------------
+    323  22d0				   Random		; 8-bit Galois LFSR
+    324  22d0					      SUBROUTINE
+    325  22d0		       ad df f0 	      lda	R_rand
+    326  22d3		       4a		      lsr
+    327  22d4		       90 02		      bcc	.noEor
+    328  22d6		       49 b4		      eor	#$B4
+    329  22d8				   .noEor
+    330  22d8		       8d 5f f0 	      sta	W_rand
+    331  22db		       60		      rts
+    332  22dc
+    333  22dc							; ReadInput: lt1 = this frame's input (bits 3-0 right left down up, bit 7
+    334  22dc							; fire; 1 = pressed), lt2 = pressed since last frame, lt3 = last frame's
+    335  22dc				   ReadInput
+    336  22dc					      SUBROUTINE
+    337  22dc		       ad 80 02 	      lda	SWCHA
+    338  22df		       49 ff		      eor	#$FF
+    339  22e1		       4a		      lsr
+    340  22e2		       4a		      lsr
+    341  22e3		       4a		      lsr
+    342  22e4		       4a		      lsr
+    343  22e5		       85 b2		      sta	lt1
+    344  22e7		       a5 0c		      lda	INPT4
+    345  22e9		       30 06		      bmi	.noFire
+    346  22eb		       a5 b2		      lda	lt1
+    347  22ed		       09 80		      ora	#$80
+    348  22ef		       85 b2		      sta	lt1
+    349  22f1				   .noFire
+    350  22f1		       ad d6 f0 	      lda	R_input
+    351  22f4		       85 b4		      sta	lt3
+    352  22f6		       49 ff		      eor	#$FF
+    353  22f8		       25 b2		      and	lt1
+    354  22fa		       85 b3		      sta	lt2
+    355  22fc		       a5 b2		      lda	lt1
+    356  22fe		       8d 56 f0 	      sta	W_input
+    357  2301		       60		      rts
+    358  2302
+    359  2302							;-------------------------------------------------------------------------------
+    360  2302							; Cursor: the joystick moves the cursor over the nine slots (auto-repeat
+    361  2302							; when held). Holding fire, left/right choose the toy instead; releasing fire
+    362  2302							; without having changed toys places the toy (or picks one up).
+    363  2302				   Cursor
+    364  2302					      SUBROUTINE
+    365  2302		       a5 b3		      lda	lt2
+    366  2304		       10 05		      bpl	.noPress
+    367  2306		       a9 01		      lda	#1
+    368  2308		       8d 58 f0 	      sta	W_fireState
+    369  230b				   .noPress
+    370  230b		       a5 b2		      lda	lt1
+    371  230d		       10 1b		      bpl	.notHeld
+    372  230f		       a5 b3		      lda	lt2
+    373  2311		       29 08		      and	#$08
+    374  2313		       f0 06		      beq	.noNext
+    375  2315		       20 a4 f3 	      jsr	NextToy
+    376  2318		       4c 24 f3 	      jmp	.changed
+    377  231b				   .noNext
+    378  231b		       a5 b3		      lda	lt2
+    379  231d		       29 04		      and	#$04
+    380  231f		       f0 08		      beq	.heldDone
+    381  2321		       20 bc f3 	      jsr	PrevToy
+    382  2324				   .changed
+    383  2324		       a9 02		      lda	#2
+    384  2326		       8d 58 f0 	      sta	W_fireState
+    385  2329				   .heldDone
+    386  2329		       60		      rts
+    387  232a				   .notHeld
+    388  232a		       a5 b4		      lda	lt3
+    389  232c		       10 0f		      bpl	.move	; fire wasn't down last frame
+    390  232e		       ad d8 f0 	      lda	R_fireState
+    391  2331		       c9 01		      cmp	#1
+    392  2333		       d0 03		      bne	.clear
+    393  2335		       20 d0 f3 	      jsr	Act
+    394  2338				   .clear
+    395  2338		       a9 00		      lda	#0
+    396  233a		       8d 58 f0 	      sta	W_fireState
+    397  233d				   .move
+    398  233d		       a5 b2		      lda	lt1
+    399  233f		       29 0f		      and	#$0F
+    400  2341		       d0 06		      bne	.dir
+    401  2343		       a9 00		      lda	#0
+    402  2345		       8d 57 f0 	      sta	W_repeat
+    403  2348		       60		      rts
+    404  2349				   .dir
+    405  2349		       a5 b3		      lda	lt2
+    406  234b		       29 0f		      and	#$0F
+    407  234d		       f0 0a		      beq	.held
+    408  234f		       a9 12		      lda	#18	; first repeat after 18 frames
+    409  2351		       8d 57 f0 	      sta	W_repeat
+    410  2354		       a5 b3		      lda	lt2
+    411  2356		       4c 6b f3 	      jmp	.step
+    412  2359				   .held
+    413  2359		       ad d7 f0 	      lda	R_repeat
+    414  235c		       38		      sec
+    415  235d		       e9 01		      sbc	#1
+    416  235f		       8d 57 f0 	      sta	W_repeat
+    417  2362		       d0 3f		      bne	.done
+    418  2364		       a9 06		      lda	#6	; then every 6
+    419  2366		       8d 57 f0 	      sta	W_repeat
+    420  2369		       a5 b2		      lda	lt1
+    421  236b				   .step
+    422  236b		       ae d3 f0 	      ldx	R_cursor
+    423  236e		       4a		      lsr
+    424  236f		       90 07		      bcc	.noUp
+    425  2371		       e0 03		      cpx	#3
+    426  2373		       90 03		      bcc	.noUp
+    427  2375		       ca		      dex
+    428  2376		       ca		      dex
+    429  2377		       ca		      dex
+    430  2378				   .noUp
+    431  2378		       4a		      lsr
+    432  2379		       90 07		      bcc	.noDown
+    433  237b		       e0 06		      cpx	#6
+    434  237d		       b0 03		      bcs	.noDown
+    435  237f		       e8		      inx
+    436  2380		       e8		      inx
+    437  2381		       e8		      inx
+    438  2382				   .noDown
+    439  2382		       4a		      lsr
+    440  2383		       90 06		      bcc	.noLeft
+    441  2385		       bc 27 fd 	      ldy	SlotCol,x
+    442  2388		       f0 01		      beq	.noLeft
+    443  238a		       ca		      dex
+    444  238b				   .noLeft
+    445  238b		       4a		      lsr
+    446  238c		       90 08		      bcc	.noRight
+    447  238e		       bc 27 fd 	      ldy	SlotCol,x
+    448  2391		       c0 02		      cpy	#2
+    449  2393		       f0 01		      beq	.noRight
+    450  2395		       e8		      inx
+    451  2396				   .noRight
+    452  2396		       ec d3 f0 	      cpx	R_cursor
+    453  2399		       f0 05		      beq	.same
       0  239b					      SOUND	SND_CURSOR
       1  239b		       a9 00		      lda	#SND_CURSOR
-      2  239d		       20 86 fb 	      jsr	SndPlay
-    454  23a0				   .same
-    455  23a0		       8e 53 f0 	      stx	W_cursor
-    456  23a3				   .done
-    457  23a3		       60		      rts
-    458  23a4
-    459  23a4				   NextToy
-    460  23a4					      SUBROUTINE
-    461  23a4		       ad d4 f0 	      lda	R_toy
-    462  23a7		       18		      clc
-    463  23a8		       69 01		      adc	#1
-    464  23aa		       cd d5 f0 	      cmp	R_unlock
-    465  23ad		       f0 04		      beq	.ok
-    466  23af		       90 02		      bcc	.ok
-    467  23b1		       a9 01		      lda	#1
-    468  23b3				   .ok
-    469  23b3		       8d 54 f0 	      sta	W_toy
+      2  239d		       20 a4 fb 	      jsr	SndPlay
+    455  23a0				   .same
+    456  23a0		       8e 53 f0 	      stx	W_cursor
+    457  23a3				   .done
+    458  23a3		       60		      rts
+    459  23a4
+    460  23a4				   NextToy
+    461  23a4					      SUBROUTINE
+    462  23a4		       ad d4 f0 	      lda	R_toy
+    463  23a7		       18		      clc
+    464  23a8		       69 01		      adc	#1
+    465  23aa		       cd d5 f0 	      cmp	R_unlock
+    466  23ad		       f0 04		      beq	.ok
+    467  23af		       90 02		      bcc	.ok
+    468  23b1		       a9 01		      lda	#1
+    469  23b3				   .ok
+    470  23b3		       8d 54 f0 	      sta	W_toy
       0  23b6					      SOUND	SND_SELECT
       1  23b6		       a9 01		      lda	#SND_SELECT
-      2  23b8		       20 86 fb 	      jsr	SndPlay
-    471  23bb		       60		      rts
-    472  23bc
-    473  23bc				   PrevToy
-    474  23bc					      SUBROUTINE
-    475  23bc		       ad d4 f0 	      lda	R_toy
-    476  23bf		       38		      sec
-    477  23c0		       e9 01		      sbc	#1
-    478  23c2		       d0 03		      bne	.ok
-    479  23c4		       ad d5 f0 	      lda	R_unlock
-    480  23c7				   .ok
-    481  23c7		       8d 54 f0 	      sta	W_toy
+      2  23b8		       20 a4 fb 	      jsr	SndPlay
+    472  23bb		       60		      rts
+    473  23bc
+    474  23bc				   PrevToy
+    475  23bc					      SUBROUTINE
+    476  23bc		       ad d4 f0 	      lda	R_toy
+    477  23bf		       38		      sec
+    478  23c0		       e9 01		      sbc	#1
+    479  23c2		       d0 03		      bne	.ok
+    480  23c4		       ad d5 f0 	      lda	R_unlock
+    481  23c7				   .ok
+    482  23c7		       8d 54 f0 	      sta	W_toy
       0  23ca					      SOUND	SND_SELECT
       1  23ca		       a9 01		      lda	#SND_SELECT
-      2  23cc		       20 86 fb 	      jsr	SndPlay
-    483  23cf		       60		      rts
-    484  23d0
-    485  23d0							; Act: on the cursor's slot, place the chosen toy (if there are batteries
-    486  23d0							; for it, and no monster stands there) or pick up the toy there (half its
-    487  23d0							; cost back)
-    488  23d0				   Act
-    489  23d0					      SUBROUTINE
-    490  23d0		       ae d3 f0 	      ldx	R_cursor
-    491  23d3		       bd 99 f0 	      lda	R_slotType,x
-    492  23d6		       f0 17		      beq	.place
-    493  23d8		       a8		      tay
-    494  23d9		       b9 e0 fb 	      lda	ToyCost,y
-    495  23dc		       4a		      lsr
-    496  23dd		       18		      clc
-    497  23de		       6d d1 f0 	      adc	R_batt
-    498  23e1		       20 9a f4 	      jsr	SetBatt
-    499  23e4		       a9 00		      lda	#0
-    500  23e6		       9d 19 f0 	      sta	W_slotType,x
+      2  23cc		       20 a4 fb 	      jsr	SndPlay
+    484  23cf		       60		      rts
+    485  23d0
+    486  23d0							; Act: on the cursor's slot, place the chosen toy (if there are batteries
+    487  23d0							; for it, and no monster stands there) or pick up the toy there (half its
+    488  23d0							; cost back)
+    489  23d0				   Act
+    490  23d0					      SUBROUTINE
+    491  23d0		       ae d3 f0 	      ldx	R_cursor
+    492  23d3		       bd 99 f0 	      lda	R_slotType,x
+    493  23d6		       f0 17		      beq	.place
+    494  23d8		       a8		      tay
+    495  23d9		       b9 fe fb 	      lda	ToyCost,y
+    496  23dc		       4a		      lsr
+    497  23dd		       18		      clc
+    498  23de		       6d d1 f0 	      adc	R_batt
+    499  23e1		       20 9a f4 	      jsr	SetBatt
+    500  23e4		       a9 00		      lda	#0
+    501  23e6		       9d 19 f0 	      sta	W_slotType,x
       0  23e9					      SOUND	SND_PICK
       1  23e9		       a9 03		      lda	#SND_PICK
-      2  23eb		       20 86 fb 	      jsr	SndPlay
-    502  23ee		       60		      rts
-    503  23ef				   .place
-    504  23ef		       ac d4 f0 	      ldy	R_toy
-    505  23f2		       c0 06		      cpy	#TOY_JET
-    506  23f4		       f0 05		      beq	.afford	; (a jet takes off: it never stands there)
-    507  23f6		       20 28 f4 	      jsr	Occupied
-    508  23f9		       b0 27		      bcs	.cant	; a toy can't go down on a monster
-    509  23fb				   .afford
-    510  23fb		       ad d1 f0 	      lda	R_batt
-    511  23fe		       d9 e0 fb 	      cmp	ToyCost,y
-    512  2401		       90 1f		      bcc	.cant
-    513  2403		       f9 e0 fb 	      sbc	ToyCost,y
-    514  2406		       20 9a f4 	      jsr	SetBatt
-    515  2409		       c0 06		      cpy	#TOY_JET
-    516  240b		       f0 50		      beq	JetStrike
-    517  240d		       98		      tya
-    518  240e		       9d 19 f0 	      sta	W_slotType,x
-    519  2411		       b9 e7 fb 	      lda	ToyHP,y
-    520  2414		       9d 22 f0 	      sta	W_slotHP,x
-    521  2417		       a9 05		      lda	#5	; first action after 30 frames
-    522  2419		       9d 2b f0 	      sta	W_slotCool,x
+      2  23eb		       20 a4 fb 	      jsr	SndPlay
+    503  23ee		       60		      rts
+    504  23ef				   .place
+    505  23ef		       ac d4 f0 	      ldy	R_toy
+    506  23f2		       c0 06		      cpy	#TOY_JET
+    507  23f4		       f0 05		      beq	.afford	; (a jet takes off: it never stands there)
+    508  23f6		       20 28 f4 	      jsr	Occupied
+    509  23f9		       b0 27		      bcs	.cant	; a toy can't go down on a monster
+    510  23fb				   .afford
+    511  23fb		       ad d1 f0 	      lda	R_batt
+    512  23fe		       d9 fe fb 	      cmp	ToyCost,y
+    513  2401		       90 1f		      bcc	.cant
+    514  2403		       f9 fe fb 	      sbc	ToyCost,y
+    515  2406		       20 9a f4 	      jsr	SetBatt
+    516  2409		       c0 06		      cpy	#TOY_JET
+    517  240b		       f0 50		      beq	JetStrike
+    518  240d		       98		      tya
+    519  240e		       9d 19 f0 	      sta	W_slotType,x
+    520  2411		       b9 05 fc 	      lda	ToyHP,y
+    521  2414		       9d 22 f0 	      sta	W_slotHP,x
+    522  2417		       a9 05		      lda	#5	; first action after 30 frames
+    523  2419		       9d 2b f0 	      sta	W_slotCool,x
       0  241c					      SOUND	SND_PLACE
       1  241c		       a9 02		      lda	#SND_PLACE
-      2  241e		       20 86 fb 	      jsr	SndPlay
-    524  2421		       60		      rts
-    525  2422				   .cant
+      2  241e		       20 a4 fb 	      jsr	SndPlay
+    525  2421		       60		      rts
+    526  2422				   .cant
       0  2422					      SOUND	SND_NOBATT
       1  2422		       a9 04		      lda	#SND_NOBATT
-      2  2424		       20 86 fb 	      jsr	SndPlay
-    527  2427		       60		      rts
-    528  2428
-    529  2428							; Occupied (X = slot; keeps X and Y): carry set if a monster (not the
-    530  2428							; balloon clown, which floats over) stands on it,
-    531  2428							; where the toy would stop it (the toy's x to x + 8). Without this a toy
-    532  2428							; dropped on a monster, or put back each time it is eaten, could hold the
-    533  2428							; monster out of every shot's reach for good, and the wave would never end.
-    534  2428				   Occupied
-    535  2428					      SUBROUTINE
-    536  2428		       84 b1		      sty	lt0
-    537  242a		       bd 09 fd 	      lda	SlotCol,x
-    538  242d		       a8		      tay
-    539  242e		       b9 12 fd 	      lda	ColX,y
-    540  2431		       85 b6		      sta	lt5	; the toy's x
-    541  2433		       bd 00 fd 	      lda	SlotLane,x
-    542  2436		       85 b5		      sta	lt4
-    543  2438		       a0 04		      ldy	#NENEMY-1
-    544  243a				   .loop
-    545  243a		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF, a jet's 4-6)
-    546  243d		       c5 b5		      cmp	lt4
-    547  243f		       d0 11		      bne	.next
-    548  2441		       b9 8a f0 	      lda	R_eType,y
-    549  2444		       c9 06		      cmp	#EN_BALLOON
-    550  2446		       f0 0a		      beq	.next	; (it floats over toys: it never stands there)
-    551  2448		       b9 80 f0 	      lda	R_eX,y
-    552  244b		       38		      sec
-    553  244c		       e5 b6		      sbc	lt5
-    554  244e		       c9 09		      cmp	#9
-    555  2450		       90 07		      bcc	.yes
-    556  2452				   .next
-    557  2452		       88		      dey
-    558  2453		       10 e5		      bpl	.loop
-    559  2455		       a4 b1		      ldy	lt0
-    560  2457		       18		      clc
-    561  2458		       60		      rts
-    562  2459				   .yes
-    563  2459		       a4 b1		      ldy	lt0
-    564  245b		       38		      sec
-    565  245c		       60		      rts
-    566  245d
-    567  245d							; JetStrike (X = slot): the jet takes off from the toy box end of the slot's
-    568  245d							; shelf and flies the whole shelf (JetAct); if every enemy slot is taken, it
-    569  245d							; strikes the whole shelf as a burst (Splash: one monster a frame, so five
-    570  245d							; kills never land in one frame)
-    571  245d				   JetStrike
-    572  245d					      SUBROUTINE
+      2  2424		       20 a4 fb 	      jsr	SndPlay
+    528  2427		       60		      rts
+    529  2428
+    530  2428							; Occupied (X = slot; keeps X and Y): carry set if a monster (not the
+    531  2428							; balloon clown, which floats over) stands on it,
+    532  2428							; where the toy would stop it (the toy's x to x + 8). Without this a toy
+    533  2428							; dropped on a monster, or put back each time it is eaten, could hold the
+    534  2428							; monster out of every shot's reach for good, and the wave would never end.
+    535  2428				   Occupied
+    536  2428					      SUBROUTINE
+    537  2428		       84 b1		      sty	lt0
+    538  242a		       bd 27 fd 	      lda	SlotCol,x
+    539  242d		       a8		      tay
+    540  242e		       b9 30 fd 	      lda	ColX,y
+    541  2431		       85 b6		      sta	lt5	; the toy's x
+    542  2433		       bd 1e fd 	      lda	SlotLane,x
+    543  2436		       85 b5		      sta	lt4
+    544  2438		       a0 04		      ldy	#NENEMY-1
+    545  243a				   .loop
+    546  243a		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF, a jet's 4-6)
+    547  243d		       c5 b5		      cmp	lt4
+    548  243f		       d0 11		      bne	.next
+    549  2441		       b9 8a f0 	      lda	R_eType,y
+    550  2444		       c9 06		      cmp	#EN_BALLOON
+    551  2446		       f0 0a		      beq	.next	; (it floats over toys: it never stands there)
+    552  2448		       b9 80 f0 	      lda	R_eX,y
+    553  244b		       38		      sec
+    554  244c		       e5 b6		      sbc	lt5
+    555  244e		       c9 09		      cmp	#9
+    556  2450		       90 07		      bcc	.yes
+    557  2452				   .next
+    558  2452		       88		      dey
+    559  2453		       10 e5		      bpl	.loop
+    560  2455		       a4 b1		      ldy	lt0
+    561  2457		       18		      clc
+    562  2458		       60		      rts
+    563  2459				   .yes
+    564  2459		       a4 b1		      ldy	lt0
+    565  245b		       38		      sec
+    566  245c		       60		      rts
+    567  245d
+    568  245d							; JetStrike (X = slot): the jet takes off from the toy box end of the slot's
+    569  245d							; shelf and flies the whole shelf (JetAct); if every enemy slot is taken, it
+    570  245d							; strikes the whole shelf as a burst (Splash: one monster a frame, so five
+    571  245d							; kills never land in one frame)
+    572  245d				   JetStrike
+    573  245d					      SUBROUTINE
       0  245d					      SOUND	SND_JET
       1  245d		       a9 0f		      lda	#SND_JET
-      2  245f		       20 86 fb 	      jsr	SndPlay
-    574  2462		       bd 00 fd 	      lda	SlotLane,x
-    575  2465		       85 b1		      sta	lt0
-    576  2467		       a9 18		      lda	#24
-    577  2469		       8d 60 f0 	      sta	W_flash
-    578  246c		       20 b1 f6 	      jsr	FreeEnemy
-    579  246f		       30 1e		      bmi	.instant
-    580  2471		       a9 09		      lda	#EN_JET
-    581  2473		       99 0a f0 	      sta	W_eType,y
-    582  2476		       a5 b1		      lda	lt0
-    583  2478		       09 04		      ora	#4	; shelves 4-6: never matches an enemy's shelf
-    584  247a		       99 05 f0 	      sta	W_eLane,y
-    585  247d		       a9 28		      lda	#JET_X0	; left of every enemy: its first step's nose
-    586  247f		       99 00 f0 	      sta	W_eX,y	; passes the middle of one at BREACH_X
-    587  2482		       a9 00		      lda	#0
-    588  2484		       99 14 f0 	      sta	W_eState,y
-    589  2487		       99 0f f0 	      sta	W_eHP,y
-    590  248a		       98		      tya
-    591  248b		       aa		      tax
-    592  248c		       4c 4c f8 	      jmp	EnemyRow
-    593  248f				   .instant
-    594  248f		       a5 b1		      lda	lt0
-    595  2491		       8d 4a f0 	      sta	W_splashL
-    596  2494		       a9 f5		      lda	#$F0|NENEMY	; a jet's burst (no monster hit first), all five
-    597  2496		       8d 4b f0 	      sta	W_splashN	; (it replaces a cannonball's burst still going)
-    598  2499		       60		      rts
-    599  249a
-    600  249a				   SetBatt		; batteries = A (at most 99)
-    601  249a					      SUBROUTINE
-    602  249a		       c9 64		      cmp	#100
-    603  249c		       90 02		      bcc	.ok
-    604  249e		       a9 63		      lda	#99
-    605  24a0				   .ok
-    606  24a0		       8d 51 f0 	      sta	W_batt
-    607  24a3		       ad e1 f0 	      lda	R_dirty
-    608  24a6		       09 02		      ora	#2
-    609  24a8		       8d 61 f0 	      sta	W_dirty
-    610  24ab		       60		      rts
-    611  24ac
-    612  24ac							; Damage: enemy X loses A health; at 0 it is destroyed (Kill)
-    613  24ac				   Damage
-    614  24ac					      SUBROUTINE
-    615  24ac		       85 b5		      sta	lt4
-    616  24ae		       bd 8f f0 	      lda	R_eHP,x
-    617  24b1		       38		      sec
-    618  24b2		       e5 b5		      sbc	lt4
-    619  24b4		       f0 1e		      beq	Kill
-    620  24b6		       90 1c		      bcc	Kill
-    621  24b8		       9d 0f f0 	      sta	W_eHP,x
+      2  245f		       20 a4 fb 	      jsr	SndPlay
+    575  2462		       bd 1e fd 	      lda	SlotLane,x
+    576  2465		       85 b1		      sta	lt0
+    577  2467		       a9 18		      lda	#24
+    578  2469		       8d 60 f0 	      sta	W_flash
+    579  246c		       20 b1 f6 	      jsr	FreeEnemy
+    580  246f		       30 1e		      bmi	.instant
+    581  2471		       a9 09		      lda	#EN_JET
+    582  2473		       99 0a f0 	      sta	W_eType,y
+    583  2476		       a5 b1		      lda	lt0
+    584  2478		       09 04		      ora	#4	; shelves 4-6: never matches an enemy's shelf
+    585  247a		       99 05 f0 	      sta	W_eLane,y
+    586  247d		       a9 28		      lda	#JET_X0	; left of every enemy: its first step's nose
+    587  247f		       99 00 f0 	      sta	W_eX,y	; passes the middle of one at BREACH_X
+    588  2482		       a9 00		      lda	#0
+    589  2484		       99 14 f0 	      sta	W_eState,y
+    590  2487		       99 0f f0 	      sta	W_eHP,y
+    591  248a		       98		      tya
+    592  248b		       aa		      tax
+    593  248c		       4c 6c f8 	      jmp	EnemyRow
+    594  248f				   .instant
+    595  248f		       a5 b1		      lda	lt0
+    596  2491		       8d 4a f0 	      sta	W_splashL
+    597  2494		       a9 f5		      lda	#$F0|NENEMY	; a jet's burst (no monster hit first), all five
+    598  2496		       8d 4b f0 	      sta	W_splashN	; (it replaces a cannonball's burst still going)
+    599  2499		       60		      rts
+    600  249a
+    601  249a				   SetBatt		; batteries = A (at most 99)
+    602  249a					      SUBROUTINE
+    603  249a		       c9 64		      cmp	#100
+    604  249c		       90 02		      bcc	.ok
+    605  249e		       a9 63		      lda	#99
+    606  24a0				   .ok
+    607  24a0		       8d 51 f0 	      sta	W_batt
+    608  24a3		       ad e1 f0 	      lda	R_dirty
+    609  24a6		       09 02		      ora	#2
+    610  24a8		       8d 61 f0 	      sta	W_dirty
+    611  24ab		       60		      rts
+    612  24ac
+    613  24ac							; Damage: enemy X loses A health; at 0 it is destroyed (Kill)
+    614  24ac				   Damage
+    615  24ac					      SUBROUTINE
+    616  24ac		       85 b5		      sta	lt4
+    617  24ae		       bd 8f f0 	      lda	R_eHP,x
+    618  24b1		       38		      sec
+    619  24b2		       e5 b5		      sbc	lt4
+    620  24b4		       f0 1e		      beq	Kill
+    621  24b6		       90 1c		      bcc	Kill
+    622  24b8		       9d 0f f0 	      sta	W_eHP,x
       0  24bb					      SOUND	SND_HIT
       1  24bb		       a9 0b		      lda	#SND_HIT
-      2  24bd		       20 86 fb 	      jsr	SndPlay
-    623  24c0		       c9 03		      cmp	#3
-    624  24c2		       b0 0f		      bcs	.done
-    625  24c4		       bd 8a f0 	      lda	R_eType,x	; a knight's shield breaks
-    626  24c7		       c9 05		      cmp	#EN_KNIGHT
-    627  24c9		       d0 08		      bne	.done
-    628  24cb		       bd 94 f0 	      lda	R_eState,x
-    629  24ce		       09 40		      ora	#$40
-    630  24d0		       9d 14 f0 	      sta	W_eState,x
-    631  24d3				   .done
-    632  24d3		       60		      rts
-    633  24d4
-    634  24d4				   Kill 		; enemy X destroyed: batteries and score
-    635  24d4					      SUBROUTINE
+      2  24bd		       20 a4 fb 	      jsr	SndPlay
+    624  24c0		       c9 03		      cmp	#3
+    625  24c2		       b0 0f		      bcs	.done
+    626  24c4		       bd 8a f0 	      lda	R_eType,x	; a knight's shield breaks
+    627  24c7		       c9 05		      cmp	#EN_KNIGHT
+    628  24c9		       d0 08		      bne	.done
+    629  24cb		       bd 94 f0 	      lda	R_eState,x
+    630  24ce		       09 40		      ora	#$40
+    631  24d0		       9d 14 f0 	      sta	W_eState,x
+    632  24d3				   .done
+    633  24d3		       60		      rts
+    634  24d4
+    635  24d4				   Kill 		; enemy X destroyed: batteries and score
+    636  24d4					      SUBROUTINE
       0  24d4					      SOUND	SND_KILL
       1  24d4		       a9 0c		      lda	#SND_KILL
-      2  24d6		       20 86 fb 	      jsr	SndPlay
-    637  24d9		       bc 8a f0 	      ldy	R_eType,x
-    638  24dc		       b9 05 fc 	      lda	EnReward,y
-    639  24df		       18		      clc
-    640  24e0		       6d d1 f0 	      adc	R_batt
-    641  24e3		       20 9a f4 	      jsr	SetBatt
-    642  24e6		       f8		      sed
-    643  24e7		       ad cf f0 	      lda	R_score+2
-    644  24ea		       18		      clc
-    645  24eb		       79 0e fc 	      adc	EnScore,y
-    646  24ee		       8d 4f f0 	      sta	W_score+2
-    647  24f1		       ad ce f0 	      lda	R_score+1
-    648  24f4		       69 00		      adc	#0
-    649  24f6		       8d 4e f0 	      sta	W_score+1
-    650  24f9		       ad cd f0 	      lda	R_score
-    651  24fc		       69 00		      adc	#0
-    652  24fe		       8d 4d f0 	      sta	W_score
-    653  2501		       d8		      cld
-    654  2502		       a9 00		      lda	#0
-    655  2504		       9d 0a f0 	      sta	W_eType,x
-    656  2507		       a9 ff		      lda	#$FF
-    657  2509		       95 9e		      sta	eTop,x
-    658  250b		       9d 05 f0 	      sta	W_eLane,x	; (no shelf: shots skip the empty slot)
-    659  250e		       85 b0		      sta	KILLED
-    660  2510		       ad e1 f0 	      lda	R_dirty
-    661  2513		       09 01		      ora	#1
-    662  2515		       8d 61 f0 	      sta	W_dirty
-    663  2518		       60		      rts
-    664  2519
-    665  2519							;-------------------------------------------------------------------------------
-    666  2519				   Batteries		; one more every TRICKLE frames (TRICKLE2 in the second lap)
-    667  2519					      SUBROUTINE
-    668  2519		       a0 f0		      ldy	#TRICKLE
-    669  251b		       24 b9		      bit	fast
-    670  251d		       10 02		      bpl	.lap1
-    671  251f		       a0 96		      ldy	#TRICKLE2
-    672  2521				   .lap1
-    673  2521		       84 b1		      sty	lt0
-    674  2523		       ad d2 f0 	      lda	R_battTimer
-    675  2526		       18		      clc
-    676  2527		       69 01		      adc	#1
-    677  2529		       c5 b1		      cmp	lt0
-    678  252b		       90 0b		      bcc	.store
-    679  252d		       ad d1 f0 	      lda	R_batt
-    680  2530		       18		      clc
-    681  2531		       69 01		      adc	#1
-    682  2533		       20 9a f4 	      jsr	SetBatt
-    683  2536		       a9 00		      lda	#0
-    684  2538				   .store
-    685  2538		       8d 52 f0 	      sta	W_battTimer
-    686  253b		       60		      rts
-    687  253c
-    688  253c				   CountAlive		; A = enemies on the shelves (Z if none); keeps X
-    689  253c					      SUBROUTINE		; (an empty slot's shelf is $FF, a flying jet's 4-6)
-    690  253c		       a0 00		      ldy	#0
-    691  253e		       ad 85 f0 	      lda	R_eLane
-    692  2541		       c9 03		      cmp	#3
-    693  2543		       b0 01		      bcs	.1
-    694  2545		       c8		      iny
-    695  2546		       ad 86 f0    .1	      lda	R_eLane+1
-    696  2549		       c9 03		      cmp	#3
-    697  254b		       b0 01		      bcs	.2
-    698  254d		       c8		      iny
-    699  254e		       ad 87 f0    .2	      lda	R_eLane+2
-    700  2551		       c9 03		      cmp	#3
-    701  2553		       b0 01		      bcs	.3
-    702  2555		       c8		      iny
-    703  2556		       ad 88 f0    .3	      lda	R_eLane+3
-    704  2559		       c9 03		      cmp	#3
-    705  255b		       b0 01		      bcs	.4
-    706  255d		       c8		      iny
-    707  255e		       ad 89 f0    .4	      lda	R_eLane+4
-    708  2561		       c9 03		      cmp	#3
-    709  2563		       b0 01		      bcs	.5
-    710  2565		       c8		      iny
-    711  2566		       98	   .5	      tya
-    712  2567		       60		      rts
-    713  2568
-    714  2568							; Spawner (even frames): the wave's enemies arrive one by one at the right
-    715  2568							; edge of a shelf drawn from a shuffle bag (a boss wave starts with its
-    716  2568							; T-Rexes; wind-up mice come in packs of three); when all have come and gone,
-    717  2568							; the next wave starts
-    718  2568				   Spawner
-    719  2568					      SUBROUTINE
-    720  2568		       a5 9c		      lda	frame
-    721  256a		       4a		      lsr
-    722  256b		       b0 33		      bcs	.done
-    723  256d		       a5 b0		      lda	KILLED
-    724  256f		       d0 2f		      bne	.done	; a kill this frame: spawn on the next even one
-    725  2571		       20 83 f6 	      jsr	Pack
-    726  2574		       ad dd f0 	      lda	R_spawnLeft
-    727  2577		       d0 1c		      bne	.spawning
-    728  2579		       ad bc f0 	      lda	R_packLeft
-    729  257c		       d0 22		      bne	.done	; (a pack's mice still to come belong to this wave)
-    730  257e		       20 3c f5 	      jsr	CountAlive
-    731  2581		       d0 1d		      bne	.done
-    732  2583		       ad d0 f0 	      lda	R_wave
-    733  2586		       18		      clc
-    734  2587		       69 01		      adc	#1
-    735  2589		       c9 64		      cmp	#100
-    736  258b		       90 02		      bcc	.next
-    737  258d		       a9 63		      lda	#99
-    738  258f				   .next
-    739  258f		       8d 50 f0 	      sta	W_wave
-    740  2592		       4c 8c f2 	      jmp	StartWave
-    741  2595				   .spawning
-    742  2595		       ad de f0 	      lda	R_spawnTimer
-    743  2598		       f0 07		      beq	.try
-    744  259a		       38		      sec
-    745  259b		       e9 01		      sbc	#1
-    746  259d		       8d 5e f0 	      sta	W_spawnTimer
-    747  25a0				   .done
-    748  25a0		       60		      rts
-    749  25a1				   .try
-    750  25a1		       20 3c f5 	      jsr	CountAlive
-    751  25a4		       85 b1		      sta	lt0
-    752  25a6		       20 bf f2 	      jsr	WaveIndex
-    753  25a9		       a5 b1		      lda	lt0
-    754  25ab		       dd 94 fc 	      cmp	WaveMax,x
-    755  25ae		       b0 f0		      bcs	.done	; enough on the shelves already
-    756  25b0		       20 b1 f6 	      jsr	FreeEnemy
-    757  25b3		       30 eb		      bmi	.done
-    758  25b5							; kind: a boss first, else start from a random kind and take the first the wave allows
-    759  25b5		       ad bb f0 	      lda	R_bossLeft
-    760  25b8		       f0 0b		      beq	.random
-    761  25ba		       38		      sec
-    762  25bb		       e9 01		      sbc	#1
-    763  25bd		       8d 3b f0 	      sta	W_bossLeft
-    764  25c0		       a9 08		      lda	#EN_TREX
-    765  25c2		       4c fb f5 	      jmp	.kindOk
-    766  25c5				   .random
-    767  25c5		       ad df f0 	      lda	R_rand
-    768  25c8		       29 1f		      and	#31
-    769  25ca		       84 b2		      sty	lt1
-    770  25cc		       a8		      tay
-    771  25cd		       b9 c7 fc 	      lda	Mod7,y
-    772  25d0		       a4 b2		      ldy	lt1
-    773  25d2		       85 b3		      sta	lt2	; 0-6
-    774  25d4		       a9 07		      lda	#7
-    775  25d6		       85 b4		      sta	lt3	; tries
-    776  25d8				   .kind
-    777  25d8		       86 b5		      stx	lt4
-    778  25da		       a6 b3		      ldx	lt2
-    779  25dc		       bd 5f fc 	      lda	KindBit,x
-    780  25df		       a6 b5		      ldx	lt4
-    781  25e1		       3d a0 fc 	      and	WaveKinds,x
-    782  25e4		       d0 10		      bne	.found
-    783  25e6		       e6 b3		      inc	lt2
-    784  25e8		       a5 b3		      lda	lt2
-    785  25ea		       c9 07		      cmp	#7
-    786  25ec		       90 04		      bcc	.kindNext
-    787  25ee		       a9 00		      lda	#0
-    788  25f0		       85 b3		      sta	lt2
-    789  25f2				   .kindNext
-    790  25f2		       c6 b4		      dec	lt3
-    791  25f4		       d0 e2		      bne	.kind
-    792  25f6				   .found
-    793  25f6		       a5 b3		      lda	lt2
-    794  25f8		       18		      clc
-    795  25f9		       69 01		      adc	#1	; type = 1-7
-    796  25fb				   .kindOk
-    797  25fb		       85 b6		      sta	lt5
-    798  25fd							; shelf: a shuffle bag of six, each shelf twice, so the shelves stay even
-    799  25fd							; (an 8-bit LFSR read on the spawn timer's beat leans to some shelves).
-    800  25fd							; The random pick is only where the search for one still in the bag starts:
-    801  25fd							; bits 5-6, which the kind (bits 0-4) doesn't use.
-    802  25fd		       ad df f0 	      lda	R_rand
-    803  2600		       4a		      lsr
-    804  2601		       4a		      lsr
-    805  2602		       4a		      lsr
-    806  2603		       4a		      lsr
-    807  2604		       4a		      lsr
-    808  2605		       29 03		      and	#3
-    809  2607		       c9 03		      cmp	#3
-    810  2609		       90 02		      bcc	.first
-    811  260b		       a9 00		      lda	#0
-    812  260d				   .first
-    813  260d		       85 b1		      sta	lt0	; first choice
-    814  260f				   .bag
-    815  260f		       a6 b1		      ldx	lt0
-    816  2611		       ad cc f0 	      lda	R_bag
-    817  2614		       3d be fc 	      and	BagMask,x
-    818  2617		       dd c1 fc 	      cmp	BagTwo,x
-    819  261a		       90 0c		      bcc	.take	; drawn less than twice this bag
-    820  261c		       e8		      inx
-    821  261d		       e0 03		      cpx	#3
-    822  261f		       90 02		      bcc	.nextShelf
-    823  2621		       a2 00		      ldx	#0
-    824  2623				   .nextShelf
-    825  2623		       86 b1		      stx	lt0
-    826  2625		       4c 0f f6 	      jmp	.bag
-    827  2628				   .take
-    828  2628		       ad cc f0 	      lda	R_bag
-    829  262b		       18		      clc
-    830  262c		       7d c4 fc 	      adc	BagOne,x
-    831  262f		       c9 2a		      cmp	#$2A	; every shelf twice: a new bag
-    832  2631		       d0 02		      bne	.keep
-    833  2633		       a9 00		      lda	#0
-    834  2635				   .keep
-    835  2635		       8d 4c f0 	      sta	W_bag	; shelf: lt0
-    836  2638		       a5 b6		      lda	lt5
-    837  263a		       c9 04		      cmp	#EN_MOUSE
-    838  263c		       d0 0f		      bne	.one
-    839  263e		       a9 02		      lda	#2	; a pack: two more follow on the same shelf
-    840  2640		       8d 3c f0 	      sta	W_packLeft
-    841  2643		       a9 06		      lda	#6
-    842  2645		       8d 3d f0 	      sta	W_packTimer
-    843  2648		       a5 b1		      lda	lt0
-    844  264a		       8d 3e f0 	      sta	W_packLane
-    845  264d				   .one
-    846  264d		       a5 b6		      lda	lt5
-    847  264f		       20 bc f6 	      jsr	Spawn
-    848  2652		       ad dd f0 	      lda	R_spawnLeft
-    849  2655		       38		      sec
-    850  2656		       e9 01		      sbc	#1
-    851  2658		       8d 5d f0 	      sta	W_spawnLeft
-    852  265b		       20 bf f2 	      jsr	WaveIndex
-    853  265e		       bd 88 fc 	      lda	WaveGap,x
-    854  2661		       24 b9		      bit	fast
-    855  2663		       50 1a		      bvc	.gap
-    856  2665		       4a		      lsr		; second lap (or difficulty A): three quarters of the gap
-    857  2666		       4a		      lsr
-    858  2667		       85 b1		      sta	lt0
-    859  2669		       a5 b9		      lda	fast
-    860  266b		       29 a0		      and	#$A0
-    861  266d		       c9 a0		      cmp	#$A0
-    862  266f		       d0 08		      bne	.quarter
-    863  2671		       a5 b1		      lda	lt0	; second lap on A: five eighths
-    864  2673		       4a		      lsr
-    865  2674		       18		      clc
-    866  2675		       65 b1		      adc	lt0
-    867  2677		       85 b1		      sta	lt0
-    868  2679				   .quarter
-    869  2679		       bd 88 fc 	      lda	WaveGap,x
-    870  267c		       38		      sec
-    871  267d		       e5 b1		      sbc	lt0
-    872  267f				   .gap
-    873  267f		       8d 5e f0 	      sta	W_spawnTimer
-    874  2682		       60		      rts
-    875  2683
-    876  2683							; Pack: the rest of a wind-up mouse pack, every 12 frames
-    877  2683				   Pack
-    878  2683					      SUBROUTINE
-    879  2683		       ad bc f0 	      lda	R_packLeft
-    880  2686		       f0 28		      beq	.done
-    881  2688		       ad bd f0 	      lda	R_packTimer
-    882  268b		       38		      sec
-    883  268c		       e9 01		      sbc	#1
-    884  268e		       8d 3d f0 	      sta	W_packTimer
-    885  2691		       d0 1d		      bne	.done
-    886  2693		       a9 06		      lda	#6
-    887  2695		       8d 3d f0 	      sta	W_packTimer
-    888  2698		       20 b1 f6 	      jsr	FreeEnemy
-    889  269b		       30 13		      bmi	.done
-    890  269d		       ad bc f0 	      lda	R_packLeft
-    891  26a0		       38		      sec
-    892  26a1		       e9 01		      sbc	#1
-    893  26a3		       8d 3c f0 	      sta	W_packLeft
-    894  26a6		       ad be f0 	      lda	R_packLane
-    895  26a9		       85 b1		      sta	lt0
-    896  26ab		       a9 04		      lda	#EN_MOUSE
-    897  26ad		       4c bc f6 	      jmp	Spawn
-    898  26b0				   .done
-    899  26b0		       60		      rts
-    900  26b1
-    901  26b1				   FreeEnemy		; Y = a free enemy slot ($FF, N set, if none)
-    902  26b1					      SUBROUTINE
-    903  26b1		       a0 04		      ldy	#NENEMY-1
-    904  26b3				   .loop
-    905  26b3		       b9 8a f0 	      lda	R_eType,y
-    906  26b6		       f0 03		      beq	.found
-    907  26b8		       88		      dey
-    908  26b9		       10 f8		      bpl	.loop
-    909  26bb				   .found
-    910  26bb		       60		      rts
-    911  26bc
-    912  26bc							; Spawn: enemy kind A into slot Y on shelf lt0, at the right edge
-    913  26bc				   Spawn
-    914  26bc					      SUBROUTINE
-    915  26bc		       99 0a f0 	      sta	W_eType,y
-    916  26bf		       aa		      tax
-    917  26c0		       ad d0 f0 	      lda	R_wave	; one more health every fourth wave (every
-    918  26c3		       4a		      lsr		; eighth for the light ones: wind-up mice and
-    919  26c4		       4a		      lsr		; balloon clowns, which a ramp of wave / 4
-    920  26c5		       e0 04		      cpx	#EN_MOUSE	; made six and three times as tough by wave 20)
-    921  26c7		       f0 04		      beq	.light
-    922  26c9		       e0 06		      cpx	#EN_BALLOON
-    923  26cb		       d0 01		      bne	.ramp
-    924  26cd				   .light
-    925  26cd		       4a		      lsr
-    926  26ce				   .ramp
-    927  26ce		       18		      clc
-    928  26cf		       7d fc fb 	      adc	EnHP,x
-    929  26d2		       85 b5		      sta	lt4	; health
-    930  26d4		       a5 b9		      lda	fast
-    931  26d6		       29 a0		      and	#$A0
-    932  26d8		       c9 a0		      cmp	#$A0
-    933  26da		       d0 07		      bne	.health
-    934  26dc		       a5 b5		      lda	lt4	; the second lap on A: tougher
-    935  26de		       18		      clc
-    936  26df		       69 01		      adc	#A_LAP2_HP
-    937  26e1		       85 b5		      sta	lt4
-    938  26e3				   .health
-    939  26e3		       a5 b5		      lda	lt4
-    940  26e5		       99 0f f0 	      sta	W_eHP,y
-    941  26e8		       a9 97		      lda	#151
-    942  26ea		       99 00 f0 	      sta	W_eX,y
-    943  26ed		       a9 00		      lda	#0
-    944  26ef		       99 14 f0 	      sta	W_eState,y
-    945  26f2		       a5 b1		      lda	lt0
-    946  26f4		       99 05 f0 	      sta	W_eLane,y
-    947  26f7		       a2 04		      ldx	#NENEMY-1
-    948  26f9				   .jets		; a flying jet hasn't hit the newcomer: clear
-    949  26f9		       bd 8a f0 	      lda	R_eType,x	; its slot's bit in every jet's hit mask
-    950  26fc		       c9 09		      cmp	#EN_JET
-    951  26fe		       d0 0b		      bne	.notJet
-    952  2700		       b9 5f fc 	      lda	KindBit,y
-    953  2703		       49 ff		      eor	#$FF
-    954  2705		       3d 8f f0 	      and	R_eHP,x
-    955  2708		       9d 0f f0 	      sta	W_eHP,x
-    956  270b				   .notJet
-    957  270b		       ca		      dex
-    958  270c		       10 eb		      bpl	.jets
-    959  270e		       98		      tya
-    960  270f		       aa		      tax
-    961  2710		       4c 4c f8 	      jmp	EnemyRow
-    962  2713
-    963  2713							;-------------------------------------------------------------------------------
-    964  2713							; Enemies: half of them each frame (even slots on even frames, odd slots on
-    965  2713							; odd frames), so each moves in steps of two frames. Each walks left at its
-    966  2713							; kind's pace; a toy in its way stops it and gets chewed, except: the
-    967  2713							; helicopter hops over the first toy, the pogo frog jumps to the next shelf
-    968  2713							; once, the balloon clown floats over every toy, the T-Rex crushes a toy in
-    969  2713							; one bite. A lasso holds it; reaching the toy box is a breach.
-    970  2713				   Enemies
-    971  2713					      SUBROUTINE
-    972  2713		       a5 9c		      lda	frame
-    973  2715		       29 01		      and	#1
-    974  2717		       aa		      tax
-    975  2718				   .loop
-    976  2718		       bd 8a f0 	      lda	R_eType,x
-    977  271b		       f0 16		      beq	.next
-    978  271d		       c9 09		      cmp	#EN_JET
-    979  271f		       f0 0f		      beq	.jet
-    980  2721		       20 3a f7 	      jsr	EnemyAct	; (it updates the rows when the enemy moves)
-    981  2724		       b5 9e		      lda	eTop,x
-    982  2726		       c9 ff		      cmp	#$FF
-    983  2728		       d0 09		      bne	.next
-    984  272a		       20 4c f8 	      jsr	EnemyRow	; (rows never worked out: a living enemy's
-    985  272d		       4c 33 f7 	      jmp	.next	; eTop is never $FF otherwise)
-    986  2730				   .jet
-    987  2730		       20 12 fb 	      jsr	JetAct
-    988  2733				   .next
-    989  2733		       e8		      inx
-    990  2734		       e8		      inx
-    991  2735		       e0 05		      cpx	#NENEMY
-    992  2737		       90 df		      bcc	.loop
-    993  2739		       60		      rts
-    994  273a
-    995  273a				   EnemyAct		; enemy X (kept)
-    996  273a					      SUBROUTINE
-    997  273a		       85 b6		      sta	lt5	; kind
-    998  273c		       bd 94 f0 	      lda	R_eState,x
-    999  273f		       29 3f		      and	#$3F
-   1000  2741		       f0 10		      beq	.free
-   1001  2743		       bd 94 f0 	      lda	R_eState,x	; the lasso's count down: held for its first
-   1002  2746		       38		      sec		; LASSO_HOLD updates (standing still), then
-   1003  2747		       e9 01		      sbc	#1	; free but not to be lassoed again until it
-   1004  2749		       9d 14 f0 	      sta	W_eState,x	; runs out (two cowboys can't hold it for good)
-   1005  274c		       29 3f		      and	#$3F
-   1006  274e		       c9 1e		      cmp	#LASSO_FREE
-   1007  2750		       90 01		      bcc	.free
-   1008  2752		       60		      rts
-   1009  2753				   .free
-   1010  2753		       a5 b6		      lda	lt5
-   1011  2755		       c9 06		      cmp	#EN_BALLOON
-   1012  2757		       f0 2f		      beq	.walk	; floats over every toy
-   1013  2759		       bd 80 f0 	      lda	R_eX,x
-   1014  275c		       c9 79		      cmp	#121
-   1015  275e		       b0 28		      bcs	.walk	; right of every toy
-   1016  2760		       38		      sec		; the toys stand at x 48, 80, 112 (ColX): a
-   1017  2761		       e9 30		      sbc	#48	; toy blocks an enemy at its x to x + 8
-   1018  2763		       90 23		      bcc	.walk	; left of every toy
-   1019  2765		       a8		      tay
-   1020  2766		       29 1f		      and	#31
-   1021  2768		       c9 09		      cmp	#9
-   1022  276a		       b0 1c		      bcs	.walk	; between two columns
-   1023  276c		       98		      tya
-   1024  276d		       4a		      lsr
-   1025  276e		       4a		      lsr
-   1026  276f		       4a		      lsr
-   1027  2770		       4a		      lsr
-   1028  2771		       4a		      lsr
-   1029  2772		       85 b3		      sta	lt2	; column
-   1030  2774		       bc 85 f0 	      ldy	R_eLane,x
-   1031  2777		       18		      clc
-   1032  2778		       79 b8 fc 	      adc	Lane3,y
-   1033  277b		       85 b2		      sta	lt1	; slot
-   1034  277d		       a8		      tay
-   1035  277e		       b9 99 f0 	      lda	R_slotType,y
-   1036  2781		       f0 05		      beq	.walk	; (empty)
-   1037  2783		       a4 b3		      ldy	lt2
-   1038  2785		       4c d4 f7 	      jmp	.blocked
-   1039  2788				   .walk
-   1040  2788		       bd 94 f0 	      lda	R_eState,x	; walking: not chewing
-   1041  278b		       29 7f		      and	#$7F
-   1042  278d		       9d 14 f0 	      sta	W_eState,x
-   1043  2790							; pace: move on updates where (frame/2) & mask = 0, by step pixels
-   1044  2790		       a4 b6		      ldy	lt5
-   1045  2792		       24 b9		      bit	fast
-   1046  2794		       10 05		      bpl	.lap1
-   1047  2796		       98		      tya		; second lap: the fast table
-   1048  2797		       18		      clc
-   1049  2798		       69 09		      adc	#NKINDS
-   1050  279a		       a8		      tay
-   1051  279b				   .lap1
-   1052  279b		       a5 b6		      lda	lt5
-   1053  279d		       c9 05		      cmp	#EN_KNIGHT
-   1054  279f		       d0 0c		      bne	.pace
-   1055  27a1		       bd 94 f0 	      lda	R_eState,x
-   1056  27a4		       29 40		      and	#$40
-   1057  27a6		       f0 05		      beq	.pace
-   1058  27a8		       98		      tya		; a knight without its shield charges
-   1059  27a9		       18		      clc
-   1060  27aa		       69 12		      adc	#2*NKINDS
-   1061  27ac		       a8		      tay
-   1062  27ad				   .pace
-   1063  27ad		       a5 9c		      lda	frame
-   1064  27af		       4a		      lsr
-   1065  27b0		       39 17 fc 	      and	EnMask,y
-   1066  27b3		       d0 1e		      bne	.done
-   1067  27b5		       bd 80 f0 	      lda	R_eX,x
-   1068  27b8		       38		      sec
-   1069  27b9		       f9 3b fc 	      sbc	EnStep,y
-   1070  27bc		       c9 29		      cmp	#BREACH_X
-   1071  27be		       90 06		      bcc	.reach
-   1072  27c0		       9d 00 f0 	      sta	W_eX,x
-   1073  27c3		       4c 4c f8 	      jmp	EnemyRow
-   1074  27c6				   .reach
-   1075  27c6		       a4 b0		      ldy	KILLED
-   1076  27c8		       d0 09		      bne	.done	; an enemy died this frame: the box next update
-   1077  27ca		       9d 00 f0 	      sta	W_eX,x
-   1078  27cd				   .breach
-   1079  27cd		       20 4c f8 	      jsr	EnemyRow	; (the game may end with it in view)
-   1080  27d0		       4c 75 f8 	      jmp	Breach
-   1081  27d3				   .done
-   1082  27d3		       60		      rts
-   1083  27d4				   .blocked
-   1084  27d4		       a5 b6		      lda	lt5
-   1085  27d6		       c9 02		      cmp	#EN_HELI
-   1086  27d8		       f0 1f		      beq	.hop
-   1087  27da		       c9 07		      cmp	#EN_POGO
-   1088  27dc		       d0 3c		      bne	.chew
-   1089  27de							; pogo frog: once, jump to the next shelf
-   1090  27de		       bd 94 f0 	      lda	R_eState,x
-   1091  27e1		       29 40		      and	#$40
-   1092  27e3		       d0 35		      bne	.chew
-   1093  27e5		       bd 94 f0 	      lda	R_eState,x
-   1094  27e8		       09 40		      ora	#$40
-   1095  27ea		       9d 14 f0 	      sta	W_eState,x
-   1096  27ed		       bc 85 f0 	      ldy	R_eLane,x
-   1097  27f0		       b9 66 fc 	      lda	NextLane,y
-   1098  27f3		       9d 05 f0 	      sta	W_eLane,x
-   1099  27f6		       4c 4c f8 	      jmp	EnemyRow
-   1100  27f9				   .hop
-   1101  27f9		       bd 94 f0 	      lda	R_eState,x
-   1102  27fc		       29 40		      and	#$40
-   1103  27fe		       d0 1a		      bne	.chew
-   1104  2800		       bd 94 f0 	      lda	R_eState,x	; helicopter: hop over the toy, once
-   1105  2803		       09 40		      ora	#$40
-   1106  2805		       9d 14 f0 	      sta	W_eState,x
-   1107  2808		       a4 b3		      ldy	lt2
-   1108  280a		       b9 12 fd 	      lda	ColX,y
-   1109  280d		       38		      sec
-   1110  280e		       e9 09		      sbc	#9
-   1111  2810		       9d 00 f0 	      sta	W_eX,x
-   1112  2813		       c9 29		      cmp	#BREACH_X
-   1113  2815		       90 b6		      bcc	.breach
-   1114  2817		       4c 4c f8 	      jmp	EnemyRow
-   1115  281a				   .chew
-   1116  281a		       bd 94 f0 	      lda	R_eState,x
-   1117  281d		       09 80		      ora	#$80
-   1118  281f		       9d 14 f0 	      sta	W_eState,x
-   1119  2822		       86 b1		      stx	lt0
-   1120  2824		       a5 9c		      lda	frame
-   1121  2826		       4a		      lsr
-   1122  2827		       18		      clc
-   1123  2828		       65 b1		      adc	lt0	; (staggered by slot: bites don't pile up
-   1124  282a		       29 07		      and	#7	; on one frame) one bite every 16 frames
-   1125  282c		       d0 a5		      bne	.done
-      0  282e					      SOUND	SND_CHEW
-      1  282e		       a9 0d		      lda	#SND_CHEW
-      2  2830		       20 86 fb 	      jsr	SndPlay
-   1127  2833		       a4 b2		      ldy	lt1
-   1128  2835		       a5 b6		      lda	lt5
-   1129  2837		       c9 08		      cmp	#EN_TREX
-   1130  2839		       f0 0b		      beq	.crush
-   1131  283b		       b9 a2 f0 	      lda	R_slotHP,y
-   1132  283e		       38		      sec
-   1133  283f		       e9 01		      sbc	#1
-   1134  2841		       99 22 f0 	      sta	W_slotHP,y
-   1135  2844		       d0 8d		      bne	.done
-   1136  2846				   .crush
-   1137  2846		       a9 00		      lda	#0
-   1138  2848		       99 19 f0 	      sta	W_slotType,y
-   1139  284b		       60		      rts
-   1140  284c
-   1141  284c							; EnemyRow (X = enemy, kept): its feet row and event row for the kernel's
-   1142  284c							; scheduler (SelectEnemies, VBLANK), $FF when there is none. Kept up to date
-   1143  284c							; wherever an enemy moves, changes shelf, arrives or goes.
-   1144  284c				   EnemyRow
-   1145  284c					      SUBROUTINE
-   1146  284c		       bd 8a f0 	      lda	R_eType,x
-   1147  284f		       f0 1f		      beq	.none
-   1148  2851		       bc 80 f0 	      ldy	R_eX,x
-   1149  2854		       b9 33 fd 	      lda	FeetX2,y
-   1150  2857		       bc 85 f0 	      ldy	R_eLane,x
-   1151  285a		       18		      clc
-   1152  285b		       79 23 fe 	      adc	LaneBase2,y
-   1153  285e		       95 a3		      sta	eFeet,x
-   1154  2860		       38		      sec
-   1155  2861		       e9 0b		      sbc	#11	; top - 1: the latest row for its event
-   1156  2863		       a8		      tay
-   1157  2864				   .findE
-   1158  2864		       b9 d3 fd 	      lda	RowBad2,y
-   1159  2867		       f0 03		      beq	.gotE
-   1160  2869		       88		      dey
-   1161  286a		       d0 f8		      bne	.findE
-   1162  286c				   .gotE
-   1163  286c		       98		      tya
-   1164  286d		       95 9e		      sta	eTop,x	; eTop = the event row (0: none usable)
-   1165  286f		       60		      rts
-   1166  2870				   .none
-   1167  2870		       a9 ff		      lda	#$FF
-   1168  2872		       95 9e		      sta	eTop,x
-   1169  2874		       60		      rts
-   1170  2875
-   1171  2875							; Breach (X = enemy at the box): the shelf's lid slams and clears it, once;
-   1172  2875							; the second breach on a shelf ends the game
-   1173  2875				   Breach
-   1174  2875					      SUBROUTINE
-   1175  2875		       a9 01		      lda	#1
-   1176  2877		       85 b0		      sta	KILLED	; (the spawner waits a frame)
-   1177  2879		       bc 85 f0 	      ldy	R_eLane,x
-   1178  287c		       b9 bb fc 	      lda	Bit,y
-   1179  287f		       2d da f0 	      and	R_lids
-   1180  2882		       d0 34		      bne	.over
-   1181  2884		       b9 bb fc 	      lda	Bit,y
-   1182  2887		       0d da f0 	      ora	R_lids
-   1183  288a		       8d 5a f0 	      sta	W_lids
-   1184  288d		       84 b1		      sty	lt0
-   1185  288f		       a0 04		      ldy	#NENEMY-1
-   1186  2891				   .clear
-   1187  2891		       b9 8a f0 	      lda	R_eType,y
-   1188  2894		       f0 14		      beq	.next
-   1189  2896		       b9 85 f0 	      lda	R_eLane,y
-   1190  2899		       c5 b1		      cmp	lt0
-   1191  289b		       d0 0d		      bne	.next
-   1192  289d		       a9 00		      lda	#0
-   1193  289f		       99 0a f0 	      sta	W_eType,y
-   1194  28a2		       a9 ff		      lda	#$FF
-   1195  28a4		       99 9e 00 	      sta	eTop,y
-   1196  28a7		       99 05 f0 	      sta	W_eLane,y
-   1197  28aa				   .next
-   1198  28aa		       88		      dey
-   1199  28ab		       10 e4		      bpl	.clear
-   1200  28ad		       a9 28		      lda	#40
-   1201  28af		       8d 60 f0 	      sta	W_flash
-      0  28b2					      SOUND	SND_SLAM
-      1  28b2		       a9 0e		      lda	#SND_SLAM
-      2  28b4		       20 86 fb 	      jsr	SndPlay
-   1203  28b7		       60		      rts
-   1204  28b8				   .over
-      0  28b8					      SOUND	SND_OVER
-      1  28b8		       a9 06		      lda	#SND_OVER
-      2  28ba		       20 86 fb 	      jsr	SndPlay
-   1206  28bd		       a9 02		      lda	#ST_OVER
-   1207  28bf		       8d 5b f0 	      sta	W_state
-   1208  28c2		       a9 78		      lda	#120
-   1209  28c4		       8d 5c f0 	      sta	W_overTimer
-   1210  28c7		       60		      rts
-   1211  28c8
-   1212  28c8							;-------------------------------------------------------------------------------
-   1213  28c8							; Toys (odd frames, one shelf at a time, so each toy acts every sixth
-   1214  28c8							; frame): when ready, army men, tanks and cannons fire along their shelf (one
-   1215  28c8							; shot in flight per shelf) at an enemy ahead; cowboys lasso an enemy within
-   1216  28c8							; 40 pixels; teddies just stand
-   1217  28c8				   Toys
-   1218  28c8					      SUBROUTINE
-   1219  28c8		       ad b4 f0 	      lda	R_toyShelf
-   1220  28cb		       18		      clc
-   1221  28cc		       69 01		      adc	#1
-   1222  28ce		       c9 03		      cmp	#3
-   1223  28d0		       90 02		      bcc	.shelf
-   1224  28d2		       a9 00		      lda	#0
-   1225  28d4				   .shelf
-   1226  28d4		       8d 34 f0 	      sta	W_toyShelf
-   1227  28d7		       a8		      tay
-   1228  28d8		       b9 b8 fc 	      lda	Lane3,y
-   1229  28db		       85 b5		      sta	lt4	; first slot of the shelf
-   1230  28dd		       18		      clc
-   1231  28de		       69 02		      adc	#2
-   1232  28e0		       aa		      tax
-   1233  28e1				   .loop
-   1234  28e1		       20 ec f8 	      jsr	ToyAct
-   1235  28e4		       ca		      dex
-   1236  28e5		       30 04		      bmi	.done
-   1237  28e7		       e4 b5		      cpx	lt4
-   1238  28e9		       b0 f6		      bcs	.loop
-   1239  28eb				   .done
-   1240  28eb		       60		      rts
-   1241  28ec
-   1242  28ec				   ToyAct		; slot X (kept)
-   1243  28ec					      SUBROUTINE
-   1244  28ec		       bd 99 f0 	      lda	R_slotType,x
-   1245  28ef		       d0 01		      bne	.some
-   1246  28f1		       60		      rts
-   1247  28f2				   .some
-   1248  28f2		       c9 02		      cmp	#TOY_TEDDY
-   1249  28f4		       d0 01		      bne	.acts
-   1250  28f6		       60		      rts
-   1251  28f7				   .acts
-   1252  28f7		       85 b6		      sta	lt5
-   1253  28f9		       bd ab f0 	      lda	R_slotCool,x
-   1254  28fc		       f0 09		      beq	.ready
-   1255  28fe		       38		      sec
-   1256  28ff		       e9 01		      sbc	#1
-   1257  2901		       9d 2b f0 	      sta	W_slotCool,x
-   1258  2904		       4c 74 f9 	      jmp	.next
-   1259  2907				   .ready
-   1260  2907		       bc 09 fd 	      ldy	SlotCol,x
-   1261  290a		       b9 12 fd 	      lda	ColX,y
-   1262  290d		       85 b1		      sta	lt0
-   1263  290f		       bd 00 fd 	      lda	SlotLane,x
-   1264  2912		       85 b2		      sta	lt1
-   1265  2914		       20 75 f9 	      jsr	FindAhead
-   1266  2917		       30 5b		      bmi	.next
-   1267  2919		       a5 b6		      lda	lt5
-   1268  291b		       c9 04		      cmp	#TOY_COWBOY
-   1269  291d		       d0 26		      bne	.shoot
-   1270  291f		       b9 80 f0 	      lda	R_eX,y
-   1271  2922		       38		      sec
-   1272  2923		       e5 b1		      sbc	lt0
-   1273  2925		       c9 29		      cmp	#41	; within 40 pixels: up to a monster chewing
-   1274  2927		       b0 4b		      bcs	.next	; the next column's toy (x + 32 to x + 40)
-   1275  2929		       b9 94 f0 	      lda	R_eState,y
-   1276  292c		       29 3f		      and	#$3F
-   1277  292e		       d0 44		      bne	.next	; held, or just let go: not again yet
-   1278  2930		       b9 94 f0 	      lda	R_eState,y
-   1279  2933		       09 3c		      ora	#LASSO_HOLD+LASSO_FREE	; held 60 frames, then free (and safe) 60
-   1280  2935		       99 14 f0 	      sta	W_eState,y
-      0  2938					      SOUND	SND_LASSO
-      1  2938		       a9 0a		      lda	#SND_LASSO
-      2  293a		       20 86 fb 	      jsr	SndPlay
-   1282  293d		       a9 14		      lda	#20	; next lasso after 2 seconds
-   1283  293f		       9d 2b f0 	      sta	W_slotCool,x
-   1284  2942		       4c 74 f9 	      jmp	.next
-   1285  2945				   .shoot
-   1286  2945		       a4 b2		      ldy	lt1
-   1287  2947		       b9 c3 f0 	      lda	R_shotDmg,y
-   1288  294a		       d0 28		      bne	.next
-   1289  294c		       a4 b6		      ldy	lt5
-   1290  294e		       b9 f5 fb 	      lda	ToyDmg,y
-   1291  2951		       a4 b2		      ldy	lt1
-   1292  2953		       99 43 f0 	      sta	W_shotDmg,y
-   1293  2956		       a4 b6		      ldy	lt5
-   1294  2958		       b9 69 fc 	      lda	ToyShot,y
-   1295  295b		       a4 b2		      ldy	lt1
-   1296  295d		       99 46 f0 	      sta	W_shotKind,y
-   1297  2960		       bd 15 fd 	      lda	ShotStart,x
-   1298  2963		       99 99 00 	      sta	shotPtr,y
-   1299  2966		       a4 b6		      ldy	lt5
-   1300  2968		       b9 ee fb 	      lda	ToyPeriod,y
-   1301  296b		       9d 2b f0 	      sta	W_slotCool,x
-   1302  296e		       b9 d9 fb 	      lda	ToySound,y
-   1303  2971		       20 86 fb 	      jsr	SndPlay
-   1304  2974				   .next
-   1305  2974		       60		      rts
-   1306  2975
-   1307  2975							; FindAhead: Y = the nearest enemy on shelf lt1 right of x lt0 ($FF, N set,
-   1308  2975							; if none)
-   1309  2975				   FindAhead
-   1310  2975					      SUBROUTINE
-   1311  2975		       a9 ff		      lda	#$FF
-   1312  2977		       85 b3		      sta	lt2
-   1313  2979		       85 b4		      sta	lt3
-   1314  297b		       a0 04		      ldy	#NENEMY-1
-   1315  297d				   .loop
-   1316  297d		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF)
-   1317  2980		       c5 b2		      cmp	lt1
-   1318  2982		       d0 11		      bne	.next
-   1319  2984		       b9 80 f0 	      lda	R_eX,y
-   1320  2987		       c5 b1		      cmp	lt0
-   1321  2989		       90 0a		      bcc	.next
-   1322  298b		       f0 08		      beq	.next
-   1323  298d		       c5 b3		      cmp	lt2
-   1324  298f		       b0 04		      bcs	.next
-   1325  2991		       85 b3		      sta	lt2
-   1326  2993		       84 b4		      sty	lt3
-   1327  2995				   .next
-   1328  2995		       88		      dey
-   1329  2996		       10 e5		      bpl	.loop
-   1330  2998		       a4 b4		      ldy	lt3
-   1331  299a		       60		      rts
-   1332  299b
-   1333  299b							;-------------------------------------------------------------------------------
-   1334  299b							; Shots (even frames): each checks for a hit where it is, then moves one step
-   1335  299b							; (six pixels) right along its shelf's diagonal; past x 149 it is gone
-   1336  299b				   Shots
-   1337  299b					      SUBROUTINE
-   1338  299b		       a2 02		      ldx	#2
-   1339  299d				   .loop
-   1340  299d		       bd c3 f0 	      lda	R_shotDmg,x
-   1341  29a0		       f0 2b		      beq	.next
-   1342  29a2		       b5 99		      lda	shotPtr,x
-   1343  29a4		       38		      sec
-   1344  29a5		       fd 1e fd 	      sbc	LaneR0,x
-   1345  29a8		       a8		      tay
-   1346  29a9		       b9 21 fd 	      lda	ShotX,y
-   1347  29ac		       85 b1		      sta	lt0	; the shot's x
-   1348  29ae		       86 b2		      stx	lt1
-   1349  29b0		       20 d1 f9 	      jsr	ShotHit
-   1350  29b3		       b0 18		      bcs	.next
-   1351  29b5		       b5 99		      lda	shotPtr,x
-   1352  29b7		       38		      sec
-   1353  29b8		       e9 01		      sbc	#1
-   1354  29ba		       dd 1e fd 	      cmp	LaneR0,x
-   1355  29bd		       90 05		      bcc	.gone
-   1356  29bf		       95 99		      sta	shotPtr,x
-   1357  29c1		       4c cd f9 	      jmp	.next
-   1358  29c4				   .gone
-   1359  29c4		       a9 50		      lda	#80
-   1360  29c6		       95 99		      sta	shotPtr,x
-   1361  29c8		       a9 00		      lda	#0
-   1362  29ca		       9d 43 f0 	      sta	W_shotDmg,x
-   1363  29cd				   .next
-   1364  29cd		       ca		      dex
-   1365  29ce		       10 cd		      bpl	.loop
-   1366  29d0		       60		      rts
-   1367  29d1
-   1368  29d1							; ShotHit (X = shelf, lt0 = shot x): carry set if it hit an enemy
-   1369  29d1				   ShotHit
-   1370  29d1					      SUBROUTINE
-   1371  29d1		       a5 b1		      lda	lt0
-   1372  29d3		       18		      clc
-   1373  29d4		       69 03		      adc	#3
-   1374  29d6		       85 b4		      sta	lt3	; the shot's right end
-   1375  29d8		       a0 04		      ldy	#NENEMY-1
-   1376  29da				   .loop
-   1377  29da		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF)
-   1378  29dd		       c5 b2		      cmp	lt1
-   1379  29df		       d0 67		      bne	.next
-   1380  29e1		       a5 b4		      lda	lt3
-   1381  29e3		       d9 80 f0 	      cmp	R_eX,y
-   1382  29e6		       90 60		      bcc	.next	; shot ends left of the enemy
-   1383  29e8		       b9 80 f0 	      lda	R_eX,y
-   1384  29eb		       18		      clc
-   1385  29ec		       69 07		      adc	#7
-   1386  29ee		       c5 b1		      cmp	lt0
-   1387  29f0		       90 56		      bcc	.next	; enemy ends left of the shot
-   1388  29f2		       bd c6 f0 	      lda	R_shotKind,x
-   1389  29f5		       c9 02		      cmp	#SHOT_TANK
-   1390  29f7		       d0 09		      bne	.notShell
-   1391  29f9		       b9 8a f0 	      lda	R_eType,y
-   1392  29fc		       c9 06		      cmp	#EN_BALLOON
-   1393  29fe		       f0 48		      beq	.next	; tank shells can't hit the balloon clown
-   1394  2a00		       d0 10		      bne	.hit
-   1395  2a02				   .notShell
-   1396  2a02		       c9 01		      cmp	#SHOT_ARMY
-   1397  2a04		       d0 0c		      bne	.hit
-   1398  2a06		       b9 8a f0 	      lda	R_eType,y
-   1399  2a09		       c9 03		      cmp	#EN_CRAWL
-   1400  2a0b		       d0 05		      bne	.hit
-   1401  2a0d		       b9 94 f0 	      lda	R_eState,y
-   1402  2a10		       30 36		      bmi	.next	; bullets pass over a crawler that is chewing
-   1403  2a12				   .hit
-   1404  2a12		       bd c6 f0 	      lda	R_shotKind,x
-   1405  2a15		       c9 03		      cmp	#SHOT_CANNON
-   1406  2a17		       d0 18		      bne	.direct
-   1407  2a19		       ad cb f0 	      lda	R_splashN
-   1408  2a1c		       d0 13		      bne	.direct	; (one burst at a time)
-   1409  2a1e		       b9 80 f0 	      lda	R_eX,y
-   1410  2a21		       8d 49 f0 	      sta	W_splashX
-   1411  2a24		       8e 4a f0 	      stx	W_splashL
-   1412  2a27		       98		      tya
-   1413  2a28		       0a		      asl
-   1414  2a29		       0a		      asl
-   1415  2a2a		       0a		      asl
-   1416  2a2b		       0a		      asl
-   1417  2a2c		       09 05		      ora	#NENEMY
-   1418  2a2e		       8d 4b f0 	      sta	W_splashN
-   1419  2a31				   .direct
-   1420  2a31		       bd c3 f0 	      lda	R_shotDmg,x
-   1421  2a34		       84 b3		      sty	lt2
-   1422  2a36		       a6 b3		      ldx	lt2
-   1423  2a38		       20 ac f4 	      jsr	Damage
-   1424  2a3b		       a6 b2		      ldx	lt1
-   1425  2a3d		       a9 50		      lda	#80
-   1426  2a3f		       95 99		      sta	shotPtr,x
-   1427  2a41		       a9 00		      lda	#0
-   1428  2a43		       9d 43 f0 	      sta	W_shotDmg,x
-   1429  2a46		       38		      sec
-   1430  2a47		       60		      rts
-   1431  2a48				   .next
-   1432  2a48		       88		      dey
-   1433  2a49		       10 8f		      bpl	.loop
-   1434  2a4b		       18		      clc
-   1435  2a4c		       60		      rts
-   1436  2a4d
-   1437  2a4d
-   1438  2a4d							; Splash (odd frames): a cannonball's burst also hits every other monster on
-   1439  2a4d							; its shelf within SPLASH pixels of the one it hit; a jet's burst (bit 7 of
-   1440  2a4d							; splashN; no monster hit first) hits every monster on its shelf. One monster
-   1441  2a4d							; is checked a frame (five frames a burst), which keeps the frame time bounded
-   1442  2a4d				   Splash
-   1443  2a4d					      SUBROUTINE
-   1444  2a4d		       ad cb f0 	      lda	R_splashN
-   1445  2a50		       f0 4e		      beq	.done
-   1446  2a52		       85 b1		      sta	lt0
-   1447  2a54		       29 0f		      and	#$0F
-   1448  2a56		       aa		      tax
-   1449  2a57		       ca		      dex		; X = the monster to check
-   1450  2a58		       d0 04		      bne	.more
-   1451  2a5a		       a9 00		      lda	#0	; the last one: the burst is over
-   1452  2a5c		       f0 05		      beq	.store
-   1453  2a5e				   .more
-   1454  2a5e		       a5 b1		      lda	lt0
-   1455  2a60		       38		      sec
-   1456  2a61		       e9 01		      sbc	#1
-   1457  2a63				   .store
-   1458  2a63		       8d 4b f0 	      sta	W_splashN
-   1459  2a66		       a5 b1		      lda	lt0
-   1460  2a68		       4a		      lsr
-   1461  2a69		       4a		      lsr
-   1462  2a6a		       4a		      lsr
-   1463  2a6b		       4a		      lsr
-   1464  2a6c		       85 b1		      sta	lt0	; the monster hit (8-15: a jet's burst)
-   1465  2a6e		       e4 b1		      cpx	lt0
-   1466  2a70		       f0 2e		      beq	.done	; (it took its hit already)
-   1467  2a72		       bd 8a f0 	      lda	R_eType,x
-   1468  2a75		       f0 29		      beq	.done
-   1469  2a77		       bd 85 f0 	      lda	R_eLane,x
-   1470  2a7a		       cd ca f0 	      cmp	R_splashL
-   1471  2a7d		       d0 21		      bne	.done	; (a flying jet's shelf is 4-6)
-   1472  2a7f		       a5 b1		      lda	lt0
-   1473  2a81		       29 08		      and	#8
-   1474  2a83		       d0 16		      bne	.jet
-   1475  2a85		       bd 80 f0 	      lda	R_eX,x
-   1476  2a88		       38		      sec
-   1477  2a89		       ed c9 f0 	      sbc	R_splashX
-   1478  2a8c		       b0 04		      bcs	.right
-   1479  2a8e		       49 ff		      eor	#$FF	; (carry clear: + 1 makes it positive)
-   1480  2a90		       69 01		      adc	#1
-   1481  2a92				   .right
-   1482  2a92		       c9 0d		      cmp	#SPLASH+1
-   1483  2a94		       b0 0a		      bcs	.done
-   1484  2a96		       a9 03		      lda	#CANNON_DMG
-   1485  2a98		       4c ac f4 	      jmp	Damage
-   1486  2a9b				   .jet
-   1487  2a9b		       a9 0a		      lda	#JET_DMG
-   1488  2a9d		       4c ac f4 	      jmp	Damage
-   1489  2aa0				   .done
-   1490  2aa0		       60		      rts
-   1491  2aa1
-   1492  2aa1							;-------------------------------------------------------------------------------
-   1493  2aa1				   Flash		; shelves flash white after a lid slam or air strike
-   1494  2aa1					      SUBROUTINE
-   1495  2aa1		       ad e0 f0 	      lda	R_flash
-   1496  2aa4		       f0 0f		      beq	.gold
-   1497  2aa6		       38		      sec
-   1498  2aa7		       e9 01		      sbc	#1
-   1499  2aa9		       8d 60 f0 	      sta	W_flash
-   1500  2aac		       29 04		      and	#4
-   1501  2aae		       f0 05		      beq	.gold
-   1502  2ab0		       a9 0e		      lda	#COL_WHITE
-   1503  2ab2		       85 9d		      sta	pfColor
-   1504  2ab4		       60		      rts
-   1505  2ab5				   .gold
-   1506  2ab5		       a9 f8		      lda	#COL_GOLD
-   1507  2ab7		       85 9d		      sta	pfColor
-   1508  2ab9		       60		      rts
-   1509  2aba
-   1510  2aba							; SlotPointers: the kernel's defender pointers, one shelf per frame plus the
-   1511  2aba							; cursor's slot. The cursor's slot shows the chosen toy as a blinking ghost
-   1512  2aba							; when empty, or blinks its toy.
-   1513  2aba				   SlotPointers
-   1514  2aba					      SUBROUTINE
-   1515  2aba		       ae d3 f0 	      ldx	R_cursor
-   1516  2abd		       20 cf fa 	      jsr	SlotPointer
-   1517  2ac0		       ae b4 f0 	      ldx	R_toyShelf	; (the shelf the toys just took their turn on)
-   1518  2ac3		       bd b8 fc 	      lda	Lane3,x
-   1519  2ac6		       aa		      tax
-   1520  2ac7		       20 cf fa 	      jsr	SlotPointer
-   1521  2aca		       e8		      inx
-   1522  2acb		       20 cf fa 	      jsr	SlotPointer
-   1523  2ace		       e8		      inx
-   1524  2acf				   SlotPointer		; slot X
-   1525  2acf					      SUBROUTINE
-   1526  2acf		       bd 99 f0 	      lda	R_slotType,x
-   1527  2ad2		       85 b1		      sta	lt0
-   1528  2ad4		       ec d3 f0 	      cpx	R_cursor
-   1529  2ad7		       d0 23		      bne	.show
-   1530  2ad9		       ad db f0 	      lda	R_state
-   1531  2adc		       c9 01		      cmp	#ST_PLAY
-   1532  2ade		       d0 1c		      bne	.show
-   1533  2ae0		       a5 b1		      lda	lt0
-   1534  2ae2		       d0 0e		      bne	.occupied
-   1535  2ae4		       a5 9c		      lda	frame
-   1536  2ae6		       29 10		      and	#16
-   1537  2ae8		       f0 12		      beq	.show
-   1538  2aea		       ad d4 f0 	      lda	R_toy
-   1539  2aed		       85 b1		      sta	lt0
-   1540  2aef		       4c fc fa 	      jmp	.show
-   1541  2af2				   .occupied
-   1542  2af2		       a5 9c		      lda	frame
-   1543  2af4		       29 18		      and	#24
-   1544  2af6		       d0 04		      bne	.show
-   1545  2af8		       a9 00		      lda	#0
-   1546  2afa		       85 b1		      sta	lt0
-   1547  2afc				   .show
-   1548  2afc		       a4 b1		      ldy	lt0
-   1549  2afe		       f0 0c		      beq	.empty
-   1550  2b00		       b9 e7 fc 	      lda	ToyLo,y
-   1551  2b03		       18		      clc
-   1552  2b04		       7d ee fc 	      adc	SlotOfs,x
-   1553  2b07		       95 90		      sta	slotPtr,x
-   1554  2b09		       4c 11 fb 	      jmp	.next
-   1555  2b0c				   .empty
-   1556  2b0c		       bd f7 fc 	      lda	EmptyLo,x
-   1557  2b0f		       95 90		      sta	slotPtr,x
-   1558  2b11				   .next
-   1559  2b11		       60		      rts
-   1560  2b12
-   1561  2b12							;-------------------------------------------------------------------------------
-   1562  2b12							; JetAct (X = a launched jet): four pixels right per update; every enemy on
-   1563  2b12							; its shelf takes 10 damage once the nose has passed its middle. The jet's
-   1564  2b12							; health byte (unused for a jet) marks the enemy slots it has hit, so each is
-   1565  2b12							; hit exactly once; at most two an update (the rest the next one), so a pack
-   1566  2b12							; bunched together never dies all in one frame.
-   1567  2b12				   JetAct
-   1568  2b12					      SUBROUTINE
-   1569  2b12		       86 b4		      stx	lt3
-   1570  2b14		       bd 80 f0 	      lda	R_eX,x
-   1571  2b17		       18		      clc
-   1572  2b18		       69 0c		      adc	#12
-   1573  2b1a		       85 b1		      sta	lt0	; the nose after this step
-   1574  2b1c		       bd 85 f0 	      lda	R_eLane,x
-   1575  2b1f		       29 03		      and	#3
-   1576  2b21		       85 b2		      sta	lt1
-   1577  2b23		       a9 02		      lda	#2
-   1578  2b25		       a4 b0		      ldy	KILLED
-   1579  2b27		       f0 02		      beq	.hits
-   1580  2b29		       a9 01		      lda	#1	; an enemy died this frame already: one hit
-   1581  2b2b				   .hits
-   1582  2b2b		       85 b6		      sta	lt5	; hits left this update
-   1583  2b2d		       a0 04		      ldy	#NENEMY-1
-   1584  2b2f				   .loop
-   1585  2b2f		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF, a jet's 4-6)
-   1586  2b32		       c5 b2		      cmp	lt1
-   1587  2b34		       d0 2e		      bne	.next
-   1588  2b36		       b9 80 f0 	      lda	R_eX,y
-   1589  2b39		       18		      clc
-   1590  2b3a		       69 04		      adc	#4
-   1591  2b3c		       c5 b1		      cmp	lt0
-   1592  2b3e		       b0 24		      bcs	.next	; its middle is still ahead of the nose
-   1593  2b40		       a6 b4		      ldx	lt3
-   1594  2b42		       bd 8f f0 	      lda	R_eHP,x
-   1595  2b45		       39 5f fc 	      and	KindBit,y	; (bits 0-4: enemy slots 0-4)
-   1596  2b48		       d0 1a		      bne	.next	; hit already
-   1597  2b4a		       a5 b6		      lda	lt5
-   1598  2b4c		       f0 16		      beq	.next	; two this update: the next one gets it
-   1599  2b4e		       c6 b6		      dec	lt5
-   1600  2b50		       bd 8f f0 	      lda	R_eHP,x
-   1601  2b53		       19 5f fc 	      ora	KindBit,y
-   1602  2b56		       9d 0f f0 	      sta	W_eHP,x
-   1603  2b59		       84 b3		      sty	lt2
-   1604  2b5b		       a6 b3		      ldx	lt2
-   1605  2b5d		       a9 0a		      lda	#JET_DMG
-   1606  2b5f		       20 ac f4 	      jsr	Damage
-   1607  2b62		       a4 b3		      ldy	lt2
-   1608  2b64				   .next
-   1609  2b64		       88		      dey
-   1610  2b65		       10 c8		      bpl	.loop
-   1611  2b67		       a6 b4		      ldx	lt3
-   1612  2b69		       bd 80 f0 	      lda	R_eX,x
-   1613  2b6c		       18		      clc
-   1614  2b6d		       69 04		      adc	#4
-   1615  2b6f		       c9 98		      cmp	#152
-   1616  2b71		       b0 06		      bcs	.gone
-   1617  2b73		       9d 00 f0 	      sta	W_eX,x
-   1618  2b76		       4c 4c f8 	      jmp	EnemyRow
-   1619  2b79				   .gone
-   1620  2b79		       a9 00		      lda	#0
-   1621  2b7b		       9d 0a f0 	      sta	W_eType,x
-   1622  2b7e		       a9 ff		      lda	#$FF
-   1623  2b80		       95 9e		      sta	eTop,x
-   1624  2b82		       9d 05 f0 	      sta	W_eLane,x	; (no shelf: shots skip the empty slot)
-   1625  2b85		       60		      rts
-   1626  2b86
-   1627  2b86							;-------------------------------------------------------------------------------
-   1628  2b86
-   1629  2b86							;-------------------------------------------------------------------------------
-   1630  2b86							; Sound: channel 0 plays the player's actions and jingles, channel 1 combat.
-   1631  2b86							; A sound is a list of steps (ticks of two frames, AUDC*16+AUDV, AUDF) ending
-   1632  2b86							; in a zero; a new sound replaces the one playing on its channel unless that
-   1633  2b86							; one matters more (SndPri).
-   1634  2b86				   SndPlay		; A = sound id; keeps X and Y
-   1635  2b86					      SUBROUTINE
-   1636  2b86		       86 b7		      stx	sndX
-   1637  2b88		       84 b8		      sty	sndY
-   1638  2b8a		       a8		      tay
-   1639  2b8b		       be b9 fb 	      ldx	SndChan,y
-   1640  2b8e		       b9 c9 fb 	      lda	SndPri,y
-   1641  2b91		       dd b9 f0 	      cmp	R_sndPri,x
-   1642  2b94		       90 0e		      bcc	.done	; something more important is playing
-   1643  2b96		       9d 39 f0 	      sta	W_sndPri,x
-   1644  2b99		       b9 a9 fb 	      lda	SndStart,y
-   1645  2b9c		       9d 35 f0 	      sta	W_sndPos,x
-   1646  2b9f		       a9 00		      lda	#0
-   1647  2ba1		       9d 37 f0 	      sta	W_sndTimer,x
-   1648  2ba4				   .done
-   1649  2ba4		       a6 b7		      ldx	sndX
-   1650  2ba6		       a4 b8		      ldy	sndY
-   1651  2ba8		       60		      rts
-   1652  2ba9
-   1653  2ba9		       01 05 0c 16 SndStart   .byte.b	SdCursor-SndData, SdSelect-SndData, SdPlace-SndData, SdPick-SndData
-   1654  2bad		       1d 21 2e 3b	      .byte.b	SdNoBatt-SndData, SdWave-SndData, SdOver-SndData, SdPop-SndData
-   1655  2bb1		       42 4c 53 60	      .byte.b	SdBoom-SndData, SdThump-SndData, SdLasso-SndData, SdHit-SndData
-   1656  2bb5		       64 71 75 82	      .byte.b	SdKill-SndData, SdChew-SndData, SdSlam-SndData, SdJet-SndData
-   1657  2bb9		       00 00 00 00*SndChan    .byte.b	0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1
-   1658  2bc9		       01 02 03 03*SndPri     .byte.b	1, 2, 3, 3, 3, 4, 5, 1, 3, 3, 2, 2, 3, 1, 5, 5
-   1659  2bd9		       00 07 00 08*ToySound   .byte.b	0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
-   1660  2be0
-   1661  2be0							;-------------------------------------------------------------------------------
-   1662  2be0							; tables (toy and enemy types index from 1)
-   1663  2be0		       00 0a 05 19*ToyCost    .byte.b	0, 10, 5, 25, 15, 20, 30
-   1664  2be7		       00 08 28 0c*ToyHP      .byte.b	0, 8, 40, 12, 8, 10, 1
-   1665  2bee		       00 07 00 32*ToyPeriod  .byte.b	0, 7, 0, 50, 20, 33, 0	; visits (6 frames) between shots
-   1666  2bf5		       00 01 00 08*ToyDmg     .byte.b	0, 1, 0, 8, 0, CANNON_DMG, 0
-   1667  2bfc							; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
-   1668  2bfc		       00 06 05 03*EnHP       .byte.b	0, 6, 5, 3, 1, 6, 2, 3, 20
-   1669  2c05		       00 02 02 01*EnReward   .byte.b	0, 2, 2, 1, 1, 2, 2, 2, 5	; batteries
-   1670  2c0e		       00 10 15 10*EnScore    .byte.b	0, $10, $15, $10, $05, $20, $15, $15, $50	; BCD points
-   1671  2c17							; pace (updates are two frames): move when (frame/2) & mask = 0, by step
-   1672  2c17							; pixels; four blocks: first lap, second lap, knight charging (first lap,
-   1673  2c17							; second lap)
-   1674  2c17		       00 01 00 00*EnMask     .byte.b	0, 1, 0, 0, 0, 1, 1, 0, 3
-   1675  2c20		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 1
-   1676  2c29		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 0
-   1677  2c32		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 0
-   1678  2c3b		       00 01 01 01*EnStep     .byte.b	0, 1, 1, 1, 2, 1, 1, 1, 1
-   1679  2c44		       00 01 02 02*	      .byte.b	0, 1, 2, 2, 3, 1, 1, 2, 1
-   1680  2c4d		       00 01 01 01*	      .byte.b	0, 1, 1, 1, 1, 2, 1, 1, 1
-   1681  2c56		       00 01 01 01*	      .byte.b	0, 1, 1, 1, 1, 3, 1, 1, 1
-   1682  2c5f		       01 02 04 08*KindBit    .byte.b	1, 2, 4, 8, 16, 32, 64	; kinds 1-7 (the T-Rex only as a boss)
-   1683  2c66		       01 02 00    NextLane   .byte.b	1, 2, 0	; the pogo frog's jump
-   1684  2c69		       00 01 00 02*ToyShot    .byte.b	0, SHOT_ARMY, 0, SHOT_TANK, 0, SHOT_CANNON, 0
-   1685  2c70							; waves 1-12 (later waves repeat them)
-   1686  2c70		       05 07 09 0a*WaveCount  .byte.b	5, 7, 9, 10, 12, 7, 12, 14, 15, 18, 20, 12
-   1687  2c7c		       00 00 00 00*WaveBoss   .byte.b	0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2	; T-Rexes first
-   1688  2c88		       b4 96 96 87*WaveGap    .byte.b	180, 150, 150, 135, 120, 120, 120, 105, 105, 90, 90, 90
-   1689  2c94		       02 03 03 03*WaveMax    .byte.b	2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5
-   1690  2ca0		       01 01 09 0d*WaveKinds  .byte.b	1, 1, 9, 13, 29, 29, 31, 63, 127, 127, 127, 127
-   1691  2cac		       01 02 02 03*WaveUnlock .byte.b	1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6
-   1692  2cb8		       00 03 06    Lane3      .byte.b	0, 3, 6
-   1693  2cbb		       01 02 04    Bit	      .byte.b	1, 2, 4
-   1694  2cbe		       03 0c 30    BagMask    .byte.b	$03, $0C, $30	; a shelf's two bits in the bag
-   1695  2cc1		       02 08 20    BagTwo     .byte.b	$02, $08, $20
-   1696  2cc4		       01 04 10    BagOne     .byte.b	$01, $04, $10
-   1697  2cc7		       00 01 02 03*Mod7       .byte.b	0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3
+      2  24d6		       20 a4 fb 	      jsr	SndPlay
+    638  24d9		       bc 8a f0 	      ldy	R_eType,x
+    639  24dc		       b9 23 fc 	      lda	EnReward,y
+    640  24df		       18		      clc
+    641  24e0		       6d d1 f0 	      adc	R_batt
+    642  24e3		       20 9a f4 	      jsr	SetBatt
+    643  24e6		       f8		      sed
+    644  24e7		       ad cf f0 	      lda	R_score+2
+    645  24ea		       18		      clc
+    646  24eb		       79 2c fc 	      adc	EnScore,y
+    647  24ee		       8d 4f f0 	      sta	W_score+2
+    648  24f1		       ad ce f0 	      lda	R_score+1
+    649  24f4		       69 00		      adc	#0
+    650  24f6		       8d 4e f0 	      sta	W_score+1
+    651  24f9		       ad cd f0 	      lda	R_score
+    652  24fc		       69 00		      adc	#0
+    653  24fe		       8d 4d f0 	      sta	W_score
+    654  2501		       d8		      cld
+    655  2502		       a9 00		      lda	#0
+    656  2504		       9d 0a f0 	      sta	W_eType,x
+    657  2507		       a9 ff		      lda	#$FF
+    658  2509		       95 9e		      sta	eTop,x
+    659  250b		       9d 05 f0 	      sta	W_eLane,x	; (no shelf: shots skip the empty slot)
+    660  250e		       85 b0		      sta	KILLED
+    661  2510		       ad e1 f0 	      lda	R_dirty
+    662  2513		       09 01		      ora	#1
+    663  2515		       8d 61 f0 	      sta	W_dirty
+    664  2518		       60		      rts
+    665  2519
+    666  2519							;-------------------------------------------------------------------------------
+    667  2519				   Batteries		; one more every TRICKLE frames (TRICKLE2 in the second lap)
+    668  2519					      SUBROUTINE
+    669  2519		       a0 f0		      ldy	#TRICKLE
+    670  251b		       24 b9		      bit	fast
+    671  251d		       10 02		      bpl	.lap1
+    672  251f		       a0 96		      ldy	#TRICKLE2
+    673  2521				   .lap1
+    674  2521		       84 b1		      sty	lt0
+    675  2523		       ad d2 f0 	      lda	R_battTimer
+    676  2526		       18		      clc
+    677  2527		       69 01		      adc	#1
+    678  2529		       c5 b1		      cmp	lt0
+    679  252b		       90 0b		      bcc	.store
+    680  252d		       ad d1 f0 	      lda	R_batt
+    681  2530		       18		      clc
+    682  2531		       69 01		      adc	#1
+    683  2533		       20 9a f4 	      jsr	SetBatt
+    684  2536		       a9 00		      lda	#0
+    685  2538				   .store
+    686  2538		       8d 52 f0 	      sta	W_battTimer
+    687  253b		       60		      rts
+    688  253c
+    689  253c				   CountAlive		; A = enemies on the shelves (Z if none); keeps X
+    690  253c					      SUBROUTINE		; (an empty slot's shelf is $FF, a flying jet's 4-6)
+    691  253c		       a0 00		      ldy	#0
+    692  253e		       ad 85 f0 	      lda	R_eLane
+    693  2541		       c9 03		      cmp	#3
+    694  2543		       b0 01		      bcs	.1
+    695  2545		       c8		      iny
+    696  2546		       ad 86 f0    .1	      lda	R_eLane+1
+    697  2549		       c9 03		      cmp	#3
+    698  254b		       b0 01		      bcs	.2
+    699  254d		       c8		      iny
+    700  254e		       ad 87 f0    .2	      lda	R_eLane+2
+    701  2551		       c9 03		      cmp	#3
+    702  2553		       b0 01		      bcs	.3
+    703  2555		       c8		      iny
+    704  2556		       ad 88 f0    .3	      lda	R_eLane+3
+    705  2559		       c9 03		      cmp	#3
+    706  255b		       b0 01		      bcs	.4
+    707  255d		       c8		      iny
+    708  255e		       ad 89 f0    .4	      lda	R_eLane+4
+    709  2561		       c9 03		      cmp	#3
+    710  2563		       b0 01		      bcs	.5
+    711  2565		       c8		      iny
+    712  2566		       98	   .5	      tya
+    713  2567		       60		      rts
+    714  2568
+    715  2568							; Spawner (even frames): the wave's enemies arrive one by one at the right
+    716  2568							; edge of a shelf drawn from a shuffle bag (a boss wave starts with its
+    717  2568							; T-Rexes; wind-up mice come in packs of three); when all have come and gone,
+    718  2568							; the next wave starts
+    719  2568				   Spawner
+    720  2568					      SUBROUTINE
+    721  2568		       a5 9c		      lda	frame
+    722  256a		       4a		      lsr
+    723  256b		       b0 33		      bcs	.done
+    724  256d		       a5 b0		      lda	KILLED
+    725  256f		       d0 2f		      bne	.done	; a kill this frame: spawn on the next even one
+    726  2571		       20 83 f6 	      jsr	Pack
+    727  2574		       ad dd f0 	      lda	R_spawnLeft
+    728  2577		       d0 1c		      bne	.spawning
+    729  2579		       ad bc f0 	      lda	R_packLeft
+    730  257c		       d0 22		      bne	.done	; (a pack's mice still to come belong to this wave)
+    731  257e		       20 3c f5 	      jsr	CountAlive
+    732  2581		       d0 1d		      bne	.done
+    733  2583		       ad d0 f0 	      lda	R_wave
+    734  2586		       18		      clc
+    735  2587		       69 01		      adc	#1
+    736  2589		       c9 64		      cmp	#100
+    737  258b		       90 02		      bcc	.next
+    738  258d		       a9 63		      lda	#99
+    739  258f				   .next
+    740  258f		       8d 50 f0 	      sta	W_wave
+    741  2592		       4c 8c f2 	      jmp	StartWave
+    742  2595				   .spawning
+    743  2595		       ad de f0 	      lda	R_spawnTimer
+    744  2598		       f0 07		      beq	.try
+    745  259a		       38		      sec
+    746  259b		       e9 01		      sbc	#1
+    747  259d		       8d 5e f0 	      sta	W_spawnTimer
+    748  25a0				   .done
+    749  25a0		       60		      rts
+    750  25a1				   .try
+    751  25a1		       20 3c f5 	      jsr	CountAlive
+    752  25a4		       85 b1		      sta	lt0
+    753  25a6		       20 bf f2 	      jsr	WaveIndex
+    754  25a9		       a5 b1		      lda	lt0
+    755  25ab		       dd b2 fc 	      cmp	WaveMax,x
+    756  25ae		       b0 f0		      bcs	.done	; enough on the shelves already
+    757  25b0		       20 b1 f6 	      jsr	FreeEnemy
+    758  25b3		       30 eb		      bmi	.done
+    759  25b5							; kind: a boss first, else start from a random kind and take the first the wave allows
+    760  25b5		       ad bb f0 	      lda	R_bossLeft
+    761  25b8		       f0 0b		      beq	.random
+    762  25ba		       38		      sec
+    763  25bb		       e9 01		      sbc	#1
+    764  25bd		       8d 3b f0 	      sta	W_bossLeft
+    765  25c0		       a9 08		      lda	#EN_TREX
+    766  25c2		       4c fb f5 	      jmp	.kindOk
+    767  25c5				   .random
+    768  25c5		       ad df f0 	      lda	R_rand
+    769  25c8		       29 1f		      and	#31
+    770  25ca		       84 b2		      sty	lt1
+    771  25cc		       a8		      tay
+    772  25cd		       b9 e5 fc 	      lda	Mod7,y
+    773  25d0		       a4 b2		      ldy	lt1
+    774  25d2		       85 b3		      sta	lt2	; 0-6
+    775  25d4		       a9 07		      lda	#7
+    776  25d6		       85 b4		      sta	lt3	; tries
+    777  25d8				   .kind
+    778  25d8		       86 b5		      stx	lt4
+    779  25da		       a6 b3		      ldx	lt2
+    780  25dc		       bd 7d fc 	      lda	KindBit,x
+    781  25df		       a6 b5		      ldx	lt4
+    782  25e1		       3d be fc 	      and	WaveKinds,x
+    783  25e4		       d0 10		      bne	.found
+    784  25e6		       e6 b3		      inc	lt2
+    785  25e8		       a5 b3		      lda	lt2
+    786  25ea		       c9 07		      cmp	#7
+    787  25ec		       90 04		      bcc	.kindNext
+    788  25ee		       a9 00		      lda	#0
+    789  25f0		       85 b3		      sta	lt2
+    790  25f2				   .kindNext
+    791  25f2		       c6 b4		      dec	lt3
+    792  25f4		       d0 e2		      bne	.kind
+    793  25f6				   .found
+    794  25f6		       a5 b3		      lda	lt2
+    795  25f8		       18		      clc
+    796  25f9		       69 01		      adc	#1	; type = 1-7
+    797  25fb				   .kindOk
+    798  25fb		       85 b6		      sta	lt5
+    799  25fd							; shelf: a shuffle bag of six, each shelf twice, so the shelves stay even
+    800  25fd							; (an 8-bit LFSR read on the spawn timer's beat leans to some shelves).
+    801  25fd							; The random pick is only where the search for one still in the bag starts:
+    802  25fd							; bits 5-6, which the kind (bits 0-4) doesn't use.
+    803  25fd		       ad df f0 	      lda	R_rand
+    804  2600		       4a		      lsr
+    805  2601		       4a		      lsr
+    806  2602		       4a		      lsr
+    807  2603		       4a		      lsr
+    808  2604		       4a		      lsr
+    809  2605		       29 03		      and	#3
+    810  2607		       c9 03		      cmp	#3
+    811  2609		       90 02		      bcc	.first
+    812  260b		       a9 00		      lda	#0
+    813  260d				   .first
+    814  260d		       85 b1		      sta	lt0	; first choice
+    815  260f				   .bag
+    816  260f		       a6 b1		      ldx	lt0
+    817  2611		       ad cc f0 	      lda	R_bag
+    818  2614		       3d dc fc 	      and	BagMask,x
+    819  2617		       dd df fc 	      cmp	BagTwo,x
+    820  261a		       90 0c		      bcc	.take	; drawn less than twice this bag
+    821  261c		       e8		      inx
+    822  261d		       e0 03		      cpx	#3
+    823  261f		       90 02		      bcc	.nextShelf
+    824  2621		       a2 00		      ldx	#0
+    825  2623				   .nextShelf
+    826  2623		       86 b1		      stx	lt0
+    827  2625		       4c 0f f6 	      jmp	.bag
+    828  2628				   .take
+    829  2628		       ad cc f0 	      lda	R_bag
+    830  262b		       18		      clc
+    831  262c		       7d e2 fc 	      adc	BagOne,x
+    832  262f		       c9 2a		      cmp	#$2A	; every shelf twice: a new bag
+    833  2631		       d0 02		      bne	.keep
+    834  2633		       a9 00		      lda	#0
+    835  2635				   .keep
+    836  2635		       8d 4c f0 	      sta	W_bag	; shelf: lt0
+    837  2638		       a5 b6		      lda	lt5
+    838  263a		       c9 04		      cmp	#EN_MOUSE
+    839  263c		       d0 0f		      bne	.one
+    840  263e		       a9 02		      lda	#2	; a pack: two more follow on the same shelf
+    841  2640		       8d 3c f0 	      sta	W_packLeft
+    842  2643		       a9 06		      lda	#6
+    843  2645		       8d 3d f0 	      sta	W_packTimer
+    844  2648		       a5 b1		      lda	lt0
+    845  264a		       8d 3e f0 	      sta	W_packLane
+    846  264d				   .one
+    847  264d		       a5 b6		      lda	lt5
+    848  264f		       20 bc f6 	      jsr	Spawn
+    849  2652		       ad dd f0 	      lda	R_spawnLeft
+    850  2655		       38		      sec
+    851  2656		       e9 01		      sbc	#1
+    852  2658		       8d 5d f0 	      sta	W_spawnLeft
+    853  265b		       20 bf f2 	      jsr	WaveIndex
+    854  265e		       bd a6 fc 	      lda	WaveGap,x
+    855  2661		       24 b9		      bit	fast
+    856  2663		       50 1a		      bvc	.gap
+    857  2665		       4a		      lsr		; second lap (or difficulty A): three quarters of the gap
+    858  2666		       4a		      lsr
+    859  2667		       85 b1		      sta	lt0
+    860  2669		       a5 b9		      lda	fast
+    861  266b		       29 a0		      and	#$A0
+    862  266d		       c9 a0		      cmp	#$A0
+    863  266f		       d0 08		      bne	.quarter
+    864  2671		       a5 b1		      lda	lt0	; second lap on A: five eighths
+    865  2673		       4a		      lsr
+    866  2674		       18		      clc
+    867  2675		       65 b1		      adc	lt0
+    868  2677		       85 b1		      sta	lt0
+    869  2679				   .quarter
+    870  2679		       bd a6 fc 	      lda	WaveGap,x
+    871  267c		       38		      sec
+    872  267d		       e5 b1		      sbc	lt0
+    873  267f				   .gap
+    874  267f		       8d 5e f0 	      sta	W_spawnTimer
+    875  2682		       60		      rts
+    876  2683
+    877  2683							; Pack: the rest of a wind-up mouse pack, every 12 frames
+    878  2683				   Pack
+    879  2683					      SUBROUTINE
+    880  2683		       ad bc f0 	      lda	R_packLeft
+    881  2686		       f0 28		      beq	.done
+    882  2688		       ad bd f0 	      lda	R_packTimer
+    883  268b		       38		      sec
+    884  268c		       e9 01		      sbc	#1
+    885  268e		       8d 3d f0 	      sta	W_packTimer
+    886  2691		       d0 1d		      bne	.done
+    887  2693		       a9 06		      lda	#6
+    888  2695		       8d 3d f0 	      sta	W_packTimer
+    889  2698		       20 b1 f6 	      jsr	FreeEnemy
+    890  269b		       30 13		      bmi	.done
+    891  269d		       ad bc f0 	      lda	R_packLeft
+    892  26a0		       38		      sec
+    893  26a1		       e9 01		      sbc	#1
+    894  26a3		       8d 3c f0 	      sta	W_packLeft
+    895  26a6		       ad be f0 	      lda	R_packLane
+    896  26a9		       85 b1		      sta	lt0
+    897  26ab		       a9 04		      lda	#EN_MOUSE
+    898  26ad		       4c bc f6 	      jmp	Spawn
+    899  26b0				   .done
+    900  26b0		       60		      rts
+    901  26b1
+    902  26b1				   FreeEnemy		; Y = a free enemy slot ($FF, N set, if none)
+    903  26b1					      SUBROUTINE
+    904  26b1		       a0 04		      ldy	#NENEMY-1
+    905  26b3				   .loop
+    906  26b3		       b9 8a f0 	      lda	R_eType,y
+    907  26b6		       f0 03		      beq	.found
+    908  26b8		       88		      dey
+    909  26b9		       10 f8		      bpl	.loop
+    910  26bb				   .found
+    911  26bb		       60		      rts
+    912  26bc
+    913  26bc							; Spawn: enemy kind A into slot Y on shelf lt0, at the right edge
+    914  26bc				   Spawn
+    915  26bc					      SUBROUTINE
+    916  26bc		       99 0a f0 	      sta	W_eType,y
+    917  26bf		       aa		      tax
+    918  26c0		       ad d0 f0 	      lda	R_wave	; one more health every fourth wave (every
+    919  26c3		       4a		      lsr		; eighth for the light ones: wind-up mice and
+    920  26c4		       4a		      lsr		; balloon clowns, which a ramp of wave / 4
+    921  26c5		       e0 04		      cpx	#EN_MOUSE	; made six and three times as tough by wave 20)
+    922  26c7		       f0 04		      beq	.light
+    923  26c9		       e0 06		      cpx	#EN_BALLOON
+    924  26cb		       d0 01		      bne	.ramp
+    925  26cd				   .light
+    926  26cd		       4a		      lsr
+    927  26ce				   .ramp
+    928  26ce		       18		      clc
+    929  26cf		       7d 1a fc 	      adc	EnHP,x
+    930  26d2		       85 b5		      sta	lt4	; health
+    931  26d4		       a5 b9		      lda	fast
+    932  26d6		       29 a0		      and	#$A0
+    933  26d8		       c9 a0		      cmp	#$A0
+    934  26da		       d0 07		      bne	.health
+    935  26dc		       a5 b5		      lda	lt4	; the second lap on A: tougher
+    936  26de		       18		      clc
+    937  26df		       69 01		      adc	#A_LAP2_HP
+    938  26e1		       85 b5		      sta	lt4
+    939  26e3				   .health
+    940  26e3		       a5 b5		      lda	lt4
+    941  26e5		       99 0f f0 	      sta	W_eHP,y
+    942  26e8		       a9 97		      lda	#151
+    943  26ea		       99 00 f0 	      sta	W_eX,y
+    944  26ed		       a9 00		      lda	#0
+    945  26ef		       99 14 f0 	      sta	W_eState,y
+    946  26f2		       a5 b1		      lda	lt0
+    947  26f4		       99 05 f0 	      sta	W_eLane,y
+    948  26f7		       a2 04		      ldx	#NENEMY-1
+    949  26f9				   .jets		; a flying jet hasn't hit the newcomer: clear
+    950  26f9		       bd 8a f0 	      lda	R_eType,x	; its slot's bit in every jet's hit mask
+    951  26fc		       c9 09		      cmp	#EN_JET
+    952  26fe		       d0 0b		      bne	.notJet
+    953  2700		       b9 7d fc 	      lda	KindBit,y
+    954  2703		       49 ff		      eor	#$FF
+    955  2705		       3d 8f f0 	      and	R_eHP,x
+    956  2708		       9d 0f f0 	      sta	W_eHP,x
+    957  270b				   .notJet
+    958  270b		       ca		      dex
+    959  270c		       10 eb		      bpl	.jets
+    960  270e		       98		      tya
+    961  270f		       aa		      tax
+    962  2710		       4c 6c f8 	      jmp	EnemyRow
+    963  2713
+    964  2713							;-------------------------------------------------------------------------------
+    965  2713							; Enemies: half of them each frame (even slots on even frames, odd slots on
+    966  2713							; odd frames), so each moves in steps of two frames. Each walks left at its
+    967  2713							; kind's pace; a toy in its way stops it and gets chewed, except: the
+    968  2713							; helicopter hops over the first toy, the pogo frog jumps to the next shelf
+    969  2713							; once, the balloon clown floats over every toy, the T-Rex crushes a toy in
+    970  2713							; one bite. A jack-in-the-box springs on whatever reaches it; reaching the
+    971  2713							; toy box is a breach.
+    972  2713				   Enemies
+    973  2713					      SUBROUTINE
+    974  2713		       a5 9c		      lda	frame
+    975  2715		       29 01		      and	#1
+    976  2717		       aa		      tax
+    977  2718				   .loop
+    978  2718		       bd 8a f0 	      lda	R_eType,x
+    979  271b		       f0 16		      beq	.next
+    980  271d		       c9 09		      cmp	#EN_JET
+    981  271f		       f0 0f		      beq	.jet
+    982  2721		       20 3a f7 	      jsr	EnemyAct	; (it updates the rows when the enemy moves)
+    983  2724		       b5 9e		      lda	eTop,x
+    984  2726		       c9 ff		      cmp	#$FF
+    985  2728		       d0 09		      bne	.next
+    986  272a		       20 6c f8 	      jsr	EnemyRow	; (rows never worked out: a living enemy's
+    987  272d		       4c 33 f7 	      jmp	.next	; eTop is never $FF otherwise)
+    988  2730				   .jet
+    989  2730		       20 30 fb 	      jsr	JetAct
+    990  2733				   .next
+    991  2733		       e8		      inx
+    992  2734		       e8		      inx
+    993  2735		       e0 05		      cpx	#NENEMY
+    994  2737		       90 df		      bcc	.loop
+    995  2739		       60		      rts
+    996  273a
+    997  273a				   EnemyAct		; enemy X (kept)
+    998  273a					      SUBROUTINE
+    999  273a		       85 b6		      sta	lt5	; kind
+   1000  273c		       a5 b6		      lda	lt5
+   1001  273e		       c9 06		      cmp	#EN_BALLOON
+   1002  2740		       f0 2f		      beq	.walk	; floats over every toy
+   1003  2742		       bd 80 f0 	      lda	R_eX,x
+   1004  2745		       c9 79		      cmp	#121
+   1005  2747		       b0 28		      bcs	.walk	; right of every toy
+   1006  2749		       38		      sec		; the toys stand at x 48, 80, 112 (ColX): a
+   1007  274a		       e9 30		      sbc	#48	; toy blocks an enemy at its x to x + 8
+   1008  274c		       90 23		      bcc	.walk	; left of every toy
+   1009  274e		       a8		      tay
+   1010  274f		       29 1f		      and	#31
+   1011  2751		       c9 09		      cmp	#9
+   1012  2753		       b0 1c		      bcs	.walk	; between two columns
+   1013  2755		       98		      tya
+   1014  2756		       4a		      lsr
+   1015  2757		       4a		      lsr
+   1016  2758		       4a		      lsr
+   1017  2759		       4a		      lsr
+   1018  275a		       4a		      lsr
+   1019  275b		       85 b3		      sta	lt2	; column
+   1020  275d		       bc 85 f0 	      ldy	R_eLane,x
+   1021  2760		       18		      clc
+   1022  2761		       79 d6 fc 	      adc	Lane3,y
+   1023  2764		       85 b2		      sta	lt1	; slot
+   1024  2766		       a8		      tay
+   1025  2767		       b9 99 f0 	      lda	R_slotType,y
+   1026  276a		       f0 05		      beq	.walk	; (empty)
+   1027  276c		       a4 b3		      ldy	lt2
+   1028  276e		       4c bd f7 	      jmp	.blocked
+   1029  2771				   .walk
+   1030  2771		       bd 94 f0 	      lda	R_eState,x	; walking: not chewing
+   1031  2774		       29 7f		      and	#$7F
+   1032  2776		       9d 14 f0 	      sta	W_eState,x
+   1033  2779							; pace: move on updates where (frame/2) & mask = 0, by step pixels
+   1034  2779		       a4 b6		      ldy	lt5
+   1035  277b		       24 b9		      bit	fast
+   1036  277d		       10 05		      bpl	.lap1
+   1037  277f		       98		      tya		; second lap: the fast table
+   1038  2780		       18		      clc
+   1039  2781		       69 09		      adc	#NKINDS
+   1040  2783		       a8		      tay
+   1041  2784				   .lap1
+   1042  2784		       a5 b6		      lda	lt5
+   1043  2786		       c9 05		      cmp	#EN_KNIGHT
+   1044  2788		       d0 0c		      bne	.pace
+   1045  278a		       bd 94 f0 	      lda	R_eState,x
+   1046  278d		       29 40		      and	#$40
+   1047  278f		       f0 05		      beq	.pace
+   1048  2791		       98		      tya		; a knight without its shield charges
+   1049  2792		       18		      clc
+   1050  2793		       69 12		      adc	#2*NKINDS
+   1051  2795		       a8		      tay
+   1052  2796				   .pace
+   1053  2796		       a5 9c		      lda	frame
+   1054  2798		       4a		      lsr
+   1055  2799		       39 35 fc 	      and	EnMask,y
+   1056  279c		       d0 1e		      bne	.done
+   1057  279e		       bd 80 f0 	      lda	R_eX,x
+   1058  27a1		       38		      sec
+   1059  27a2		       f9 59 fc 	      sbc	EnStep,y
+   1060  27a5		       c9 29		      cmp	#BREACH_X
+   1061  27a7		       90 06		      bcc	.reach
+   1062  27a9		       9d 00 f0 	      sta	W_eX,x
+   1063  27ac		       4c 6c f8 	      jmp	EnemyRow
+   1064  27af				   .reach
+   1065  27af		       a4 b0		      ldy	KILLED
+   1066  27b1		       d0 09		      bne	.done	; an enemy died this frame: the box next update
+   1067  27b3		       9d 00 f0 	      sta	W_eX,x
+   1068  27b6				   .breach
+   1069  27b6		       20 6c f8 	      jsr	EnemyRow	; (the game may end with it in view)
+   1070  27b9		       4c 95 f8 	      jmp	Breach
+   1071  27bc				   .done
+   1072  27bc		       60		      rts
+   1073  27bd				   .blocked
+   1074  27bd		       a4 b2		      ldy	lt1
+   1075  27bf		       b9 99 f0 	      lda	R_slotType,y
+   1076  27c2		       c9 04		      cmp	#TOY_JACK
+   1077  27c4		       d0 08		      bne	.notJack
+   1078  27c6		       ad cb f0 	      lda	R_splashN
+   1079  27c9		       d0 03		      bne	.notJack	; (a burst still going: it gets chewed meanwhile)
+   1080  27cb		       4c 49 f8 	      jmp	JackSpring
+   1081  27ce				   .notJack
+   1082  27ce		       a4 b3		      ldy	lt2
+   1083  27d0		       a5 b6		      lda	lt5
+   1084  27d2		       c9 02		      cmp	#EN_HELI
+   1085  27d4		       f0 1f		      beq	.hop
+   1086  27d6		       c9 07		      cmp	#EN_POGO
+   1087  27d8		       d0 3c		      bne	.chew
+   1088  27da							; pogo frog: once, jump to the next shelf
+   1089  27da		       bd 94 f0 	      lda	R_eState,x
+   1090  27dd		       29 40		      and	#$40
+   1091  27df		       d0 35		      bne	.chew
+   1092  27e1		       bd 94 f0 	      lda	R_eState,x
+   1093  27e4		       09 40		      ora	#$40
+   1094  27e6		       9d 14 f0 	      sta	W_eState,x
+   1095  27e9		       bc 85 f0 	      ldy	R_eLane,x
+   1096  27ec		       b9 84 fc 	      lda	NextLane,y
+   1097  27ef		       9d 05 f0 	      sta	W_eLane,x
+   1098  27f2		       4c 6c f8 	      jmp	EnemyRow
+   1099  27f5				   .hop
+   1100  27f5		       bd 94 f0 	      lda	R_eState,x
+   1101  27f8		       29 40		      and	#$40
+   1102  27fa		       d0 1a		      bne	.chew
+   1103  27fc		       bd 94 f0 	      lda	R_eState,x	; helicopter: hop over the toy, once
+   1104  27ff		       09 40		      ora	#$40
+   1105  2801		       9d 14 f0 	      sta	W_eState,x
+   1106  2804		       a4 b3		      ldy	lt2
+   1107  2806		       b9 30 fd 	      lda	ColX,y
+   1108  2809		       38		      sec
+   1109  280a		       e9 09		      sbc	#9
+   1110  280c		       9d 00 f0 	      sta	W_eX,x
+   1111  280f		       c9 29		      cmp	#BREACH_X
+   1112  2811		       90 a3		      bcc	.breach
+   1113  2813		       4c 6c f8 	      jmp	EnemyRow
+   1114  2816				   .chew
+   1115  2816		       bd 94 f0 	      lda	R_eState,x
+   1116  2819		       09 80		      ora	#$80
+   1117  281b		       9d 14 f0 	      sta	W_eState,x
+   1118  281e		       86 b1		      stx	lt0
+   1119  2820		       a5 9c		      lda	frame
+   1120  2822		       4a		      lsr
+   1121  2823		       18		      clc
+   1122  2824		       65 b1		      adc	lt0	; (staggered by slot: bites don't pile up
+   1123  2826		       29 07		      and	#7	; on one frame) one bite every 16 frames
+   1124  2828		       d0 92		      bne	.done
+      0  282a					      SOUND	SND_CHEW
+      1  282a		       a9 0d		      lda	#SND_CHEW
+      2  282c		       20 a4 fb 	      jsr	SndPlay
+   1126  282f		       a4 b2		      ldy	lt1
+   1127  2831		       a5 b6		      lda	lt5
+   1128  2833		       c9 08		      cmp	#EN_TREX
+   1129  2835		       f0 0c		      beq	.crush
+   1130  2837		       b9 a2 f0 	      lda	R_slotHP,y
+   1131  283a		       38		      sec
+   1132  283b		       e9 01		      sbc	#1
+   1133  283d		       99 22 f0 	      sta	W_slotHP,y
+   1134  2840		       f0 01		      beq	.crush
+   1135  2842		       60		      rts
+   1136  2843				   .crush
+   1137  2843		       a9 00		      lda	#0
+   1138  2845		       99 19 f0 	      sta	W_slotType,y
+   1139  2848		       60		      rts
+   1140  2849
+   1141  2849							; JackSpring (X = the enemy that reached it, lt1 = its slot, lt2 = column):
+   1142  2849							; the jack-in-the-box springs, hitting every enemy at it (the burst sweep:
+   1143  2849							; one a frame), and is gone
+   1144  2849				   JackSpring
+   1145  2849					      SUBROUTINE
+   1146  2849		       a4 b3		      ldy	lt2
+   1147  284b		       b9 30 fd 	      lda	ColX,y
+   1148  284e		       18		      clc
+   1149  284f		       69 04		      adc	#4
+   1150  2851		       8d 49 f0 	      sta	W_splashX	; the box's middle
+   1151  2854		       bd 85 f0 	      lda	R_eLane,x
+   1152  2857		       8d 4a f0 	      sta	W_splashL
+   1153  285a		       a9 75		      lda	#$70|NENEMY	; (monster hit 7: a jack's burst)
+   1154  285c		       8d 4b f0 	      sta	W_splashN
+   1155  285f		       a4 b2		      ldy	lt1
+   1156  2861		       a9 00		      lda	#0
+   1157  2863		       99 19 f0 	      sta	W_slotType,y
+      0  2866					      SOUND	SND_SPRING
+      1  2866		       a9 0a		      lda	#SND_SPRING
+      2  2868		       20 a4 fb 	      jsr	SndPlay
+   1159  286b		       60		      rts
+   1160  286c
+   1161  286c							; EnemyRow (X = enemy, kept): its feet row and event row for the kernel's
+   1162  286c							; scheduler (SelectEnemies, VBLANK), $FF when there is none. Kept up to date
+   1163  286c							; wherever an enemy moves, changes shelf, arrives or goes.
+   1164  286c				   EnemyRow
+   1165  286c					      SUBROUTINE
+   1166  286c		       bd 8a f0 	      lda	R_eType,x
+   1167  286f		       f0 1f		      beq	.none
+   1168  2871		       bc 80 f0 	      ldy	R_eX,x
+   1169  2874		       b9 51 fd 	      lda	FeetX2,y
+   1170  2877		       bc 85 f0 	      ldy	R_eLane,x
+   1171  287a		       18		      clc
+   1172  287b		       79 41 fe 	      adc	LaneBase2,y
+   1173  287e		       95 a3		      sta	eFeet,x
+   1174  2880		       38		      sec
+   1175  2881		       e9 0b		      sbc	#11	; top - 1: the latest row for its event
+   1176  2883		       a8		      tay
+   1177  2884				   .findE
+   1178  2884		       b9 f1 fd 	      lda	RowBad2,y
+   1179  2887		       f0 03		      beq	.gotE
+   1180  2889		       88		      dey
+   1181  288a		       d0 f8		      bne	.findE
+   1182  288c				   .gotE
+   1183  288c		       98		      tya
+   1184  288d		       95 9e		      sta	eTop,x	; eTop = the event row (0: none usable)
+   1185  288f		       60		      rts
+   1186  2890				   .none
+   1187  2890		       a9 ff		      lda	#$FF
+   1188  2892		       95 9e		      sta	eTop,x
+   1189  2894		       60		      rts
+   1190  2895
+   1191  2895							; Breach (X = enemy at the box): the shelf's lid slams and clears it, once;
+   1192  2895							; the second breach on a shelf ends the game
+   1193  2895				   Breach
+   1194  2895					      SUBROUTINE
+   1195  2895		       a9 01		      lda	#1
+   1196  2897		       85 b0		      sta	KILLED	; (the spawner waits a frame)
+   1197  2899		       bc 85 f0 	      ldy	R_eLane,x
+   1198  289c		       b9 d9 fc 	      lda	Bit,y
+   1199  289f		       2d da f0 	      and	R_lids
+   1200  28a2		       d0 34		      bne	.over
+   1201  28a4		       b9 d9 fc 	      lda	Bit,y
+   1202  28a7		       0d da f0 	      ora	R_lids
+   1203  28aa		       8d 5a f0 	      sta	W_lids
+   1204  28ad		       84 b1		      sty	lt0
+   1205  28af		       a0 04		      ldy	#NENEMY-1
+   1206  28b1				   .clear
+   1207  28b1		       b9 8a f0 	      lda	R_eType,y
+   1208  28b4		       f0 14		      beq	.next
+   1209  28b6		       b9 85 f0 	      lda	R_eLane,y
+   1210  28b9		       c5 b1		      cmp	lt0
+   1211  28bb		       d0 0d		      bne	.next
+   1212  28bd		       a9 00		      lda	#0
+   1213  28bf		       99 0a f0 	      sta	W_eType,y
+   1214  28c2		       a9 ff		      lda	#$FF
+   1215  28c4		       99 9e 00 	      sta	eTop,y
+   1216  28c7		       99 05 f0 	      sta	W_eLane,y
+   1217  28ca				   .next
+   1218  28ca		       88		      dey
+   1219  28cb		       10 e4		      bpl	.clear
+   1220  28cd		       a9 28		      lda	#40
+   1221  28cf		       8d 60 f0 	      sta	W_flash
+      0  28d2					      SOUND	SND_SLAM
+      1  28d2		       a9 0e		      lda	#SND_SLAM
+      2  28d4		       20 a4 fb 	      jsr	SndPlay
+   1223  28d7		       60		      rts
+   1224  28d8				   .over
+      0  28d8					      SOUND	SND_OVER
+      1  28d8		       a9 06		      lda	#SND_OVER
+      2  28da		       20 a4 fb 	      jsr	SndPlay
+   1226  28dd		       a9 02		      lda	#ST_OVER
+   1227  28df		       8d 5b f0 	      sta	W_state
+   1228  28e2		       a9 78		      lda	#120
+   1229  28e4		       8d 5c f0 	      sta	W_overTimer
+   1230  28e7		       60		      rts
+   1231  28e8
+   1232  28e8							;-------------------------------------------------------------------------------
+   1233  28e8							; Toys (odd frames, one shelf at a time, so each toy acts every sixth
+   1234  28e8							; frame): when ready, army men, tanks and cannons fire along their shelf (one
+   1235  28e8							; shot in flight per shelf) at an enemy ahead; teddies and jack-in-the-boxes
+   1236  28e8							; just stand
+   1237  28e8				   Toys
+   1238  28e8					      SUBROUTINE
+   1239  28e8		       ad b4 f0 	      lda	R_toyShelf
+   1240  28eb		       18		      clc
+   1241  28ec		       69 01		      adc	#1
+   1242  28ee		       c9 03		      cmp	#3
+   1243  28f0		       90 02		      bcc	.shelf
+   1244  28f2		       a9 00		      lda	#0
+   1245  28f4				   .shelf
+   1246  28f4		       8d 34 f0 	      sta	W_toyShelf
+   1247  28f7		       a8		      tay
+   1248  28f8		       b9 d6 fc 	      lda	Lane3,y
+   1249  28fb		       85 b5		      sta	lt4	; first slot of the shelf
+   1250  28fd		       18		      clc
+   1251  28fe		       69 02		      adc	#2
+   1252  2900		       aa		      tax
+   1253  2901				   .loop
+   1254  2901		       20 0c f9 	      jsr	ToyAct
+   1255  2904		       ca		      dex
+   1256  2905		       30 04		      bmi	.done
+   1257  2907		       e4 b5		      cpx	lt4
+   1258  2909		       b0 f6		      bcs	.loop
+   1259  290b				   .done
+   1260  290b		       60		      rts
+   1261  290c
+   1262  290c				   ToyAct		; slot X (kept)
+   1263  290c					      SUBROUTINE
+   1264  290c		       bd 99 f0 	      lda	R_slotType,x
+   1265  290f		       d0 01		      bne	.some
+   1266  2911		       60		      rts
+   1267  2912				   .some
+   1268  2912		       c9 02		      cmp	#TOY_TEDDY
+   1269  2914		       f0 04		      beq	.stands
+   1270  2916		       c9 04		      cmp	#TOY_JACK
+   1271  2918		       d0 01		      bne	.acts
+   1272  291a				   .stands
+   1273  291a		       60		      rts
+   1274  291b				   .acts
+   1275  291b		       85 b6		      sta	lt5
+   1276  291d		       bd ab f0 	      lda	R_slotCool,x
+   1277  2920		       f0 09		      beq	.ready
+   1278  2922		       38		      sec
+   1279  2923		       e9 01		      sbc	#1
+   1280  2925		       9d 2b f0 	      sta	W_slotCool,x
+   1281  2928		       4c 6c f9 	      jmp	.next
+   1282  292b				   .ready
+   1283  292b		       bc 27 fd 	      ldy	SlotCol,x
+   1284  292e		       b9 30 fd 	      lda	ColX,y
+   1285  2931		       85 b1		      sta	lt0
+   1286  2933		       bd 1e fd 	      lda	SlotLane,x
+   1287  2936		       85 b2		      sta	lt1
+   1288  2938		       20 6d f9 	      jsr	FindAhead
+   1289  293b		       30 2f		      bmi	.next
+   1290  293d		       a4 b2		      ldy	lt1
+   1291  293f		       b9 c3 f0 	      lda	R_shotDmg,y
+   1292  2942		       d0 28		      bne	.next
+   1293  2944		       a4 b6		      ldy	lt5
+   1294  2946		       b9 13 fc 	      lda	ToyDmg,y
+   1295  2949		       a4 b2		      ldy	lt1
+   1296  294b		       99 43 f0 	      sta	W_shotDmg,y
+   1297  294e		       a4 b6		      ldy	lt5
+   1298  2950		       b9 87 fc 	      lda	ToyShot,y
+   1299  2953		       a4 b2		      ldy	lt1
+   1300  2955		       99 46 f0 	      sta	W_shotKind,y
+   1301  2958		       bd 33 fd 	      lda	ShotStart,x
+   1302  295b		       99 99 00 	      sta	shotPtr,y
+   1303  295e		       a4 b6		      ldy	lt5
+   1304  2960		       b9 0c fc 	      lda	ToyPeriod,y
+   1305  2963		       9d 2b f0 	      sta	W_slotCool,x
+   1306  2966		       b9 f7 fb 	      lda	ToySound,y
+   1307  2969		       20 a4 fb 	      jsr	SndPlay
+   1308  296c				   .next
+   1309  296c		       60		      rts
+   1310  296d
+   1311  296d							; FindAhead: Y = the nearest enemy on shelf lt1 right of x lt0 ($FF, N set,
+   1312  296d							; if none)
+   1313  296d				   FindAhead
+   1314  296d					      SUBROUTINE
+   1315  296d		       a9 ff		      lda	#$FF
+   1316  296f		       85 b3		      sta	lt2
+   1317  2971		       85 b4		      sta	lt3
+   1318  2973		       a0 04		      ldy	#NENEMY-1
+   1319  2975				   .loop
+   1320  2975		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF)
+   1321  2978		       c5 b2		      cmp	lt1
+   1322  297a		       d0 11		      bne	.next
+   1323  297c		       b9 80 f0 	      lda	R_eX,y
+   1324  297f		       c5 b1		      cmp	lt0
+   1325  2981		       90 0a		      bcc	.next
+   1326  2983		       f0 08		      beq	.next
+   1327  2985		       c5 b3		      cmp	lt2
+   1328  2987		       b0 04		      bcs	.next
+   1329  2989		       85 b3		      sta	lt2
+   1330  298b		       84 b4		      sty	lt3
+   1331  298d				   .next
+   1332  298d		       88		      dey
+   1333  298e		       10 e5		      bpl	.loop
+   1334  2990		       a4 b4		      ldy	lt3
+   1335  2992		       60		      rts
+   1336  2993
+   1337  2993							;-------------------------------------------------------------------------------
+   1338  2993							; Shots (even frames): each checks for a hit where it is, then moves one step
+   1339  2993							; (six pixels) right along its shelf's diagonal; past x 149 it is gone
+   1340  2993				   Shots
+   1341  2993					      SUBROUTINE
+   1342  2993		       a2 02		      ldx	#2
+   1343  2995				   .loop
+   1344  2995		       bd c3 f0 	      lda	R_shotDmg,x
+   1345  2998		       f0 2b		      beq	.next
+   1346  299a		       b5 99		      lda	shotPtr,x
+   1347  299c		       38		      sec
+   1348  299d		       fd 3c fd 	      sbc	LaneR0,x
+   1349  29a0		       a8		      tay
+   1350  29a1		       b9 3f fd 	      lda	ShotX,y
+   1351  29a4		       85 b1		      sta	lt0	; the shot's x
+   1352  29a6		       86 b2		      stx	lt1
+   1353  29a8		       20 c9 f9 	      jsr	ShotHit
+   1354  29ab		       b0 18		      bcs	.next
+   1355  29ad		       b5 99		      lda	shotPtr,x
+   1356  29af		       38		      sec
+   1357  29b0		       e9 01		      sbc	#1
+   1358  29b2		       dd 3c fd 	      cmp	LaneR0,x
+   1359  29b5		       90 05		      bcc	.gone
+   1360  29b7		       95 99		      sta	shotPtr,x
+   1361  29b9		       4c c5 f9 	      jmp	.next
+   1362  29bc				   .gone
+   1363  29bc		       a9 50		      lda	#80
+   1364  29be		       95 99		      sta	shotPtr,x
+   1365  29c0		       a9 00		      lda	#0
+   1366  29c2		       9d 43 f0 	      sta	W_shotDmg,x
+   1367  29c5				   .next
+   1368  29c5		       ca		      dex
+   1369  29c6		       10 cd		      bpl	.loop
+   1370  29c8		       60		      rts
+   1371  29c9
+   1372  29c9							; ShotHit (X = shelf, lt0 = shot x): carry set if it hit an enemy
+   1373  29c9				   ShotHit
+   1374  29c9					      SUBROUTINE
+   1375  29c9		       a5 b1		      lda	lt0
+   1376  29cb		       18		      clc
+   1377  29cc		       69 03		      adc	#3
+   1378  29ce		       85 b4		      sta	lt3	; the shot's right end
+   1379  29d0		       a0 04		      ldy	#NENEMY-1
+   1380  29d2				   .loop
+   1381  29d2		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF)
+   1382  29d5		       c5 b2		      cmp	lt1
+   1383  29d7		       d0 67		      bne	.next
+   1384  29d9		       a5 b4		      lda	lt3
+   1385  29db		       d9 80 f0 	      cmp	R_eX,y
+   1386  29de		       90 60		      bcc	.next	; shot ends left of the enemy
+   1387  29e0		       b9 80 f0 	      lda	R_eX,y
+   1388  29e3		       18		      clc
+   1389  29e4		       69 07		      adc	#7
+   1390  29e6		       c5 b1		      cmp	lt0
+   1391  29e8		       90 56		      bcc	.next	; enemy ends left of the shot
+   1392  29ea		       bd c6 f0 	      lda	R_shotKind,x
+   1393  29ed		       c9 02		      cmp	#SHOT_TANK
+   1394  29ef		       d0 09		      bne	.notShell
+   1395  29f1		       b9 8a f0 	      lda	R_eType,y
+   1396  29f4		       c9 06		      cmp	#EN_BALLOON
+   1397  29f6		       f0 48		      beq	.next	; tank shells can't hit the balloon clown
+   1398  29f8		       d0 10		      bne	.hit
+   1399  29fa				   .notShell
+   1400  29fa		       c9 01		      cmp	#SHOT_ARMY
+   1401  29fc		       d0 0c		      bne	.hit
+   1402  29fe		       b9 8a f0 	      lda	R_eType,y
+   1403  2a01		       c9 03		      cmp	#EN_CRAWL
+   1404  2a03		       d0 05		      bne	.hit
+   1405  2a05		       b9 94 f0 	      lda	R_eState,y
+   1406  2a08		       30 36		      bmi	.next	; bullets pass over a crawler that is chewing
+   1407  2a0a				   .hit
+   1408  2a0a		       bd c6 f0 	      lda	R_shotKind,x
+   1409  2a0d		       c9 03		      cmp	#SHOT_CANNON
+   1410  2a0f		       d0 18		      bne	.direct
+   1411  2a11		       ad cb f0 	      lda	R_splashN
+   1412  2a14		       d0 13		      bne	.direct	; (one burst at a time)
+   1413  2a16		       b9 80 f0 	      lda	R_eX,y
+   1414  2a19		       8d 49 f0 	      sta	W_splashX
+   1415  2a1c		       8e 4a f0 	      stx	W_splashL
+   1416  2a1f		       98		      tya
+   1417  2a20		       0a		      asl
+   1418  2a21		       0a		      asl
+   1419  2a22		       0a		      asl
+   1420  2a23		       0a		      asl
+   1421  2a24		       09 05		      ora	#NENEMY
+   1422  2a26		       8d 4b f0 	      sta	W_splashN
+   1423  2a29				   .direct
+   1424  2a29		       bd c3 f0 	      lda	R_shotDmg,x
+   1425  2a2c		       84 b3		      sty	lt2
+   1426  2a2e		       a6 b3		      ldx	lt2
+   1427  2a30		       20 ac f4 	      jsr	Damage
+   1428  2a33		       a6 b2		      ldx	lt1
+   1429  2a35		       a9 50		      lda	#80
+   1430  2a37		       95 99		      sta	shotPtr,x
+   1431  2a39		       a9 00		      lda	#0
+   1432  2a3b		       9d 43 f0 	      sta	W_shotDmg,x
+   1433  2a3e		       38		      sec
+   1434  2a3f		       60		      rts
+   1435  2a40				   .next
+   1436  2a40		       88		      dey
+   1437  2a41		       10 8f		      bpl	.loop
+   1438  2a43		       18		      clc
+   1439  2a44		       60		      rts
+   1440  2a45
+   1441  2a45
+   1442  2a45							; Splash (odd frames): a cannonball's burst also hits every other monster on
+   1443  2a45							; its shelf within SPLASH pixels of the one it hit; a jet's burst (bit 7 of
+   1444  2a45							; splashN; no monster hit first) hits every monster on its shelf. One monster
+   1445  2a45							; is checked a frame (five frames a burst), which keeps the frame time bounded
+   1446  2a45				   Splash
+   1447  2a45					      SUBROUTINE
+   1448  2a45		       ad cb f0 	      lda	R_splashN
+   1449  2a48		       f0 74		      beq	.done
+   1450  2a4a		       85 b1		      sta	lt0
+   1451  2a4c		       29 0f		      and	#$0F
+   1452  2a4e		       aa		      tax
+   1453  2a4f		       ca		      dex		; X = the monster to check
+   1454  2a50		       d0 04		      bne	.more
+   1455  2a52		       a9 00		      lda	#0	; the last one: the burst is over
+   1456  2a54		       f0 05		      beq	.store
+   1457  2a56				   .more
+   1458  2a56		       a5 b1		      lda	lt0
+   1459  2a58		       38		      sec
+   1460  2a59		       e9 01		      sbc	#1
+   1461  2a5b				   .store
+   1462  2a5b		       8d 4b f0 	      sta	W_splashN
+   1463  2a5e		       a5 b1		      lda	lt0
+   1464  2a60		       4a		      lsr
+   1465  2a61		       4a		      lsr
+   1466  2a62		       4a		      lsr
+   1467  2a63		       4a		      lsr
+   1468  2a64		       85 b1		      sta	lt0	; the monster hit (8-15: a jet's burst)
+   1469  2a66		       e4 b1		      cpx	lt0
+   1470  2a68		       f0 54		      beq	.done	; (it took its hit already)
+   1471  2a6a		       bd 8a f0 	      lda	R_eType,x
+   1472  2a6d		       f0 4f		      beq	.done
+   1473  2a6f		       bd 85 f0 	      lda	R_eLane,x
+   1474  2a72		       cd ca f0 	      cmp	R_splashL
+   1475  2a75		       d0 47		      bne	.done	; (a flying jet's shelf is 4-6)
+   1476  2a77		       a5 b1		      lda	lt0
+   1477  2a79		       29 08		      and	#8
+   1478  2a7b		       d0 3c		      bne	.jet
+   1479  2a7d		       bd 80 f0 	      lda	R_eX,x
+   1480  2a80		       38		      sec
+   1481  2a81		       ed c9 f0 	      sbc	R_splashX
+   1482  2a84		       b0 04		      bcs	.right
+   1483  2a86		       49 ff		      eor	#$FF	; (carry clear: + 1 makes it positive)
+   1484  2a88		       69 01		      adc	#1
+   1485  2a8a				   .right
+   1486  2a8a		       a4 b1		      ldy	lt0
+   1487  2a8c		       c0 07		      cpy	#7
+   1488  2a8e		       f0 09		      beq	.jack
+   1489  2a90		       c9 0d		      cmp	#SPLASH+1
+   1490  2a92		       b0 2a		      bcs	.done
+   1491  2a94		       a9 03		      lda	#CANNON_DMG
+   1492  2a96		       4c ac f4 	      jmp	Damage
+   1493  2a99				   .jack
+   1494  2a99		       c9 09		      cmp	#JACK_REACH+1
+   1495  2a9b		       b0 21		      bcs	.done
+   1496  2a9d		       a9 0a		      lda	#JACK_DMG
+   1497  2a9f		       20 ac f4 	      jsr	Damage
+   1498  2aa2		       bd 8a f0 	      lda	R_eType,x
+   1499  2aa5		       f0 17		      beq	.done	; (that was the end of it)
+   1500  2aa7		       bd 80 f0 	      lda	R_eX,x	; the spring throws it back up the shelf
+   1501  2aaa		       18		      clc
+   1502  2aab		       69 18		      adc	#JACK_THROW
+   1503  2aad		       c9 98		      cmp	#152
+   1504  2aaf		       90 02		      bcc	.thrown
+   1505  2ab1		       a9 97		      lda	#151
+   1506  2ab3				   .thrown
+   1507  2ab3		       9d 00 f0 	      sta	W_eX,x
+   1508  2ab6		       4c 6c f8 	      jmp	EnemyRow
+   1509  2ab9				   .jet
+   1510  2ab9		       a9 0a		      lda	#JET_DMG
+   1511  2abb		       4c ac f4 	      jmp	Damage
+   1512  2abe				   .done
+   1513  2abe		       60		      rts
+   1514  2abf
+   1515  2abf							;-------------------------------------------------------------------------------
+   1516  2abf				   Flash		; shelves flash white after a lid slam or air strike
+   1517  2abf					      SUBROUTINE
+   1518  2abf		       ad e0 f0 	      lda	R_flash
+   1519  2ac2		       f0 0f		      beq	.gold
+   1520  2ac4		       38		      sec
+   1521  2ac5		       e9 01		      sbc	#1
+   1522  2ac7		       8d 60 f0 	      sta	W_flash
+   1523  2aca		       29 04		      and	#4
+   1524  2acc		       f0 05		      beq	.gold
+   1525  2ace		       a9 0e		      lda	#COL_WHITE
+   1526  2ad0		       85 9d		      sta	pfColor
+   1527  2ad2		       60		      rts
+   1528  2ad3				   .gold
+   1529  2ad3		       a9 f8		      lda	#COL_GOLD
+   1530  2ad5		       85 9d		      sta	pfColor
+   1531  2ad7		       60		      rts
+   1532  2ad8
+   1533  2ad8							; SlotPointers: the kernel's defender pointers, one shelf per frame plus the
+   1534  2ad8							; cursor's slot. The cursor's slot shows the chosen toy as a blinking ghost
+   1535  2ad8							; when empty, or blinks its toy.
+   1536  2ad8				   SlotPointers
+   1537  2ad8					      SUBROUTINE
+   1538  2ad8		       ae d3 f0 	      ldx	R_cursor
+   1539  2adb		       20 ed fa 	      jsr	SlotPointer
+   1540  2ade		       ae b4 f0 	      ldx	R_toyShelf	; (the shelf the toys just took their turn on)
+   1541  2ae1		       bd d6 fc 	      lda	Lane3,x
+   1542  2ae4		       aa		      tax
+   1543  2ae5		       20 ed fa 	      jsr	SlotPointer
+   1544  2ae8		       e8		      inx
+   1545  2ae9		       20 ed fa 	      jsr	SlotPointer
+   1546  2aec		       e8		      inx
+   1547  2aed				   SlotPointer		; slot X
+   1548  2aed					      SUBROUTINE
+   1549  2aed		       bd 99 f0 	      lda	R_slotType,x
+   1550  2af0		       85 b1		      sta	lt0
+   1551  2af2		       ec d3 f0 	      cpx	R_cursor
+   1552  2af5		       d0 23		      bne	.show
+   1553  2af7		       ad db f0 	      lda	R_state
+   1554  2afa		       c9 01		      cmp	#ST_PLAY
+   1555  2afc		       d0 1c		      bne	.show
+   1556  2afe		       a5 b1		      lda	lt0
+   1557  2b00		       d0 0e		      bne	.occupied
+   1558  2b02		       a5 9c		      lda	frame
+   1559  2b04		       29 10		      and	#16
+   1560  2b06		       f0 12		      beq	.show
+   1561  2b08		       ad d4 f0 	      lda	R_toy
+   1562  2b0b		       85 b1		      sta	lt0
+   1563  2b0d		       4c 1a fb 	      jmp	.show
+   1564  2b10				   .occupied
+   1565  2b10		       a5 9c		      lda	frame
+   1566  2b12		       29 18		      and	#24
+   1567  2b14		       d0 04		      bne	.show
+   1568  2b16		       a9 00		      lda	#0
+   1569  2b18		       85 b1		      sta	lt0
+   1570  2b1a				   .show
+   1571  2b1a		       a4 b1		      ldy	lt0
+   1572  2b1c		       f0 0c		      beq	.empty
+   1573  2b1e		       b9 05 fd 	      lda	ToyLo,y
+   1574  2b21		       18		      clc
+   1575  2b22		       7d 0c fd 	      adc	SlotOfs,x
+   1576  2b25		       95 90		      sta	slotPtr,x
+   1577  2b27		       4c 2f fb 	      jmp	.next
+   1578  2b2a				   .empty
+   1579  2b2a		       bd 15 fd 	      lda	EmptyLo,x
+   1580  2b2d		       95 90		      sta	slotPtr,x
+   1581  2b2f				   .next
+   1582  2b2f		       60		      rts
+   1583  2b30
+   1584  2b30							;-------------------------------------------------------------------------------
+   1585  2b30							; JetAct (X = a launched jet): four pixels right per update; every enemy on
+   1586  2b30							; its shelf takes 10 damage once the nose has passed its middle. The jet's
+   1587  2b30							; health byte (unused for a jet) marks the enemy slots it has hit, so each is
+   1588  2b30							; hit exactly once; at most two an update (the rest the next one), so a pack
+   1589  2b30							; bunched together never dies all in one frame.
+   1590  2b30				   JetAct
+   1591  2b30					      SUBROUTINE
+   1592  2b30		       86 b4		      stx	lt3
+   1593  2b32		       bd 80 f0 	      lda	R_eX,x
+   1594  2b35		       18		      clc
+   1595  2b36		       69 0c		      adc	#12
+   1596  2b38		       85 b1		      sta	lt0	; the nose after this step
+   1597  2b3a		       bd 85 f0 	      lda	R_eLane,x
+   1598  2b3d		       29 03		      and	#3
+   1599  2b3f		       85 b2		      sta	lt1
+   1600  2b41		       a9 02		      lda	#2
+   1601  2b43		       a4 b0		      ldy	KILLED
+   1602  2b45		       f0 02		      beq	.hits
+   1603  2b47		       a9 01		      lda	#1	; an enemy died this frame already: one hit
+   1604  2b49				   .hits
+   1605  2b49		       85 b6		      sta	lt5	; hits left this update
+   1606  2b4b		       a0 04		      ldy	#NENEMY-1
+   1607  2b4d				   .loop
+   1608  2b4d		       b9 85 f0 	      lda	R_eLane,y	; (an empty slot's shelf is $FF, a jet's 4-6)
+   1609  2b50		       c5 b2		      cmp	lt1
+   1610  2b52		       d0 2e		      bne	.next
+   1611  2b54		       b9 80 f0 	      lda	R_eX,y
+   1612  2b57		       18		      clc
+   1613  2b58		       69 04		      adc	#4
+   1614  2b5a		       c5 b1		      cmp	lt0
+   1615  2b5c		       b0 24		      bcs	.next	; its middle is still ahead of the nose
+   1616  2b5e		       a6 b4		      ldx	lt3
+   1617  2b60		       bd 8f f0 	      lda	R_eHP,x
+   1618  2b63		       39 7d fc 	      and	KindBit,y	; (bits 0-4: enemy slots 0-4)
+   1619  2b66		       d0 1a		      bne	.next	; hit already
+   1620  2b68		       a5 b6		      lda	lt5
+   1621  2b6a		       f0 16		      beq	.next	; two this update: the next one gets it
+   1622  2b6c		       c6 b6		      dec	lt5
+   1623  2b6e		       bd 8f f0 	      lda	R_eHP,x
+   1624  2b71		       19 7d fc 	      ora	KindBit,y
+   1625  2b74		       9d 0f f0 	      sta	W_eHP,x
+   1626  2b77		       84 b3		      sty	lt2
+   1627  2b79		       a6 b3		      ldx	lt2
+   1628  2b7b		       a9 0a		      lda	#JET_DMG
+   1629  2b7d		       20 ac f4 	      jsr	Damage
+   1630  2b80		       a4 b3		      ldy	lt2
+   1631  2b82				   .next
+   1632  2b82		       88		      dey
+   1633  2b83		       10 c8		      bpl	.loop
+   1634  2b85		       a6 b4		      ldx	lt3
+   1635  2b87		       bd 80 f0 	      lda	R_eX,x
+   1636  2b8a		       18		      clc
+   1637  2b8b		       69 04		      adc	#4
+   1638  2b8d		       c9 98		      cmp	#152
+   1639  2b8f		       b0 06		      bcs	.gone
+   1640  2b91		       9d 00 f0 	      sta	W_eX,x
+   1641  2b94		       4c 6c f8 	      jmp	EnemyRow
+   1642  2b97				   .gone
+   1643  2b97		       a9 00		      lda	#0
+   1644  2b99		       9d 0a f0 	      sta	W_eType,x
+   1645  2b9c		       a9 ff		      lda	#$FF
+   1646  2b9e		       95 9e		      sta	eTop,x
+   1647  2ba0		       9d 05 f0 	      sta	W_eLane,x	; (no shelf: shots skip the empty slot)
+   1648  2ba3		       60		      rts
+   1649  2ba4
+   1650  2ba4							;-------------------------------------------------------------------------------
+   1651  2ba4
+   1652  2ba4							;-------------------------------------------------------------------------------
+   1653  2ba4							; Sound: channel 0 plays the player's actions and jingles, channel 1 combat.
+   1654  2ba4							; A sound is a list of steps (ticks of two frames, AUDC*16+AUDV, AUDF) ending
+   1655  2ba4							; in a zero; a new sound replaces the one playing on its channel unless that
+   1656  2ba4							; one matters more (SndPri).
+   1657  2ba4				   SndPlay		; A = sound id; keeps X and Y
+   1658  2ba4					      SUBROUTINE
+   1659  2ba4		       86 b7		      stx	sndX
+   1660  2ba6		       84 b8		      sty	sndY
+   1661  2ba8		       a8		      tay
+   1662  2ba9		       be d7 fb 	      ldx	SndChan,y
+   1663  2bac		       b9 e7 fb 	      lda	SndPri,y
+   1664  2baf		       dd b9 f0 	      cmp	R_sndPri,x
+   1665  2bb2		       90 0e		      bcc	.done	; something more important is playing
+   1666  2bb4		       9d 39 f0 	      sta	W_sndPri,x
+   1667  2bb7		       b9 c7 fb 	      lda	SndStart,y
+   1668  2bba		       9d 35 f0 	      sta	W_sndPos,x
+   1669  2bbd		       a9 00		      lda	#0
+   1670  2bbf		       9d 37 f0 	      sta	W_sndTimer,x
+   1671  2bc2				   .done
+   1672  2bc2		       a6 b7		      ldx	sndX
+   1673  2bc4		       a4 b8		      ldy	sndY
+   1674  2bc6		       60		      rts
+   1675  2bc7
+   1676  2bc7		       01 05 0c 16 SndStart   .byte.b	SdCursor-SndData, SdSelect-SndData, SdPlace-SndData, SdPick-SndData
+   1677  2bcb		       1d 21 2e 3b	      .byte.b	SdNoBatt-SndData, SdWave-SndData, SdOver-SndData, SdPop-SndData
+   1678  2bcf		       42 4c 53 78	      .byte.b	SdBoom-SndData, SdThump-SndData, SdSpring-SndData, SdHit-SndData
+   1679  2bd3		       7c 89 8d 9a	      .byte.b	SdKill-SndData, SdChew-SndData, SdSlam-SndData, SdJet-SndData
+   1680  2bd7		       00 00 00 00*SndChan    .byte.b	0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1
+   1681  2be7		       01 02 03 03*SndPri     .byte.b	1, 2, 3, 3, 3, 4, 5, 1, 3, 3, 2, 2, 3, 1, 5, 5
+   1682  2bf7		       00 07 00 08*ToySound   .byte.b	0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
+   1683  2bfe
+   1684  2bfe							;-------------------------------------------------------------------------------
+   1685  2bfe							; tables (toy and enemy types index from 1)
+   1686  2bfe		       00 0a 05 19*ToyCost    .byte.b	0, 10, 5, 25, 15, 20, 30
+   1687  2c05		       00 08 28 0c*ToyHP      .byte.b	0, 8, 40, 12, 8, 10, 1	; (the jack's 8: chewed while a burst is busy)
+   1688  2c0c		       00 07 00 32*ToyPeriod  .byte.b	0, 7, 0, 50, 0, 33, 0	; visits (6 frames) between shots
+   1689  2c13		       00 01 00 08*ToyDmg     .byte.b	0, 1, 0, 8, 0, CANNON_DMG, 0
+   1690  2c1a							; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
+   1691  2c1a		       00 06 05 03*EnHP       .byte.b	0, 6, 5, 3, 1, 6, 2, 3, 20
+   1692  2c23		       00 02 02 01*EnReward   .byte.b	0, 2, 2, 1, 1, 2, 2, 2, 5	; batteries
+   1693  2c2c		       00 10 15 10*EnScore    .byte.b	0, $10, $15, $10, $05, $20, $15, $15, $50	; BCD points
+   1694  2c35							; pace (updates are two frames): move when (frame/2) & mask = 0, by step
+   1695  2c35							; pixels; four blocks: first lap, second lap, knight charging (first lap,
+   1696  2c35							; second lap)
+   1697  2c35		       00 01 00 00*EnMask     .byte.b	0, 1, 0, 0, 0, 1, 1, 0, 3
+   1698  2c3e		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 1
+   1699  2c47		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 0
+   1700  2c50		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 0
+   1701  2c59		       00 01 01 01*EnStep     .byte.b	0, 1, 1, 1, 2, 1, 1, 1, 1
+   1702  2c62		       00 01 02 02*	      .byte.b	0, 1, 2, 2, 3, 1, 1, 2, 1
+   1703  2c6b		       00 01 01 01*	      .byte.b	0, 1, 1, 1, 1, 2, 1, 1, 1
+   1704  2c74		       00 01 01 01*	      .byte.b	0, 1, 1, 1, 1, 3, 1, 1, 1
+   1705  2c7d		       01 02 04 08*KindBit    .byte.b	1, 2, 4, 8, 16, 32, 64	; kinds 1-7 (the T-Rex only as a boss)
+   1706  2c84		       01 02 00    NextLane   .byte.b	1, 2, 0	; the pogo frog's jump
+   1707  2c87		       00 01 00 02*ToyShot    .byte.b	0, SHOT_ARMY, 0, SHOT_TANK, 0, SHOT_CANNON, 0
+   1708  2c8e							; waves 1-12 (later waves repeat them)
+   1709  2c8e		       05 07 09 0a*WaveCount  .byte.b	5, 7, 9, 10, 12, 7, 12, 14, 15, 18, 20, 12
+   1710  2c9a		       00 00 00 00*WaveBoss   .byte.b	0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2	; T-Rexes first
+   1711  2ca6		       b4 96 96 87*WaveGap    .byte.b	180, 150, 150, 135, 120, 120, 120, 105, 105, 90, 90, 90
+   1712  2cb2		       02 03 03 03*WaveMax    .byte.b	2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5
+   1713  2cbe		       01 01 09 0d*WaveKinds  .byte.b	1, 1, 9, 13, 29, 29, 31, 63, 127, 127, 127, 127
+   1714  2cca		       01 02 02 03*WaveUnlock .byte.b	1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6
+   1715  2cd6		       00 03 06    Lane3      .byte.b	0, 3, 6
+   1716  2cd9		       01 02 04    Bit	      .byte.b	1, 2, 4
+   1717  2cdc		       03 0c 30    BagMask    .byte.b	$03, $0C, $30	; a shelf's two bits in the bag
+   1718  2cdf		       02 08 20    BagTwo     .byte.b	$02, $08, $20
+   1719  2ce2		       01 04 10    BagOne     .byte.b	$01, $04, $10
+   1720  2ce5		       00 01 02 03*Mod7       .byte.b	0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3,4,5,6,0,1,2,3
 ------- FILE toywars.asm
 ------- FILE gen/bank2.inc LEVEL 2 PASS 2
-      0  2ce7					      include	"gen/bank2.inc"
-      1  2ce7							; generated by tools/gen.mjs -- do not edit
-      2  2ce7				   ToyLo
-      3  2ce7		       00 3a 57 74*	      .byte.b	0,<D_ARMY,<D_TEDDY,<D_TANK,<D_COWBOY,<D_CANNON,<D_JET
-      4  2cee				   SlotOfs
-      5  2cee		       d2 cd c8 e6*	      .byte.b	$D2,$CD,$C8,$E6,$E1,$DC,$FA,$F5,$F0
-      6  2cf7				   EmptyLo
-      7  2cf7		       b5 b1 ac c9*	      .byte.b	$B5,$B1,$AC,$C9,$C5,$C0,$E0,$E0,$E0
-      8  2d00				   SlotLane
-      9  2d00		       00 00 00 01*	      .byte.b	0,0,0,1,1,1,2,2,2
-     10  2d09				   SlotCol
-     11  2d09		       00 01 02 00*	      .byte.b	0,1,2,0,1,2,0,1,2
-     12  2d12				   ColX
-     13  2d12		       30 50 70 	      .byte.b	48,80,112
-     14  2d15				   ShotStart
-     15  2d15		       1a 15 0f 2e*	      .byte.b	$1A,$15,$0F,$2E,$29,$23,$42,$3D,$37
-     16  2d1e				   LaneR0
-     17  2d1e		       0b 1f 33 	      .byte.b	11,31,51
-     18  2d21				   ShotX
-     19  2d21		       95 8f 89 83*	      .byte.b	$95,$8F,$89,$83,$7D,$77,$71,$6B,$65,$5F,$59,$53,$4D,$47,$41,$3B
-     20  2d31		       35 2f		      .byte.b	$35,$2F
-     21  2d33				   FeetX2
-     22  2d33		       15 15 15 15*	      .byte.b	$15,$15,$15,$15,$15,$14,$14,$14,$14,$14,$14,$13,$13,$13,$13,$13
-     23  2d43		       13 12 12 12*	      .byte.b	$13,$12,$12,$12,$12,$12,$12,$11,$11,$11,$11,$11,$11,$10,$10,$10
-     24  2d53		       10 10 10 0f*	      .byte.b	$10,$10,$10,$0F,$0F,$0F,$0F,$0F,$0F,$0E,$0E,$0E,$0E,$0E,$0E,$0D
-     25  2d63		       0d 0d 0d 0d*	      .byte.b	$0D,$0D,$0D,$0D,$0D,$0C,$0C,$0C,$0C,$0C,$0C,$0B,$0B,$0B,$0B,$0B
-     26  2d73		       0b 0a 0a 0a*	      .byte.b	$0B,$0A,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09,$09,$08,$08,$08
-     27  2d83		       08 08 08 07*	      .byte.b	$08,$08,$08,$07,$07,$07,$07,$07,$07,$06,$06,$06,$06,$06,$06,$05
-     28  2d93		       05 05 05 05*	      .byte.b	$05,$05,$05,$05,$05,$04,$04,$04,$04,$04,$04,$03,$03,$03,$03,$03
-     29  2da3		       03 02 02 02*	      .byte.b	$03,$02,$02,$02,$02,$02,$02,$01,$01,$01,$01,$01,$01,$00,$00,$00
-     30  2db3		       00 00 00 ff*	      .byte.b	$00,$00,$00,$FF,$FF,$FF,$FF,$FF,$FF,$FE,$FE,$FE,$FE,$FE,$FE,$FD
-     31  2dc3		       fd fd fd fd*	      .byte.b	$FD,$FD,$FD,$FD,$FD,$FC,$FC,$FC,$FC,$FC,$FC,$FB,$FB,$FB,$FB,$FB
-     32  2dd3				   RowBad2
-     33  2dd3		       01 00 00 00*	      .byte.b	$01,$00,$00,$00,$00,$00,$01,$01,$00,$00,$00,$01,$01,$00,$00,$00
-     34  2de3		       01 01 01 01*	      .byte.b	$01,$01,$01,$01,$00,$00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$01
-     35  2df3		       01 01 00 00*	      .byte.b	$01,$01,$00,$00,$01,$01,$01,$01,$00,$00,$00,$00,$00,$00,$00,$01
-     36  2e03		       01 01 01 01*	      .byte.b	$01,$01,$01,$01,$01,$01,$00,$00,$01,$01,$01,$01,$00,$00,$00,$00
-     37  2e13		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$01,$01
-     38  2e23				   LaneBase2
-     39  2e23		       14 28 3c 00*	      .byte.b	20,40,60,0,20,40,60
+      0  2d05					      include	"gen/bank2.inc"
+      1  2d05							; generated by tools/gen.mjs -- do not edit
+      2  2d05				   ToyLo
+      3  2d05		       00 3a 57 74*	      .byte.b	0,<D_ARMY,<D_TEDDY,<D_TANK,<D_JACK,<D_CANNON,<D_JET
+      4  2d0c				   SlotOfs
+      5  2d0c		       d2 cd c8 e6*	      .byte.b	$D2,$CD,$C8,$E6,$E1,$DC,$FA,$F5,$F0
+      6  2d15				   EmptyLo
+      7  2d15		       b5 b1 ac c9*	      .byte.b	$B5,$B1,$AC,$C9,$C5,$C0,$E0,$E0,$E0
+      8  2d1e				   SlotLane
+      9  2d1e		       00 00 00 01*	      .byte.b	0,0,0,1,1,1,2,2,2
+     10  2d27				   SlotCol
+     11  2d27		       00 01 02 00*	      .byte.b	0,1,2,0,1,2,0,1,2
+     12  2d30				   ColX
+     13  2d30		       30 50 70 	      .byte.b	48,80,112
+     14  2d33				   ShotStart
+     15  2d33		       1a 15 0f 2e*	      .byte.b	$1A,$15,$0F,$2E,$29,$23,$42,$3D,$37
+     16  2d3c				   LaneR0
+     17  2d3c		       0b 1f 33 	      .byte.b	11,31,51
+     18  2d3f				   ShotX
+     19  2d3f		       95 8f 89 83*	      .byte.b	$95,$8F,$89,$83,$7D,$77,$71,$6B,$65,$5F,$59,$53,$4D,$47,$41,$3B
+     20  2d4f		       35 2f		      .byte.b	$35,$2F
+     21  2d51				   FeetX2
+     22  2d51		       15 15 15 15*	      .byte.b	$15,$15,$15,$15,$15,$14,$14,$14,$14,$14,$14,$13,$13,$13,$13,$13
+     23  2d61		       13 12 12 12*	      .byte.b	$13,$12,$12,$12,$12,$12,$12,$11,$11,$11,$11,$11,$11,$10,$10,$10
+     24  2d71		       10 10 10 0f*	      .byte.b	$10,$10,$10,$0F,$0F,$0F,$0F,$0F,$0F,$0E,$0E,$0E,$0E,$0E,$0E,$0D
+     25  2d81		       0d 0d 0d 0d*	      .byte.b	$0D,$0D,$0D,$0D,$0D,$0C,$0C,$0C,$0C,$0C,$0C,$0B,$0B,$0B,$0B,$0B
+     26  2d91		       0b 0a 0a 0a*	      .byte.b	$0B,$0A,$0A,$0A,$0A,$0A,$0A,$09,$09,$09,$09,$09,$09,$08,$08,$08
+     27  2da1		       08 08 08 07*	      .byte.b	$08,$08,$08,$07,$07,$07,$07,$07,$07,$06,$06,$06,$06,$06,$06,$05
+     28  2db1		       05 05 05 05*	      .byte.b	$05,$05,$05,$05,$05,$04,$04,$04,$04,$04,$04,$03,$03,$03,$03,$03
+     29  2dc1		       03 02 02 02*	      .byte.b	$03,$02,$02,$02,$02,$02,$02,$01,$01,$01,$01,$01,$01,$00,$00,$00
+     30  2dd1		       00 00 00 ff*	      .byte.b	$00,$00,$00,$FF,$FF,$FF,$FF,$FF,$FF,$FE,$FE,$FE,$FE,$FE,$FE,$FD
+     31  2de1		       fd fd fd fd*	      .byte.b	$FD,$FD,$FD,$FD,$FD,$FC,$FC,$FC,$FC,$FC,$FC,$FB,$FB,$FB,$FB,$FB
+     32  2df1				   RowBad2
+     33  2df1		       01 00 00 00*	      .byte.b	$01,$00,$00,$00,$00,$00,$01,$01,$00,$00,$00,$01,$01,$00,$00,$00
+     34  2e01		       01 01 01 01*	      .byte.b	$01,$01,$01,$01,$00,$00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$01
+     35  2e11		       01 01 00 00*	      .byte.b	$01,$01,$00,$00,$01,$01,$01,$01,$00,$00,$00,$00,$00,$00,$00,$01
+     36  2e21		       01 01 01 01*	      .byte.b	$01,$01,$01,$01,$01,$01,$00,$00,$01,$01,$01,$01,$00,$00,$00,$00
+     37  2e31		       00 00 00 00*	      .byte.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$01,$01
+     38  2e41				   LaneBase2
+     39  2e41		       14 28 3c 00*	      .byte.b	20,40,60,0,20,40,60
 ------- FILE toywars.asm
-   1233  2e2a
+   1233  2e48
    1234  2fc3					      ORG	$2FC3
    1235  2fc3					      RORG	$FFC3
    1236  2fc3		       20 00 f1 	      jsr	LogicInit
@@ -4690,60 +4713,76 @@
       0  32ac					      STEP	3, 15, 6, 24
       1  32ac		       03 f6 18 	      .byte.b	3, [15 << 4] | 6, 24
     202  32af		       00		      .byte.b	0
-      0  32b0				   SdLasso    STEP	1, 4, 6, 20
-      1  32b0		       01 46 14 	      .byte.b	1, [4 << 4] | 6, 20
-      0  32b3					      STEP	1, 4, 6, 15
-      1  32b3		       01 46 0f 	      .byte.b	1, [4 << 4] | 6, 15
-      0  32b6					      STEP	1, 4, 6, 10
-      1  32b6		       01 46 0a 	      .byte.b	1, [4 << 4] | 6, 10
-      0  32b9					      STEP	2, 4, 5, 6
-      1  32b9		       02 45 06 	      .byte.b	2, [4 << 4] | 5, 6
-    207  32bc		       00		      .byte.b	0
-      0  32bd				   SdHit      STEP	1, 8, 7, 6
-      1  32bd		       01 87 06 	      .byte.b	1, [8 << 4] | 7, 6
-    209  32c0		       00		      .byte.b	0
-      0  32c1				   SdKill     STEP	2, 12, 8, 8
-      1  32c1		       02 c8 08 	      .byte.b	2, [12 << 4] | 8, 8
-      0  32c4					      STEP	2, 12, 7, 12
-      1  32c4		       02 c7 0c 	      .byte.b	2, [12 << 4] | 7, 12
-      0  32c7					      STEP	2, 12, 6, 16
-      1  32c7		       02 c6 10 	      .byte.b	2, [12 << 4] | 6, 16
-      0  32ca					      STEP	3, 12, 4, 22
-      1  32ca		       03 c4 16 	      .byte.b	3, [12 << 4] | 4, 22
-    214  32cd		       00		      .byte.b	0
-      0  32ce				   SdChew     STEP	1, 3, 4, 28
-      1  32ce		       01 34 1c 	      .byte.b	1, [3 << 4] | 4, 28
-    216  32d1		       00		      .byte.b	0
-      0  32d2				   SdSlam     STEP	3, 8, 15, 30
-      1  32d2		       03 8f 1e 	      .byte.b	3, [8 << 4] | 15, 30
-      0  32d5					      STEP	4, 8, 12, 31
-      1  32d5		       04 8c 1f 	      .byte.b	4, [8 << 4] | 12, 31
-      0  32d8					      STEP	6, 8, 8, 31
-      1  32d8		       06 88 1f 	      .byte.b	6, [8 << 4] | 8, 31
-      0  32db					      STEP	8, 8, 4, 31
-      1  32db		       08 84 1f 	      .byte.b	8, [8 << 4] | 4, 31
-    221  32de		       00		      .byte.b	0
-      0  32df				   SdJet      STEP	2, 8, 12, 4
-      1  32df		       02 8c 04 	      .byte.b	2, [8 << 4] | 12, 4
-      0  32e2					      STEP	2, 8, 12, 8
-      1  32e2		       02 8c 08 	      .byte.b	2, [8 << 4] | 12, 8
-      0  32e5					      STEP	2, 8, 12, 12
-      1  32e5		       02 8c 0c 	      .byte.b	2, [8 << 4] | 12, 12
-      0  32e8					      STEP	2, 8, 12, 16
-      1  32e8		       02 8c 10 	      .byte.b	2, [8 << 4] | 12, 16
-      0  32eb					      STEP	2, 8, 10, 20
-      1  32eb		       02 8a 14 	      .byte.b	2, [8 << 4] | 10, 20
-      0  32ee					      STEP	3, 8, 8, 24
-      1  32ee		       03 88 18 	      .byte.b	3, [8 << 4] | 8, 24
-      0  32f1					      STEP	4, 8, 5, 28
-      1  32f1		       04 85 1c 	      .byte.b	4, [8 << 4] | 5, 28
-    229  32f4		       00		      .byte.b	0
-    230  32f4		       f2 f5	   SND_END    =	.
-    231  32f5				  -	      IF	SND_END - SndData > 255
-    232  32f5				  -	      ERR		; positions are one byte
-    233  32f5					      ENDIF
+      0  32b0				   SdSpring   STEP	1, 12, 12, 10	; boing: a low pure tone wobbling between two
+      1  32b0		       01 cc 0a 	      .byte.b	1, [12 << 4] | 12, 10
+      0  32b3					      STEP	1, 12, 12, 18	;   pitches, the wobble narrowing as it fades
+      1  32b3		       01 cc 12 	      .byte.b	1, [12 << 4] | 12, 18
+      0  32b6					      STEP	1, 12, 11, 11
+      1  32b6		       01 cb 0b 	      .byte.b	1, [12 << 4] | 11, 11
+      0  32b9					      STEP	1, 12, 10, 17
+      1  32b9		       01 ca 11 	      .byte.b	1, [12 << 4] | 10, 17
+      0  32bc					      STEP	1, 12, 9, 12
+      1  32bc		       01 c9 0c 	      .byte.b	1, [12 << 4] | 9, 12
+      0  32bf					      STEP	1, 12, 8, 16
+      1  32bf		       01 c8 10 	      .byte.b	1, [12 << 4] | 8, 16
+      0  32c2					      STEP	1, 12, 7, 13
+      1  32c2		       01 c7 0d 	      .byte.b	1, [12 << 4] | 7, 13
+      0  32c5					      STEP	1, 12, 6, 15
+      1  32c5		       01 c6 0f 	      .byte.b	1, [12 << 4] | 6, 15
+      0  32c8					      STEP	1, 12, 5, 14
+      1  32c8		       01 c5 0e 	      .byte.b	1, [12 << 4] | 5, 14
+      0  32cb					      STEP	1, 12, 4, 15
+      1  32cb		       01 c4 0f 	      .byte.b	1, [12 << 4] | 4, 15
+      0  32ce					      STEP	1, 12, 3, 14
+      1  32ce		       01 c3 0e 	      .byte.b	1, [12 << 4] | 3, 14
+      0  32d1					      STEP	1, 12, 2, 14
+      1  32d1		       01 c2 0e 	      .byte.b	1, [12 << 4] | 2, 14
+    215  32d4		       00		      .byte.b	0
+      0  32d5				   SdHit      STEP	1, 8, 7, 6
+      1  32d5		       01 87 06 	      .byte.b	1, [8 << 4] | 7, 6
+    217  32d8		       00		      .byte.b	0
+      0  32d9				   SdKill     STEP	2, 12, 8, 8
+      1  32d9		       02 c8 08 	      .byte.b	2, [12 << 4] | 8, 8
+      0  32dc					      STEP	2, 12, 7, 12
+      1  32dc		       02 c7 0c 	      .byte.b	2, [12 << 4] | 7, 12
+      0  32df					      STEP	2, 12, 6, 16
+      1  32df		       02 c6 10 	      .byte.b	2, [12 << 4] | 6, 16
+      0  32e2					      STEP	3, 12, 4, 22
+      1  32e2		       03 c4 16 	      .byte.b	3, [12 << 4] | 4, 22
+    222  32e5		       00		      .byte.b	0
+      0  32e6				   SdChew     STEP	1, 3, 4, 28
+      1  32e6		       01 34 1c 	      .byte.b	1, [3 << 4] | 4, 28
+    224  32e9		       00		      .byte.b	0
+      0  32ea				   SdSlam     STEP	3, 8, 15, 30
+      1  32ea		       03 8f 1e 	      .byte.b	3, [8 << 4] | 15, 30
+      0  32ed					      STEP	4, 8, 12, 31
+      1  32ed		       04 8c 1f 	      .byte.b	4, [8 << 4] | 12, 31
+      0  32f0					      STEP	6, 8, 8, 31
+      1  32f0		       06 88 1f 	      .byte.b	6, [8 << 4] | 8, 31
+      0  32f3					      STEP	8, 8, 4, 31
+      1  32f3		       08 84 1f 	      .byte.b	8, [8 << 4] | 4, 31
+    229  32f6		       00		      .byte.b	0
+      0  32f7				   SdJet      STEP	2, 8, 12, 4
+      1  32f7		       02 8c 04 	      .byte.b	2, [8 << 4] | 12, 4
+      0  32fa					      STEP	2, 8, 12, 8
+      1  32fa		       02 8c 08 	      .byte.b	2, [8 << 4] | 12, 8
+      0  32fd					      STEP	2, 8, 12, 12
+      1  32fd		       02 8c 0c 	      .byte.b	2, [8 << 4] | 12, 12
+      0  3300					      STEP	2, 8, 12, 16
+      1  3300		       02 8c 10 	      .byte.b	2, [8 << 4] | 12, 16
+      0  3303					      STEP	2, 8, 10, 20
+      1  3303		       02 8a 14 	      .byte.b	2, [8 << 4] | 10, 20
+      0  3306					      STEP	3, 8, 8, 24
+      1  3306		       03 88 18 	      .byte.b	3, [8 << 4] | 8, 24
+      0  3309					      STEP	4, 8, 5, 28
+      1  3309		       04 85 1c 	      .byte.b	4, [8 << 4] | 5, 28
+    237  330c		       00		      .byte.b	0
+    238  330c		       f3 0d	   SND_END    =	.
+    239  330d				  -	      IF	SND_END - SndData > 255
+    240  330d				  -	      ERR		; positions are one byte
+    241  330d					      ENDIF
 ------- FILE toywars.asm
-   1255  32f5
+   1255  330d
    1256  3fb3					      ORG	$3FB3
    1257  3fb3					      RORG	$FFB3
    1258  3fb3		       20 00 f1 	      jsr	Sound

@@ -21,7 +21,9 @@ dark red; enemies move every other frame (half of them each frame).
 Numbers as built: army man fires every 42 frames (1 damage), tank every 300
 (8), cannon every 198 (3, and the same to every other monster on the shelf
 within 12 pixels of the one hit: the burst is swept one monster per odd frame,
-so its cost stays bounded); cowboy lasso holds 60 frames, every 120; chewing
+so its cost stays bounded); a jack-in-the-box springs once for 10 on every
+enemy within 8 pixels of its middle and throws each survivor 24 pixels back
+up the shelf (the same sweep); chewing
 takes 1 health every 16 frames; enemies gain 1 health every fourth wave
 (wind-up mice and balloon clowns every eighth).
 
@@ -52,7 +54,9 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave
 
 ## Toys
 
-Roster (user, 2026-10-04): army man, tank, teddy, cowboy, cannon, jet.
+Roster (user, 2026-10-04): army man, tank, teddy, cowboy, cannon, jet. The
+cowboy was replaced by the jack-in-the-box *(2026-10-06: no strategy ever
+bought it; it cost a shooter's slot and did no damage)*.
 
 As built (logic.asm: ToyCost, ToyHP, ToyDmg, ToyPeriod). A toy acts on every
 sixth frame (one shelf per odd frame); its first action comes 30 frames after
@@ -64,7 +68,7 @@ has one shot in flight at a time, shared by its toys.
 | Army Man | wave 1 | 10 | 8 | Peashooter | A bullet every 0.7 s (42 frames), 1 damage. Bullets pass over a chewing crawler. | Dino, Mouse, Balloon Clown |
 | Teddy | wave 2 | 5 | 40 | Wall-nut | No attack; walkers stop and chew it (1 health every 16 frames, about 11 s for one chewer). A T-Rex crushes it in one bite. | Holding anything that walks |
 | Tank | wave 4 | 25 | 12 | heavy shooter | A shell every 5 s (300 frames), 8 damage. Shells can't hit the balloon clown. | Knight, Helicopter, Crawler |
-| Cowboy | wave 5 | 15 | 8 | Snow Pea / crowd control | Lassos a monster up to 40 pixels ahead (as far as one chewing the next column's toy) and holds it for 1 s, every 2 s; for a second after a hold the monster can't be roped again (so two cowboys can't hold it for good). No damage. | T-Rex, a charging Knight |
+| Jack-in-the-box | wave 5 | 15 | 8 | Potato Mine | One use: the first walker to reach it springs it with a boing, and every enemy within 8 pixels of the box's middle takes 10 and, if it survives, is thrown 24 pixels back up the shelf (through the burst sweep, one a frame), then it's gone. Balloons float over it; a T-Rex springs it. Chewed like a toy if a cannon or jet burst is still being swept. | Mouse packs, crowds at a teddy, T-Rex |
 | Cannon | wave 7 | 20 | 10 | Melon-pult | A cannonball every 3.3 s (198 frames), 3 damage, splashing the same to every other monster on the shelf within 12 pixels of the one hit. Hits balloons and chewing crawlers. | Crowds at a teddy, Crawler, Balloon Clown |
 | Jet | wave 9 | 30 | — | Cherry Bomb | One use: takes off from the toy box end of its shelf and flies it in about a second, hitting every monster on it once for 10 damage. It never stands in the slot, so it can launch where a monster stands. | T-Rex, emergencies |
 
@@ -151,7 +155,7 @@ pack can briefly take the count to five.
 | 2 | Teddy | — | 7 | 5 s | 3 | Blocking |
 | 3 | — | Mouse | 9 | 5 s | 3 | First pack |
 | 4 | Tank | Crawler | 10 | 4.5 s | 3 | Bullets pass over a chewing crawler: tanks |
-| 5 | Cowboy | Knight | 12 | 4 s | 4 | Lasso the charge |
+| 5 | Jack-in-the-box | Knight | 12 | 4 s | 4 | A trap for the charge |
 | 6 | — | T-Rex | boss + 6 | 4 s | 4 | Boss, then a breather |
 | 7 | Cannon | Helicopter | 12 | 4 s | 4 | Cannon answers flyers |
 | 8 | — | Balloon Clown | 14 | 3.5 s | 4 | |
@@ -170,7 +174,7 @@ points per enemy (5 to 50), no bonuses.
 Two TIA channels, table-driven (sound.asm, SndData; SndPlay in logic.asm): channel 0 for the
 player and the game (cursor tick, toy select, place/pick-up chirps, the
 no-batteries buzz, the wave jingle, the game-over tune), channel 1 for the
-fighting (army man pop, tank boom, cannon thump, lasso whip, hit, kill,
+fighting (army man pop, tank boom, cannon thump, jack-in-the-box boing, hit, kill,
 chewing crunch, lid slam, jet strike). A new sound replaces the one on its
 channel unless that one has a higher priority. Steps are two frames long.
 The sound steps and the music run in VBLANK (bank 3, sound.asm, through the

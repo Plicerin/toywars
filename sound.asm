@@ -200,10 +200,18 @@ SdBoom:     STEP 2, 8, 12, 18
 SdThump:    STEP 2, 15, 10, 20
             STEP 3, 15, 6, 24
     .byte 0
-SdLasso:    STEP 1, 4, 6, 20
-            STEP 1, 4, 6, 15
-            STEP 1, 4, 6, 10
-            STEP 2, 4, 5, 6
+SdSpring:   STEP 1, 12, 12, 10      ; boing: a low pure tone wobbling between two
+            STEP 1, 12, 12, 18      ;   pitches, the wobble narrowing as it fades
+            STEP 1, 12, 11, 11
+            STEP 1, 12, 10, 17
+            STEP 1, 12, 9, 12
+            STEP 1, 12, 8, 16
+            STEP 1, 12, 7, 13
+            STEP 1, 12, 6, 15
+            STEP 1, 12, 5, 14
+            STEP 1, 12, 4, 15
+            STEP 1, 12, 3, 14
+            STEP 1, 12, 2, 14
     .byte 0
 SdHit:      STEP 1, 8, 7, 6
     .byte 0

@@ -87,7 +87,7 @@ W_eX        ds NENEMY   ; enemies: left x
 W_eLane     ds NENEMY   ;   shelf 0-2
 W_eType     ds NENEMY   ;   0 none, 1 dino, 2 helicopter, 3 crawler
 W_eHP       ds NENEMY   ;   health
-W_eState    ds NENEMY   ;   bit 7 chewing, bit 6 hopped, bits 0-5 lasso frames left
+W_eState    ds NENEMY   ;   bit 7 chewing, bit 6 hopped (knight: shield broken; pogo: jumped)
 W_slotType  ds 9        ; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
 W_slotHP    ds 9
 W_slotCool  ds 9        ; visits (6 frames) until the toy acts again

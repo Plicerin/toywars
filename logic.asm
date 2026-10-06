@@ -8,7 +8,7 @@
 TOY_ARMY    = 1
 TOY_TEDDY   = 2
 TOY_TANK    = 3
-TOY_COWBOY  = 4
+TOY_JACK    = 4
 TOY_CANNON  = 5
 TOY_JET     = 6
 EN_DINO     = 1
@@ -29,8 +29,9 @@ CANNON_DMG  = 3
 JET_DMG     = 10
 KILLED      = temp+3            ; this frame an enemy died (overscan only: VBLANK
                                 ;   uses temp for the status line)
-LASSO_HOLD  = 30                ; updates a lasso holds (60 frames), then as
-LASSO_FREE  = 30                ;   many it can't be lassoed again (60 frames)
+JACK_DMG    = 10                ; a jack-in-the-box's spring: damage to each enemy
+JACK_REACH  = 8                 ;   within this many pixels of the box's middle,
+JACK_THROW  = 24                ;   thrown this many pixels back up the shelf
 TRICKLE     = 240               ; frames per battery (one byte: at most 255)
 A_LAP2_HP   = 1                 ; extra health for every enemy in the second lap on difficulty A
 TRICKLE2    = 150               ;   in the second lap (2.5 s)
@@ -52,7 +53,7 @@ SND_OVER    = 6
 SND_POP     = 7
 SND_BOOM    = 8
 SND_THUMP   = 9
-SND_LASSO   = 10
+SND_SPRING  = 10
 SND_HIT     = 11
 SND_KILL    = 12
 SND_CHEW    = 13
@@ -966,7 +967,8 @@ Spawn:
 ; kind's pace; a toy in its way stops it and gets chewed, except: the
 ; helicopter hops over the first toy, the pogo frog jumps to the next shelf
 ; once, the balloon clown floats over every toy, the T-Rex crushes a toy in
-; one bite. A lasso holds it; reaching the toy box is a breach.
+; one bite. A jack-in-the-box springs on whatever reaches it; reaching the
+; toy box is a breach.
 Enemies:
     SUBROUTINE
     lda frame
@@ -995,18 +997,6 @@ Enemies:
 EnemyAct:                       ; enemy X (kept)
     SUBROUTINE
     sta lt5                     ; kind
-    lda R_eState,x
-    and #$3F
-    beq .free
-    lda R_eState,x              ; the lasso's count down: held for its first
-    sec                         ; LASSO_HOLD updates (standing still), then
-    sbc #1                      ; free but not to be lassoed again until it
-    sta W_eState,x              ; runs out (two cowboys can't hold it for good)
-    and #$3F
-    cmp #LASSO_FREE
-    bcc .free
-    rts
-.free:
     lda lt5
     cmp #EN_BALLOON
     beq .walk                   ; floats over every toy
@@ -1081,6 +1071,15 @@ EnemyAct:                       ; enemy X (kept)
 .done:
     rts
 .blocked:
+    ldy lt1
+    lda R_slotType,y
+    cmp #TOY_JACK
+    bne .notJack
+    lda R_splashN
+    bne .notJack                ; (a burst still going: it gets chewed meanwhile)
+    jmp JackSpring
+.notJack:
+    ldy lt2
     lda lt5
     cmp #EN_HELI
     beq .hop
@@ -1132,10 +1131,31 @@ EnemyAct:                       ; enemy X (kept)
     sec
     sbc #1
     sta W_slotHP,y
-    bne .done
+    beq .crush
+    rts
 .crush:
     lda #0
     sta W_slotType,y
+    rts
+
+; JackSpring (X = the enemy that reached it, lt1 = its slot, lt2 = column):
+; the jack-in-the-box springs, hitting every enemy at it (the burst sweep:
+; one a frame), and is gone
+JackSpring:
+    SUBROUTINE
+    ldy lt2
+    lda ColX,y
+    clc
+    adc #4
+    sta W_splashX               ; the box's middle
+    lda R_eLane,x
+    sta W_splashL
+    lda #$70|NENEMY             ; (monster hit 7: a jack's burst)
+    sta W_splashN
+    ldy lt1
+    lda #0
+    sta W_slotType,y
+    SOUND SND_SPRING
     rts
 
 ; EnemyRow (X = enemy, kept): its feet row and event row for the kernel's
@@ -1212,8 +1232,8 @@ Breach:
 ;-------------------------------------------------------------------------------
 ; Toys (odd frames, one shelf at a time, so each toy acts every sixth
 ; frame): when ready, army men, tanks and cannons fire along their shelf (one
-; shot in flight per shelf) at an enemy ahead; cowboys lasso an enemy within
-; 40 pixels; teddies just stand
+; shot in flight per shelf) at an enemy ahead; teddies and jack-in-the-boxes
+; just stand
 Toys:
     SUBROUTINE
     lda R_toyShelf
@@ -1246,7 +1266,10 @@ ToyAct:                         ; slot X (kept)
     rts
 .some:
     cmp #TOY_TEDDY
+    beq .stands
+    cmp #TOY_JACK
     bne .acts
+.stands:
     rts
 .acts:
     sta lt5
@@ -1264,25 +1287,6 @@ ToyAct:                         ; slot X (kept)
     sta lt1
     jsr FindAhead
     bmi .next
-    lda lt5
-    cmp #TOY_COWBOY
-    bne .shoot
-    lda R_eX,y
-    sec
-    sbc lt0
-    cmp #41                     ; within 40 pixels: up to a monster chewing
-    bcs .next                   ; the next column's toy (x + 32 to x + 40)
-    lda R_eState,y
-    and #$3F
-    bne .next                   ; held, or just let go: not again yet
-    lda R_eState,y
-    ora #LASSO_HOLD+LASSO_FREE  ; held 60 frames, then free (and safe) 60
-    sta W_eState,y
-    SOUND SND_LASSO
-    lda #20                     ; next lasso after 2 seconds
-    sta W_slotCool,x
-    jmp .next
-.shoot:
     ldy lt1
     lda R_shotDmg,y
     bne .next
@@ -1479,10 +1483,29 @@ Splash:
     eor #$FF                    ; (carry clear: + 1 makes it positive)
     adc #1
 .right:
+    ldy lt0
+    cpy #7
+    beq .jack
     cmp #SPLASH+1
     bcs .done
     lda #CANNON_DMG
     jmp Damage
+.jack:
+    cmp #JACK_REACH+1
+    bcs .done
+    lda #JACK_DMG
+    jsr Damage
+    lda R_eType,x
+    beq .done                   ; (that was the end of it)
+    lda R_eX,x                  ; the spring throws it back up the shelf
+    clc
+    adc #JACK_THROW
+    cmp #152
+    bcc .thrown
+    lda #151
+.thrown:
+    sta W_eX,x
+    jmp EnemyRow
 .jet:
     lda #JET_DMG
     jmp Damage
@@ -1652,7 +1675,7 @@ SndPlay:                        ; A = sound id; keeps X and Y
 
 SndStart:   .byte SdCursor-SndData, SdSelect-SndData, SdPlace-SndData, SdPick-SndData
             .byte SdNoBatt-SndData, SdWave-SndData, SdOver-SndData, SdPop-SndData
-            .byte SdBoom-SndData, SdThump-SndData, SdLasso-SndData, SdHit-SndData
+            .byte SdBoom-SndData, SdThump-SndData, SdSpring-SndData, SdHit-SndData
             .byte SdKill-SndData, SdChew-SndData, SdSlam-SndData, SdJet-SndData
 SndChan:    .byte 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1
 SndPri:     .byte 1, 2, 3, 3, 3, 4, 5, 1, 3, 3, 2, 2, 3, 1, 5, 5
@@ -1661,8 +1684,8 @@ ToySound:   .byte 0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
 ;-------------------------------------------------------------------------------
 ; tables (toy and enemy types index from 1)
 ToyCost:    .byte 0, 10, 5, 25, 15, 20, 30
-ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1
-ToyPeriod:  .byte 0, 7, 0, 50, 20, 33, 0        ; visits (6 frames) between shots
+ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1         ; (the jack's 8: chewed while a burst is busy)
+ToyPeriod:  .byte 0, 7, 0, 50, 0, 33, 0         ; visits (6 frames) between shots
 ToyDmg:     .byte 0, 1, 0, 8, 0, CANNON_DMG, 0
 ; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
 EnHP:       .byte 0,   6,   5,   3,    1,    6,     2,     3,  20
