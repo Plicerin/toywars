@@ -546,6 +546,33 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   };
   const gb = gap(false), ga = gap(true);
   check('left difficulty A: enemies come faster (three quarters of the gap) but walk at the first-lap pace', a === b && b > 0 && Math.abs(ga - Math.round(gb * 3 / 4)) <= 1, `pace B ${b}, A ${a} pixels in 60 frames; gap B ${gb}, A ${ga} ticks`);
+  // the second lap (wave 14: base gap 150 ticks): B three quarters, A five eighths
+  const gap2 = (diffA) => {
+    const g = boot();
+    g.press({ diffA }); g.frames(2, { diffA });
+    g.set('wave', 14);
+    for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+    g.set('spawnLeft', 5); g.set('spawnTimer', 0); g.set('bossLeft', 0); g.set('packLeft', 0);
+    let f = 0;
+    while (g.sc('spawnLeft') === 5 && f < 60) { g.frames(1, { diffA }); f += 1; }
+    const i = [0, 1, 2, 3, 4].find((k) => g.sc('eType', k));
+    return { gap: g.sc('spawnTimer'), extra: g.sc('eHP', i) - [0, 6, 5, 3, 1, 6, 2, 3, 20][g.sc('eType', i)] - (14 >> 2) };
+  };
+  const b2 = gap2(false), a2 = gap2(true), g2b = b2.gap, g2a = a2.gap;
+  check('second lap: B three quarters of the gap, A five eighths', Math.abs(g2b - 113) <= 1 && Math.abs(g2a - 95) <= 1, `B ${g2b}, A ${g2a} ticks (base 150)`);
+  check('second lap on A: every enemy one health tougher', b2.extra === 0 && a2.extra === 1, `extra health B ${b2.extra}, A ${a2.extra}`);
+}
+{
+  // batteries trickle faster in the second lap: one every 150 frames (240 in the first)
+  const trickle = (wave) => {
+    const g = quietGame();
+    g.set('wave', wave); g.set('batt', 10); g.set('battTimer', 0);
+    let f = 0;
+    while (g.sc('batt') === 10 && f < 400) { g.run(1); f += 1; }
+    return f;
+  };
+  const t1 = trickle(5), t2 = trickle(14);
+  check('a battery every 240 frames in the first lap, every 150 in the second', Math.abs(t1 - 240) <= 2 && Math.abs(t2 - 150) <= 2, `${t1} and ${t2} frames`);
 }
 
 // ---------------------------------------------------------------- sound

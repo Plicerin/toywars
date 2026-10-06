@@ -32,6 +32,8 @@ KILLED      = temp+3            ; this frame an enemy died (overscan only: VBLAN
 LASSO_HOLD  = 30                ; updates a lasso holds (60 frames), then as
 LASSO_FREE  = 30                ;   many it can't be lassoed again (60 frames)
 TRICKLE     = 240               ; frames per battery (one byte: at most 255)
+A_LAP2_HP   = 1                 ; extra health for every enemy in the second lap on difficulty A
+TRICKLE2    = 150               ;   in the second lap (2.5 s)
 ST_ATTRACT  = 0
 ST_PLAY     = 1
 ST_OVER     = 2
@@ -96,13 +98,19 @@ Logic:
 .input:
     jsr GameSelect
     ; from wave 13: second-lap pace (bit 7) and shorter spawn gaps (bit 6);
-    ; with the left difficulty on A, the shorter gaps from the start
+    ; the left difficulty on A: the shorter gaps from the start, and bit 5
+    ; (shorter still in the second lap)
+    lda SWCHB
+    and #$40
+    beq .difficultyB
+    lda #$60
+.difficultyB:
+    tay
     lda R_wave
     cmp #13
-    lda #$C0                    ; (lda keeps the carry)
-    bcs .fast
-    lda SWCHB
-    and #$40                    ; (A: bit 6)
+    tya                         ; (keeps the carry)
+    bcc .fast
+    ora #$C0
 .fast:
     sta fast
     jsr ReadInput
@@ -132,14 +140,18 @@ Logic:
     sta KILLED
     jsr Cursor
     jsr Batteries
-    jsr Enemies
+    ; one frame's heavy work is bounded: the shots go first, and once an enemy
+    ; has died (KILLED) a jet hits one enemy, not two, an enemy waits an update
+    ; before reaching the toy box, and the spawner waits for the next frame
     lda frame
     lsr
     bcs .odd
     jsr Shots
-    jsr Spawner                 ; (after the shots: it waits out a frame with a kill)
+    jsr Enemies
+    jsr Spawner
     jmp .finish
 .odd:
+    jsr Enemies
     jsr Toys
     jsr Splash
 .finish:
@@ -651,12 +663,18 @@ Kill:                           ; enemy X destroyed: batteries and score
     rts
 
 ;-------------------------------------------------------------------------------
-Batteries:                      ; one more every 240 frames (4 s)
+Batteries:                      ; one more every TRICKLE frames (TRICKLE2 in the second lap)
     SUBROUTINE
+    ldy #TRICKLE
+    bit fast
+    bpl .lap1
+    ldy #TRICKLE2
+.lap1:
+    sty lt0
     lda R_battTimer
     clc
     adc #1
-    cmp #TRICKLE
+    cmp lt0
     bcc .store
     lda R_batt
     clc
@@ -838,6 +856,16 @@ Spawner:
     lsr                         ; second lap (or difficulty A): three quarters of the gap
     lsr
     sta lt0
+    lda fast
+    and #$A0
+    cmp #$A0
+    bne .quarter
+    lda lt0                     ; second lap on A: five eighths
+    lsr
+    clc
+    adc lt0
+    sta lt0
+.quarter:
     lda WaveGap,x
     sec
     sbc lt0
@@ -891,6 +919,17 @@ Spawn:
     lsr
     clc
     adc EnHP,x
+    sta lt4                     ; health
+    lda fast
+    and #$A0
+    cmp #$A0
+    bne .health
+    lda lt4                     ; the second lap on A: tougher
+    clc
+    adc #A_LAP2_HP
+    sta lt4
+.health:
+    lda lt4
     sta W_eHP,y
     lda #151
     sta W_eX,y
@@ -1021,10 +1060,14 @@ EnemyAct:                       ; enemy X (kept)
     lda R_eX,x
     sec
     sbc EnStep,y
-    sta W_eX,x
     cmp #BREACH_X
-    bcc .breach
+    bcc .reach
+    sta W_eX,x
     jmp EnemyRow
+.reach:
+    ldy KILLED
+    bne .done                   ; an enemy died this frame: the box next update
+    sta W_eX,x
 .breach:
     jsr EnemyRow                ; (the game may end with it in view)
     jmp Breach
@@ -1122,6 +1165,8 @@ EnemyRow:
 ; the second breach on a shelf ends the game
 Breach:
     SUBROUTINE
+    lda #1
+    sta KILLED                  ; (the spawner waits a frame)
     ldy R_eLane,x
     lda Bit,y
     and R_lids
@@ -1523,6 +1568,10 @@ JetAct:
     and #3
     sta lt1
     lda #2
+    ldy KILLED
+    beq .hits
+    lda #1                      ; an enemy died this frame already: one hit
+.hits:
     sta lt5                     ; hits left this update
     ldy #NENEMY-1
 .loop:

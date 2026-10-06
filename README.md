@@ -23,7 +23,7 @@ place toys in the nine slots (three per shelf) to stop them.
 - **Game Reset / Enter:** new game. Fire also starts one.
 - **Game Select / G:** choose game 1, 2 or 3 (starting at wave 1, 5 or 9, with
   30, 50 or 70 batteries); pressed during a game, it goes back to choosing.
-- **Left difficulty A:** monsters arrive more often (three quarters of the gap) from the start.
+- **Left difficulty A:** monsters arrive more often from the start (three quarters of the gap); in the second lap, five eighths and every monster one health tougher.
 
 Batteries (the big green number) trickle in and every monster you
 destroy pays some. The first monster that reaches the box slams that shelf's
@@ -73,7 +73,8 @@ How the screen is drawn:
 - `tools/build.ps1` — runs the generator and DASM (put `dasm.exe` and `vcs.h`
   in `tools/dasm/`).
 - `toywars.asm` holds the frame loop, header and screen kernel; `logic.asm`
-  (bank 2) is the game.
+  (bank 2) is the game; `sound.asm` (bank 3) plays the sound effects and
+  music.
 - `tools/test.mjs` — runs the cartridge on the 6502 core and TIA model in
   `src/`: frame timing (262 lines) through 20,000 frames of random play and a
   late-game stress test, every visible pixel against `tools/expect.mjs` (a

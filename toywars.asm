@@ -70,7 +70,7 @@ lt4         ds 1
 lt5         ds 1
 sndX        ds 1        ; SndPlay keeps X and Y here
 sndY        ds 1
-fast        ds 1        ; bit 7: second-lap pace (wave 13+); bit 6: shorter spawn gaps (wave 13+ or left difficulty A)
+fast        ds 1        ; bit 7: second-lap pace (wave 13+); bit 6: shorter spawn gaps (wave 13+ or left difficulty A); bit 5: difficulty A
 QUEUE       ds 48       ; event records, 8 bytes: return lo, hi, gfx lo, hi, color lo, hi, HMP1, next y
 STACKTOP    = $FF
 

@@ -38,8 +38,9 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave.
   plus a reward for every enemy destroyed (more for armored ones and
   bosses). No collecting (a joystick can't chase falling sun comfortably).
   *(decided 2026-10-04)*
-- The trickle is constant, one battery every 240 frames (4 s); batteries
-  cap at 99. Rewards are small (1-2, the T-Rex 5) *(tuned 2026-10-04 with
+- The trickle is one battery every 240 frames (4 s) in the first lap and
+  every 150 (2.5 s) in the second, where the cannon layout ran short
+  *(2026-10-05)*; batteries cap at 99. Rewards are small (1-2, the T-Rex 5) *(tuned 2026-10-04 with
   tools/player.mjs: at 1.5 s and the old rewards, 3/3/2/1/4/3/3/10, batteries
   sat near the cap 44% of the time and spending was never a choice)*.
 - Shown on the status line: `00120 W01` in gold (the score's last five digits
@@ -113,7 +114,11 @@ record gains one byte (the page).
   of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot picks it up (the shovel).
 - Game Reset starts; Game Select picks game 1/2/3 (start at wave 1/5/9);
   left difficulty A = the second lap's shorter spawn gaps (three quarters)
-  from the start; the pace stays the first lap's *(changed 2026-10-05: A
+  from the start, and five eighths in the second lap, where every enemy also
+  has one more health (A_LAP2_HP; tuned 2026-10-05: shorter gaps alone left
+  the bot's results on A the same as on B; +1 health ends heavy runs about
+  2.4 waves sooner, +2 made a wall at wave 16); the pace stays the first lap's
+  until wave 13 *(changed 2026-10-05: A
   used to mean the second-lap pace too, and even a perfect opening lost a
   lid in wave 1 in 8 of 10 games)*.
 
@@ -149,7 +154,7 @@ pack can briefly take the count to five.
 | 10 | — | — | 18 | 3 s | 5 | Full mix |
 | 11 | — | — | 20 | 3 s | 5 | |
 | 12 | — | 2 × T-Rex | 2 bosses + 10 | 3 s | 5 | Final |
-| 13+ | — | — | waves 1–12 | ×0.75 | 5 | Second lap: every kind at its fast pace (about twice as fast); laps repeat |
+| 13+ | — | — | waves 1–12 | ×0.75 (A ×0.625) | 5 | Second lap: every kind at its fast pace (about twice as fast); laps repeat |
 
 Within a wave the spawn gap is constant; the next wave starts when its last
 enemy is gone. The shelves flash white only for a lid slam or a jet. Score:
@@ -157,20 +162,22 @@ points per enemy (5 to 50), no bonuses.
 
 ## Sound
 
-Two TIA channels, table-driven (logic.asm, SndData): channel 0 for the
+Two TIA channels, table-driven (sound.asm, SndData; SndPlay in logic.asm): channel 0 for the
 player and the game (cursor tick, toy select, place/pick-up chirps, the
 no-batteries buzz, the wave jingle, the game-over tune), channel 1 for the
 fighting (army man pop, tank boom, cannon thump, lasso whip, hit, kill,
 chewing crunch, lid slam, jet strike). A new sound replaces the one on its
 channel unless that one has a higher priority. Steps are two frames long.
-The sound steps and the music run in VBLANK (bank 2 through the CallSound
-stub), on alternate frames, which keeps the overscan game logic short: its
-worst measured frame is about 2,130 cycles of about 2,216 usable
-(tools/budget.mjs).
+The sound steps and the music run in VBLANK (bank 3, sound.asm, through the
+CallSound stub), on alternate frames, which keeps the overscan game logic
+short. One frame's heavy work is also bounded: the shots go first, and once
+an enemy has died that frame a jet hits one enemy instead of two, an enemy
+about to reach the toy box waits an update, and the spawner waits a frame
+(tools/budget.mjs measures the logic time; about 2,216 cycles are usable).
 
 ## Music
 
-An original 8-bar toy march (logic.asm, MelNote/BassNote): melody in eighth
+An original 8-bar toy march (sound.asm, MelNote/BassNote): melody in eighth
 notes on the pentatonic C5 D5 E5 G5 A5 C6 (pure tone, AUDC 4), bass in
 quarters on F3 G3 A3 C4 E3 (AUDC 12), all within 19 cents of true pitch.
 An eighth is 12 frames (150 quarter notes a minute). Before a game and at
