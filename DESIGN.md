@@ -134,7 +134,10 @@ record gains one byte (the page).
   of the toy about to be placed.
 - Hold fire + left/right cycles the toy; fire on an empty slot places it
   (costs batteries; not on a monster standing there, which could hold it out
-  of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot picks it up (the shovel).
+  of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot picks it up (the shovel),
+  except with the jet chosen: a jet takes off from any slot, full or not
+  *(2026-10-07: a jet used to need a free slot, so a full shelf couldn't launch
+  one without a pick-up first)*.
 - Game Reset starts; Game Select picks game 1/2/3 (start at wave 1/5/9);
   left difficulty A = the second lap's shorter spawn gaps (three quarters)
   from the start, and five eighths in the second lap, where every enemy also
@@ -194,8 +197,10 @@ channel unless that one has a higher priority. Steps are two frames long.
 The sound steps and the music run in VBLANK (bank 3, sound.asm, through the
 CallSound stub), on alternate frames, which keeps the overscan game logic
 short. One frame's heavy work is also bounded: the shots go first, and once
-an enemy has died that frame a jet hits one enemy instead of two, an enemy
-about to reach the toy box waits an update, and the spawner waits a frame
+a frame is busy (an enemy died, a toy went down, was picked up, eaten or
+crushed, or a jack sprang: the KILLED flag) a jet hits one enemy instead of
+two, an enemy about to reach the toy box waits an update, and the spawner
+waits a frame
 (tools/budget.mjs measures the logic time; about 2,216 cycles are usable).
 
 ## Music

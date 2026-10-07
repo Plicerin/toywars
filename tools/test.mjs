@@ -421,6 +421,43 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a spawn due on the frame a toy goes down waits for the next even frame', placed && waited && g.sc('spawnLeft') === 4, `placed ${placed}, waited ${waited}, then ${g.sc('spawnLeft')} left`);
 }
 {
+  // picking a toy up makes a busy frame too
+  const g = boot();
+  g.press(); g.frames(2);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  slot(g, 3, 2, 40); g.set('toy', 1); g.set('spawnTimer', 200); // a teddy under the cursor (slot 3)
+  g.frames(1, { fire: true });
+  if ((g.r('frame') + 1) & 1) g.frames(1, { fire: true });
+  g.set('spawnLeft', 5); g.set('spawnTimer', 0);
+  g.frames(1); // fire released: the teddy comes up
+  const picked = g.sc('slotType', 3) === 0, waited = g.sc('spawnLeft') === 5;
+  check('a spawn due on the frame a toy is picked up waits for the next even frame', picked && waited, `picked ${picked}, waited ${waited}`);
+}
+{
+  // a toy eaten to nothing makes a busy frame: its chewers walk on, the spawn waits
+  const g = boot();
+  g.press(); g.frames(2);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  slot(g, 5, 2, 1); // a teddy with 1 health, middle shelf, front column (x 112)
+  enemy(g, 0, 1, 118, 1, 30); g.set('eState', 0x80 | 15, 0); // a dino (slot 0: even frames) chewing it
+  let f = 0, eatenFrame = null;
+  while (f < 200 && eatenFrame === null) {
+    g.set('spawnLeft', 5); g.set('spawnTimer', 0); g.set('packLeft', 0);
+    g.frames(1); f += 1;
+    for (let i = 1; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+    if (g.sc('slotType', 5) === 0) eatenFrame = g.sc('spawnLeft');
+  }
+  check('a spawn due on the frame a toy is eaten waits for the next even frame', eatenFrame === 5, `spawns left that frame: ${eatenFrame}`);
+}
+{
+  // the jet takes off from any slot of the shelf, full or not: with it chosen, fire never picks a toy up
+  const g = quietGame();
+  slot(g, 3, 1, 8); // an army man under the cursor
+  g.set('toy', 6); g.set('unlock', 6); g.set('batt', 40);
+  g.press();
+  check('with the jet chosen, fire on a full slot launches it and leaves the toy there', g.sc('slotType', 3) === 1 && g.sc('batt') === 10 && [0, 1, 2, 3, 4].some((i) => g.sc('eType', i) === 9), `slot ${g.sc('slotType', 3)}, batteries ${g.sc('batt')}`);
+}
+{
   // no jet while a jack's spring is being swept
   const g = quietGame();
   g.set('splashN', 0x75); g.set('splashL', 2); g.set('splashX', 90); // a jack's burst

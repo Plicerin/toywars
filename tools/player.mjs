@@ -42,6 +42,14 @@
 //    seeds 1000 24.8 -> 26.8; A 19.8 -> 20.4; T-Rex lids at wave 24 8 -> 1): a jack in front of a lap-2 T-Rex kills it
 //  - jackSwapTrex: swap the front teddy for a jack only for a T-Rex (on 3527460 heavy: identical to jackSwap)
 //  - DBGCYC=frame prints the measured cycles for frames around it
+//  - result.stats.placeHolds (placeHoldsW per wave): even frames the spawner sat out only because of a
+//    placement (f385c4b: no kill or lid that frame; each slips the spawn schedule 2 frames). Heavy B: ~56 a
+//    game, ~110 frames of ~64,600; paired with the hold patched out (48 games) final waves -0.5, i.e. noise
+//  - stats.jetLastHit: monsters the jet hit on its last update (it leaves the same frame, so no mask to
+//    read; counted by the health drop). They used to be reported as "jet passed ... without hitting it"
+//  - f385c4b, 64 heavy B games: OPTS jetBalloon (identical games), bossSave 30/45 (26.8/26.5 vs 27.0),
+//    salvage false (25.9), runway (26.6; balloon lids 20 -> 7 but T-Rex lids 2 -> 11): none kept
+//  - LOGIC_ASM=path: the logic.asm matching ROM/SYM (the profiler's labels), for pinned builds
 //  - probes (not play): probeCut (a jet placed during a jack's sweep with every enemy slot taken),
 //    probeLand (a jack in the middle slot and a teddy behind a T-Rex: the throw lands on the teddy)
 // usage: node tools/player.mjs [games] [strategy: heavy (best on 3527460: B mean 28.6, median 28, 16 games), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
@@ -484,7 +492,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       const jetFlying = jetBusy(e.lane);
       if (u >= JET && !jetFlying && (e.x <= o.jetX || trexRun) && e.x >= (o.legacy ? 49 : 44) && (lidUsed || e.type === TREX || (o.jetBalloon && e.type === BALLOON) || en.filter((q) => q.lane === e.lane).length < 3)) {
         // (the jet takes off from the toy box end whatever slot it is placed in)
-        const col = o.legacy ? [0, 1, 2].find((c) => !sl[e.lane * 3 + c].type && COLX[c] + ((e.st & 0x80) ? 1 : 3) <= e.x) : [0, 1, 2].find((c) => !sl[e.lane * 3 + c].type);
+        const col = o.legacy ? [0, 1, 2].find((c) => !sl[e.lane * 3 + c].type && COLX[c] + ((e.st & 0x80) ? 1 : 3) <= e.x) : ([0, 1, 2].find((c) => !sl[e.lane * 3 + c].type) ?? 0); // (a jet takes off from any slot, full or not)
         if (col !== undefined) add(200 + (lidUsed ? 50 : 0), e.lane * 3 + col, 'place', JET, `jet ${ENAME[e.type]}@${e.x}`);
         else if ((lidUsed || e.type === TREX) && batt + (COST[sl[e.lane * 3].type] >> 1) >= COST[JET]) add(190, e.lane * 3, 'pick', 0, 'clear runway for jet');
         else if (o.balloonRunway && e.type === BALLOON || o.runway && (lidUsed || e.type === TREX || e.type === BALLOON)) {
@@ -584,7 +592,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         if (jetBusy(L)) continue;
         const hp = en.filter((e) => e.lane === L && e.x < COLX[2] && e.x >= 44).reduce((a2, e) => a2 + Math.min(10, e.hp), 0);
         if (hp < o.jetChew) continue;
-        const col = [0, 1, 2].find((c) => !sl[L * 3 + c].type);
+        const col = o.legacy ? [0, 1, 2].find((c) => !sl[L * 3 + c].type) : ([0, 1, 2].find((c) => !sl[L * 3 + c].type) ?? 0);
         if (col !== undefined) add(185, L * 3 + col, 'place', JET, `jet pack ${hp}`);
         else if (o.runway) {
           // runway: no free slot on the shelf; pick up the cheapest toy nothing stands on
@@ -603,7 +611,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       }
       if (best >= 0 && bestHp >= o.overflowHp) {
         const s1 = best * 3 + 1, s0 = best * 3;
-        if (!sl[s0].type) add(80, s0, 'place', JET, 'overflow jet');
+        if (!o.legacy || !sl[s0].type) add(80, s0, 'place', JET, 'overflow jet'); // (any slot: a jet takes off from a full one too)
         else if (!sl[s1].type) add(80, s1, 'place', JET, 'overflow jet');
         else if (!o.legacy && !sl[s1 + 1].type) add(80, s1 + 1, 'place', JET, 'overflow jet');
         else if (sl[s1].type !== TEDDY) add(80, s1, 'pick', 0, 'clear runway for jet');
@@ -694,7 +702,9 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     } else {
       const t = sc('slotType', act.slot);
       if (!t) { run(); continue; }
-      const pre = act.why.startsWith('repair ') && !act.why.startsWith('salvage') ? t : act.why === 'clear runway for jet' ? JET : 0;
+      let pre = act.why.startsWith('repair ') && !act.why.startsWith('salvage') ? t : act.why === 'clear runway for jet' ? JET : 0;
+      // (with the jet chosen, fire launches a jet from any slot instead of picking up: choose another toy first)
+      if (pre === JET || (!pre && sc('toy') === JET)) pre = t;
       if (pre && sc('toy') !== pre) { selectToy(pre); continue; }
       if (log) console.log(`f${frames} pick ${TOYNAME[t]} at ${act.slot} (${act.why})`);
       const bp = sc('batt'); pickSlot = act.slot; tap(); pickSlot = -1; stats.refund = (stats.refund ?? 0) + Math.max(0, sc('batt') - bp);

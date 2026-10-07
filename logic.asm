@@ -27,8 +27,9 @@ SHOT_CANNON = 3
 SPLASH      = 12                ; a cannonball's splash reach, pixels each way
 CANNON_DMG  = 3
 JET_DMG     = 10
-KILLED      = temp+3            ; this frame an enemy died or a toy went down (the
-                                ;   spawner waits; overscan only: VBLANK uses temp)
+KILLED      = temp+3            ; a busy frame (the spawner waits): an enemy died, a
+                                ;   toy went down, was picked up or destroyed, or a jack
+                                ;   sprang (overscan only: VBLANK uses temp)
 JACK_DMG    = 20                ; a jack-in-the-box's spring: damage to each enemy
 JACK_REACH  = 8                 ;   within this many pixels of the one that sprang it,
 JACK_THROW  = 16                ;   thrown this many pixels back up the shelf (short of
@@ -486,10 +487,14 @@ PrevToy:
 
 ; Act: on the cursor's slot, place the chosen toy (if there are batteries
 ; for it, and no monster stands there) or pick up the toy there (half its
-; cost back)
+; cost back). A jet takes off from any slot of the shelf, full or not: with
+; the jet chosen, fire never picks a toy up.
 Act:
     SUBROUTINE
     ldx R_cursor
+    lda R_toy
+    cmp #TOY_JET
+    beq .place
     lda R_slotType,x
     beq .place
     tay
@@ -500,6 +505,8 @@ Act:
     jsr SetBatt
     lda #0
     sta W_slotType,x
+    lda #1                      ; (a busy frame: the spawner waits a frame)
+    sta KILLED
     SOUND SND_PICK
     rts
 .place:
@@ -1200,6 +1207,8 @@ EnemyAct:                       ; enemy X (kept)
 .crush:
     lda #0
     sta W_slotType,y
+    lda #1                      ; (its chewers walk on: a busy frame)
+    sta KILLED
     rts
 
 ; JackSpring (X = the enemy that reached it, lt1 = its slot): the
@@ -1216,6 +1225,8 @@ JackSpring:
     ldy lt1
     lda #0
     sta W_slotType,y
+    lda #1                      ; (a busy frame: the spawner waits a frame)
+    sta KILLED
     SOUND SND_SPRING
     rts
 
