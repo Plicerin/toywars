@@ -87,7 +87,9 @@ W_eX        ds NENEMY   ; enemies: left x
 W_eLane     ds NENEMY   ;   shelf 0-2
 W_eType     ds NENEMY   ;   0 none, 1 dino, 2 helicopter, 3 crawler
 W_eHP       ds NENEMY   ;   health
-W_eState    ds NENEMY   ;   bit 7 chewing, bit 6 hopped (knight: shield broken; pogo: jumped)
+W_eState    ds NENEMY   ;   bit 7 chewing, bit 6 hopped (knight: shield broken; pogo: jumped),
+                        ;   bit 5 hurt (half its health or less), bit 4 a quarter or less,
+                        ;   bits 0-3 half its full health (at most 15)
 W_slotType  ds 9        ; toys per slot (shelf*3+column): 0 none, 1-6 (TOY_*)
 W_slotHP    ds 9
 W_slotCool  ds 9        ; visits (6 frames) until the toy acts again
@@ -821,9 +823,25 @@ Schedule:
     lda eFeet,y
     sta QUEUE+4,x
     sta evPrevF
+    lda R_eState,y              ; color page for this kind of enemy; hurt (half
+    and #$30                    ; or less), the other one (red <-> orange); a
+    beq .plainCol               ; quarter or less, flickering between them
+    and #$10
+    beq .otherCol
+    lda frame
+    lsr
+    bcc .plainCol
+.otherCol:
     lda R_eType,y
     tay
-    lda EnColHi,y               ; color page for this kind of enemy
+    lda EnColHi,y
+    eor #>ColArr ^ >ColOrange
+    jmp .col
+.plainCol:
+    lda R_eType,y
+    tay
+    lda EnColHi,y
+.col:
     sta QUEUE+5,x
     ldy temp+1
     lda R_eX,y                  ; walking frame: (x >> 2) & 1

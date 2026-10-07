@@ -92,7 +92,7 @@ const STRATEGIES = {
 // debugging: PROF_AT=frame,frame,... prints where the overscan logic spends its cycles on those frames
 const PROF_AT = new Set((process.env.PROF_AT ?? '').split(',').filter(Boolean).map(Number));
 const labelSet = (file) => new Set([...readFileSync(file, 'latin1').matchAll(/^([A-Za-z]\w*):?/gm)].map((x) => x[1]));
-const LOGIC = labelSet('logic.asm');
+const LOGIC = labelSet(process.env.LOGIC_ASM ?? 'logic.asm'); // (LOGIC_ASM=path: the source matching ROM/SYM, for the profiler's labels)
 const LISTS = [false, true].map((logic) => Object.entries(SYM).filter(([n]) => LOGIC.has(n) === logic && /^[A-Za-z]\w*$/.test(n) && !/^[WR]_/.test(n)).sort((a, b) => a[1] - b[1]));
 function profileFrame(m, at) {
   const labelOf = (pc, bank) => { let best = '?'; for (const [n, a] of LISTS[bank === 2 ? 1 : 0]) { if (a <= pc) best = n; else break; } return best; };
@@ -242,6 +242,8 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         // a lid slam) wasn't skipped: drop it
         for (const id of [...g.passed.keys()]) if (!g.hit.has(id) && !cur.en.some((e) => e.type !== EJET && e.i + ':' + birth[e.i] === id)) { g.passed.delete(id); stats.jetPassedDied = (stats.jetPassedDied ?? 0) + 1; }
         if (jetsNow.some((j) => j.i + ':' + j.lane === k)) continue;
+        // (the jet's last update can hit a monster as the jet leaves: no mask left to read, but the health fell)
+        for (const id of [...g.passed.keys()]) { const e = cur.en.find((q) => q.type !== EJET && q.i + ':' + birth[q.i] === id), p = e && prev.en.find((q) => q.i === e.i && q.type === e.type); if (p && e.hp < p.hp) { g.hit.add(id); stats.jetLastHit = (stats.jetLastHit ?? 0) + 1; } }
         for (const [id, what] of g.passed) if (!g.hit.has(id)) { stats.jetSkipped += 1; anomaly(`jet passed ${what} without hitting it (slot ${id})`); }
         jetLog.delete(k);
       }
@@ -383,7 +385,12 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   // ---- the hands
   const run = (bits = 0, fire = false, swchb = o.diffA ? 0x4b : 0x0b) => {
     m.bus.swcha = 0xff ^ bits; m.bus.inpt4 = fire ? 0 : 0x80; m.bus.swchb = swchb;
+    const pre = sc('state') === 1 ? { batt: sc('batt'), n: enemies().filter((e) => e.type !== EJET).length, lids: sc('lids'), wave: sc('wave') } : null;
     if (PROF_AT.has(frames)) profileFrame(m, frames); else stepFrame();
+    if (pre && SYM.temp !== undefined && sc('state') === 1 && !(m.ram(SYM.frame) & 1) && m.ram(SYM.temp + 3) && sc('batt') < pre.batt && sc('lids') === pre.lids && enemies().filter((e) => e.type !== EJET).length >= pre.n) {
+      // an even frame the spawner sat out only because of a placement (no kill, no lid): the spawn schedule slips 2 frames
+      stats.placeHolds = (stats.placeHolds ?? 0) + 1; (stats.placeHoldsW ??= {})[pre.wave] = (stats.placeHoldsW[pre.wave] ?? 0) + 1;
+    }
     checkDisplay();
     const { total, vb } = m.layout();
     if (total !== 262 || vb[0][0] !== 40) { mistimed += 1; mistimedAll.push(frames); if (mistimedAt.length < 10) mistimedAt.push({ frame: frames, wave: sc('wave'), total, vb: JSON.stringify(vb), en: enemies().map((e) => `${ENAME[e.type]}@L${e.lane}x${e.x}`).join(' '), toys: slots().map((q) => TOYNAME[q.type][0] ?? '-').join(''), shots: [0, 1, 2].map((L) => sc('shotDmg', L)).join(','), splashN: sc('splashN'), cursor: sc('cursor'), stick: m.bus.swcha.toString(16), fire: m.bus.inpt4 === 0, sound: sc('sndPos') }); }

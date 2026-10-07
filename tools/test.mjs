@@ -378,6 +378,21 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a balloon clown floats over a jack-in-the-box without springing it', g.sc('slotType', 4) === 4 && g.sc('eHP', 0) === 9, `jack ${g.sc('slotType', 4)}, balloon health ${g.sc('eHP', 0)}`);
 }
 {
+  // every spawn keeps half its full health in its state's low bits (for the hurt marks)
+  const g = boot();
+  g.press(); g.frames(2);
+  g.set('wave', 10); g.set('unlock', 6);
+  let checked = 0, wrong = [];
+  for (let f = 0; f < 3000 && checked < 40; f += 1) {
+    g.set('spawnLeft', 50); g.set('spawnTimer', 0); g.set('packLeft', 0);
+    const before = [0, 1, 2, 3, 4].map((i) => g.sc('eType', i));
+    g.frames(1);
+    [0, 1, 2, 3, 4].forEach((i) => { const k = g.sc('eType', i); if (!before[i] && k && k !== 9) { checked += 1; const hp = g.sc('eHP', i), half = g.sc('eState', i) & 15; if (half !== Math.min(15, hp >> 1)) wrong.push(`${KINDS[k]} ${hp}:${half}`); } });
+    for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  }
+  check('every spawned monster keeps half its full health for its hurt marks', checked >= 40 && wrong.length === 0, wrong.length ? wrong.slice(0, 4).join(', ') : `${checked} spawns`);
+}
+{
   // a burst still being swept (a cannonball's, another shelf): the monster waits at the jack, then springs it
   const g = quietGame();
   slot(g, 4, 4, 8); // a jack at x 80
@@ -474,6 +489,24 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   g.set('shotDmg', 0, 0); g.m.poke(SYM.shotPtr, 80); g.set('eHP', 2, 0); // no more hits
   const fast = g.sc('eX', 0); g.run(40); const fastStep = fast - g.sc('eX', 0);
   check('a knight walks slowly until its shield breaks, then charges', (g.sc('eState', 0) & 0x40) !== 0 && fastStep >= 3 * slowStep && slowStep > 0, `${slowStep} then ${fastStep} pixels in 40 frames, kind ${g.sc('eType', 0)}`);
+}
+{
+  // the shield holds until the knight is down to 2: one bullet off a full knight doesn't break it
+  const g = quietGame();
+  enemy(g, 0, 0, 120, 5, 6); // a full knight (6 health in wave 1)
+  slot(g, 0, 1, 8);
+  let f = 0;
+  while (g.sc('eHP', 0) === 6 && f < 600) { g.run(1); f += 1; }
+  check('a knight\'s shield holds after one hit (it breaks only at 2 health or less)', g.sc('eHP', 0) === 5 && (g.sc('eState', 0) & 0x40) === 0, `health ${g.sc('eHP', 0)}, shield ${(g.sc('eState', 0) & 0x40) ? 'broken' : 'whole'}`);
+}
+{
+  // hurt marks: half its health or less (bit 5), a quarter or less (bit 4); the kernel shows them in color
+  const g = quietGame();
+  enemy(g, 0, 1, 140, 1, 6); // a dino, full health 6 in wave 1
+  g.set('eState', 3, 0); // (half its full health, as Spawn keeps it)
+  const marks = [];
+  for (const dmg of [2, 1, 2]) { g.set('shotDmg', dmg, 1); g.set('shotKind', 3, 1); g.m.poke(SYM.shotPtr + 1, layout.shotStart[5]); let f = 0; const hp0 = g.sc('eHP', 0); while (g.sc('eHP', 0) === hp0 && f < 200) { g.run(1); f += 1; } marks.push(`${g.sc('eHP', 0)}:${(g.sc('eState', 0) >> 4) & 3}`); }
+  check('a monster is marked hurt at half its health or less, and badly hurt at a quarter or less', marks.join(' ') === '4:0 3:2 1:3', marks.join(' '));
 }
 {
   const g = quietGame();

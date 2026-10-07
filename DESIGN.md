@@ -113,6 +113,15 @@ two caused about three quarters of the bot's second-lap losses)*.
 
 All enemies have a two-frame walk (frame chosen by `(x >> 2) & 1`).
 
+Health shown in color *(2026-10-06)*: Damage marks an enemy hurt at half its
+full health or less (eState bit 5) and badly hurt at a quarter or less (bit
+4), the full health worked out again by MaxHP (the same formula as Spawn).
+The scheduler then gives a hurt enemy the other color page (red <-> orange,
+so the T-Rex goes red) and a badly hurt one that page on odd frames only, a
+flicker. Toys can't show damage this way: the three copies share one color,
+and there is no room in bank 1 for worn toy sprites (a sag of the pointer
+was tried and read as misalignment).
+
 Per-object colors *(decided 2026-10-04)*: every object player 1 draws picks
 its color (red for most enemies, dark red for armor, orange for the boss,
 green for the jet). The kernel reads the color per row from a table page per

@@ -641,6 +641,41 @@ SetBatt:                        ; batteries = A (at most 99)
     sta W_dirty
     rts
 
+; MaxHP: A = enemy kind -> A = its full health now: one more every fourth
+; wave (every eighth for the light ones, wind-up mice and balloon clowns, which
+; a ramp of wave / 4 made six and three times as tough by wave 20), and in the
+; second lap on difficulty A one more. Keeps X and Y (uses temp+1, temp+2:
+; overscan only).
+MaxHP:
+    SUBROUTINE
+    sty temp+1
+    tay
+    lda R_wave
+    lsr
+    lsr
+    cpy #EN_MOUSE
+    beq .light
+    cpy #EN_BALLOON
+    bne .ramp
+.light:
+    lsr
+.ramp:
+    clc
+    adc EnHP,y
+    sta temp+2
+    lda fast
+    and #$A0
+    cmp #$A0
+    bne .done
+    lda temp+2
+    clc
+    adc #A_LAP2_HP
+    sta temp+2
+.done:
+    ldy temp+1
+    lda temp+2
+    rts
+
 ; Damage: enemy X loses A health; at 0 it is destroyed (Kill)
 Damage:
     SUBROUTINE
@@ -651,7 +686,22 @@ Damage:
     beq Kill
     bcc Kill
     sta W_eHP,x
+    sta temp                    ; health now
+    lda R_eState,x
+    and #$0F                    ; half its full health (kept since it spawned)
+    cmp temp
+    bcc .sound                  ; more than half left
+    lsr
+    cmp temp                    ; (carry: a quarter or less left)
+    lda R_eState,x
+    ora #$20                    ; hurt: half or less (the kernel shows it in the
+    bcc .half                   ;   other color; a quarter or less, flickering)
+    ora #$10
+.half:
+    sta W_eState,x
+.sound:
     SOUND SND_HIT
+    lda R_eHP,x                 ; (SndPlay leaves A changed)
     cmp #3
     bcs .done
     lda R_eType,x               ; a knight's shield breaks
@@ -945,35 +995,16 @@ FreeEnemy:                      ; Y = a free enemy slot ($FF, N set, if none)
 Spawn:
     SUBROUTINE
     sta W_eType,y
-    tax
-    lda R_wave                  ; one more health every fourth wave (every
-    lsr                         ; eighth for the light ones: wind-up mice and
-    lsr                         ; balloon clowns, which a ramp of wave / 4
-    cpx #EN_MOUSE               ; made six and three times as tough by wave 20)
-    beq .light
-    cpx #EN_BALLOON
-    bne .ramp
-.light:
-    lsr
-.ramp:
-    clc
-    adc EnHP,x
-    sta lt4                     ; health
-    lda fast
-    and #$A0
-    cmp #$A0
-    bne .health
-    lda lt4                     ; the second lap on A: tougher
-    clc
-    adc #A_LAP2_HP
-    sta lt4
-.health:
-    lda lt4
+    jsr MaxHP
     sta W_eHP,y
+    lsr                         ; half its full health, kept in its state's low
+    cmp #16                     ; bits for Damage's hurt marks (at most 15)
+    bcc .half
+    lda #15
+.half:
+    sta W_eState,y
     lda #151
     sta W_eX,y
-    lda #0
-    sta W_eState,y
     lda lt0
     sta W_eLane,y
     ldx #NENEMY-1
