@@ -231,6 +231,29 @@ MainLoop:
     jsr Schedule
     jsr BuildStatus
     jsr CallSound               ; bank 2: sound steps or music
+    ; the health pips (status line, right end): the toy under the cursor's health
+    ; in thirds, 1-3 (temp+1, which the header loops leave alone); 0 = none
+    ldx #0
+    lda R_state
+    cmp #1                      ; (ST_PLAY)
+    bne .pips
+    ldy R_cursor
+    lda R_slotType,y
+    beq .pips
+    tax
+    lda R_slotHP,y
+    ldy #1
+    cmp PipT1,x
+    bcc .level
+    iny
+    cmp PipT2,x
+    bcc .level
+    iny
+.level:
+    tya
+    tax
+.pips:
+    stx temp+1
     lda #161                    ; defenders: rows 0-16 read the page's zero tail
     sta pc0
     sta pc1
@@ -381,11 +404,13 @@ MainLoop:
     ; score and wave are 40-pixel text (player 0 three copies, player 1 two,
     ; x 54-93); the batteries are PF1 blocks in green, x 96-123. PF1 is cleared
     ; as each line starts, so the left half stays blank, and set after the
-    ; text, before the beam reaches x 96 (cycle 54).
+    ; text, before the beam reaches x 96 (cycle 54). The health pips are PF2
+    ; blocks at x 136, 144 and 152, set the same way (before x 136, cycle 68)
+    ; and cleared as the next line starts.
     MAC STATUSLINE              ; {1} = font row (bottom first)
     sta WSYNC
     sty PF1                     ; 0-2    (Y = 0)
-    bit $80                     ; 3-5
+    sty PF2                     ; 3-5
     lda R_cells+{1}             ; 6-9
     sta GRP0                    ; 10-12
     lda R_cells+5+{1}           ; 13-16
@@ -401,6 +426,9 @@ MainLoop:
     sty GRP1                    ; 47-49  cell 4 shows (player 1 has no third copy)
     sty PF1                     ; 50-52
     ldy #0                      ; 53-54
+    ldx temp+1                  ; 55-57  the pips
+    lda PipRow+4*{1},x          ; 58-61
+    sta PF2                     ; 62-64
     ENDM
     STATUSLINE 4
     STATUSLINE 4
@@ -415,6 +443,7 @@ MainLoop:
 
     sta WSYNC                   ; s26
     sty PF1                     ; (Y = 0)
+    sty PF2
     lda #0
     sta GRP0
     sta GRP1
@@ -588,6 +617,18 @@ ScoreNext:  .byte $08, $10, $00  ; ... and ask for the next
     lda #0
     sta W_dirty
     rts
+
+; the pips: PF2 per font row (bottom first) x 4 levels; three dashes, and as
+; many blocks on them as the level (bits 2, 4, 6: x 136, 144, 152)
+PipRow:     .byte 0, 0, 0, 0
+            .byte 0, $54, $54, $54
+            .byte 0, $04, $14, $54
+            .byte 0, $04, $14, $54
+            .byte 0, 0, 0, 0
+; a toy's health from which it shows 2 and 3 pips: max / 3 + 1, 2 max / 3 + 1
+; (logic.asm ToyHP: army 8, teddy 40, tank 12, jack 8, cannon 10)
+PipT1:      .byte 0, 3, 14, 5, 3, 4, 0
+PipT2:      .byte 0, 6, 27, 9, 6, 7, 0
 
 TwoDigits:                      ; X = 0-99 -> temp = tens*5, temp+1 = ones*5
     lda Bin2BCD,x

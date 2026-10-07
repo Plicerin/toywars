@@ -52,6 +52,13 @@ takes 1 health every 16 frames; enemies gain 1 health every fourth wave
 - Shown on the status line: `00120 W01` in gold (the score's last five digits
   and the wave, 40-pixel text) and the batteries as two big green digits drawn
   with PF1 (4-pixel blocks, x 96-123), set mid-line after the text.
+- Health pips *(2026-10-07)*: with the cursor on a toy, its health in thirds
+  (rounded up: 1-3) at the status line's right end, PF2 blocks over three
+  dashes at x 136, 144, 152; nothing on an empty slot or outside play. Toys
+  can't show damage on the shelves (one color and one graphics strip per
+  slot), so the cursor reads it out. Worked out in VBLANK (temp+1, which the
+  header loops leave alone; thresholds PipT1/PipT2 from ToyHP), PF2 set after
+  the text and cleared as the next line starts (where a 3-cycle delay was).
 - Named batteries *(decided 2026-10-04)*.
 
 ## Toys
@@ -127,7 +134,8 @@ frame parity only, or, three mice stacked on one spot, once every 8 frames)
 it from a monster drawn once in 8)*. A third color for hurt monsters (orange
 is the T-Rex's own) would need another 160-byte color page in bank 1. Toys can't show damage this way: the three copies share one color,
 and there is no room in bank 1 for worn toy sprites (a sag of the pointer
-was tried and read as misalignment).
+was tried and read as misalignment); the status line's health pips show
+the cursor's toy instead.
 
 Per-object colors *(decided 2026-10-04)*: every object player 1 draws picks
 its color (as built: red for every enemy but the orange T-Rex, green for

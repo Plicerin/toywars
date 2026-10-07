@@ -157,7 +157,7 @@ export function titleLines() {
 // batteries 29-31 and 33-35, "W" 37-39, wave 41-43 and 45-47
 // the status line from x 54 to the right edge: '#' gold text (players, x 54-93),
 // 'g' the green batteries (PF1, 4-pixel blocks, x 96-123)
-export function statusLines(score, batteries, wave) {
+export function statusLines(score, batteries, wave, pips = 0) {
   return Array.from({ length: 5 }, (_, r) => {
     const row = Array(106).fill('.');
     const put = (x, g) => [...NARROW[g][r]].forEach((p, i) => { row[x + i] = p; });
@@ -167,6 +167,8 @@ export function statusLines(score, batteries, wave) {
     put(24, 'w'); put(28, wave[0]); put(32, wave[1]);
     // PF1 blocks from x 96: tens, a gap, ones
     block(0, batteries[0]); block(4, batteries[1]);
+    // the health pips (PF2 from x 136): three dashes (row 3), blocks over them (rows 1-2)
+    if (pips) for (let i = 0; i < 3; i += 1) if (r === 3 || ((r === 1 || r === 2) && i < pips)) for (let d = 0; d < 4; d += 1) row[82 + 8 * i + d] = 'g';
     return row.join('');
   });
 }

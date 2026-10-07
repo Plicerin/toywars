@@ -36,6 +36,13 @@ function boot() {
 }
 const RIGHT = 0x7f, LEFT = 0xbf, DOWN = 0xdf, UP = 0xef;
 
+// the health pips: the cursor's toy's health in thirds (1-3, rounded up), 0 for none
+const TOY_HP = /^ToyHP:\s*\.byte\s*([\d,\s]+)/m.exec(readFileSync('logic.asm', 'latin1'))[1].split(',').map(Number);
+function pipsOf(g) {
+  const t = g.sc('slotType', g.sc('cursor'));
+  return g.sc('state') === 1 && t ? Math.ceil((3 * g.sc('slotHP', g.sc('cursor'))) / TOY_HP[t]) : 0;
+}
+
 // the scene the kernel will draw next, read from RAM before the frame runs
 const toyAt = Object.fromEntries(TOYS.map((n) => [layout.defenders[n], n]));
 function sceneFromRam(g) {
@@ -52,8 +59,9 @@ function sceneFromRam(g) {
   const two = (v) => `${(v / 10) | 0}${v % 10}`;
   const score = [0, 1, 2].map((i) => sc('score', i).toString(16).padStart(2, '0')).join('');
   return {
+    pips: pipsOf(g),
     titleLines: sc('state') === 2 ? gameOverLines() : titleLines(),
-    statusLines: sc('dirty') ? null : sc('state') === 0 ? gameLines(sc('game')) : statusLines(score, two(sc('batt')), two(Math.min(99, sc('wave')))),
+    statusLines: sc('dirty') ? null : sc('state') === 0 ? gameLines(sc('game')) : statusLines(score, two(sc('batt')), two(Math.min(99, sc('wave'))), pipsOf(g)),
     pfColor: r('pfColor'),
     slots, enemies, shots,
   };
@@ -571,6 +579,26 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   let f = 0;
   while (g.sc('eHP', 0) === 6 && f < 600) { g.run(1); f += 1; }
   check('a knight\'s shield holds after one hit (it breaks only at 2 health or less)', g.sc('eHP', 0) === 5 && (g.sc('eState', 0) & 0x40) === 0, `health ${g.sc('eHP', 0)}, shield ${(g.sc('eState', 0) & 0x40) ? 'broken' : 'whole'}`);
+}
+{
+  // the health pips: the toy under the cursor's health in thirds, on the status line's right end
+  const g = quietGame();
+  slot(g, 4, 2, 40); // teddy, middle shelf, column 1
+  g.set('cursor', 4);
+  g.run(10);
+  const seen = [];
+  let bad = '';
+  for (const hp of [40, 27, 26, 14, 13, 1]) {
+    g.set('slotHP', hp, 4);
+    g.run(2);
+    const lit = [0, 1, 2].filter((i) => g.m.bus.tia.lastFrame[40 + 16 + 2][136 + 8 * i] === 0xc8).length; // (font row 1: the blocks)
+    const d = frameDiffs(g, {});
+    seen.push(`${hp}:${lit}`);
+    if (d.length && !bad) bad = `health ${hp}: ${d.slice(0, 2).join('; ')}`;
+  }
+  g.set('cursor', 3); g.run(2);
+  const none = frameDiffs(g, {}).length === 0 && [136, 144, 152].every((x) => g.m.bus.tia.lastFrame[40 + 22][x] !== 0xc8);
+  check("the status line shows the cursor's toy's health in thirds as pips (none on an empty slot)", seen.join(' ') === '40:3 27:3 26:2 14:2 13:1 1:1' && !bad && none, `${seen.join(' ')}${bad ? `; ${bad}` : ''}${none ? '' : '; pips on an empty slot'}`);
 }
 {
   // hurt marks: half its health or less (bit 5), a quarter or less (bit 4); the kernel shows them in color

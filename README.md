@@ -16,7 +16,8 @@ Defend the toy box on the left. Monsters walk in along the three shelves;
 place toys in the nine slots (three per shelf) to stop them.
 
 - **Joystick / arrow keys:** move the cursor over the slots. An empty slot
-  shows a blinking ghost of the toy you're about to place.
+  shows a blinking ghost of the toy you're about to place; on a toy, three
+  pips at the right end of the status line show its health in thirds.
 - **Fire / Space:** place that toy (it costs batteries), or pick up the toy
   under the cursor (half its cost back). With the jet chosen, fire launches it
   from any slot, full or not.
@@ -66,7 +67,8 @@ How the screen is drawn:
   Each picks its color through the queue.
 - Shots: missile 1, one per shelf.
 - Header: 48-pixel text (title or GAME OVER), then the status line: score and
-  wave as 40-pixel text, and the batteries as big green playfield digits.
+  wave as 40-pixel text, the batteries as big green playfield digits (PF1),
+  and the cursor's toy's health as three pips (PF2).
 
 ## Files
 
