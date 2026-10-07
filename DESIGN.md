@@ -120,9 +120,12 @@ full health or less (eState bit 5) and badly hurt at a quarter or less (bit
 4), against half the full health that Spawn keeps in eState bits 0-3
 (capped at 15).
 The scheduler then gives a hurt enemy the other color page (red <-> orange,
-so the T-Rex goes red) and a badly hurt one that page 4 frames of every 8,
-a flicker (slow enough that monsters taking turns, drawn on one frame parity
-only, still show it). Toys can't show damage this way: the three copies share one color,
+so the T-Rex goes red) and a badly hurt one that page 8 frames of every 16,
+a blink (slow enough that monsters taking turns still show it: drawn on one
+frame parity only, or, three mice stacked on one spot, once every 8 frames)
+*(2026-10-07: odd frames hid it from turn-takers; then 4 of every 8 still hid
+it from a monster drawn once in 8)*. A third color for hurt monsters (orange
+is the T-Rex's own) would need another 160-byte color page in bank 1. Toys can't show damage this way: the three copies share one color,
 and there is no room in bank 1 for worn toy sprites (a sag of the pointer
 was tried and read as misalignment).
 

@@ -828,8 +828,8 @@ Schedule:
     beq .plainCol               ; quarter or less, flickering between them
     and #$10
     beq .otherCol
-    lda frame                   ; (every 4 frames: an overlapping enemy is drawn
-    and #4                      ; on one frame parity only)
+    lda frame                   ; (every 8 frames: monsters taking turns are drawn
+    and #8                      ; on one frame parity, or once in 8, only)
     beq .plainCol
 .otherCol:
     lda R_eType,y

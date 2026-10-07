@@ -59,7 +59,7 @@
 //    overflow jets), paired: heavy B 16 games 25.4 -> 26.3, tank B 8 games 24.5 -> 24.0 (not kept)
 //  - stats.hurt (3f75347 hurt colors): per kind lives, hurt/badly hurt lives and frames, steadyF (badly
 //    hurt frames whose last 16 frames showed 3+ draws all in one color: the flicker hidden; since the
-//    flicker runs 4 frames of every 8, the turn-taking parity no longer hides it), steadyPlainF (shown in its full-health color), steadyFullF (steadyF
+//    flicker runs 8 frames of every 16, the turn-taking parity no longer hides it), steadyPlainF (shown in its full-health color), steadyFullF (steadyF
 //    with a full 16-frame window: not just the first frames after turning badly hurt), halfBad, capped; stats.hurtOneColor:
 //    badly hurt lives drawn 8+ times all in one color (kind, draws, frames from-to);
 //    stats.hurtMarkBad: frames whose marks disagree with health vs the kept half
@@ -448,9 +448,9 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       if (!!(st & 0x20) !== wantB5 || !!(st & 0x10) !== wantB4) { stats.hurtMarkBad += 1; if (stats.hurtMarkBad < 6) anomaly(`${ENAME[t]} slot ${i} hp ${hp} half ${half} marks ${(st >> 4) & 3}`); }
       if (st & 0x20) L.hurtF += 1; if (st & 0x10) { L.badF += 1; L.badFrom ??= frames; }
       // what the scheduler drew this frame (its state and frame at Schedule)
-      if (schedSnap && drawn.has(i) && schedSnap.ty[i] === t && (schedSnap.st[i] & 0x10)) { if (schedSnap.fr & 4) L.badOther += 1; else L.badPlain += 1; }
+      if (schedSnap && drawn.has(i) && schedSnap.ty[i] === t && (schedSnap.st[i] & 0x10)) { if (schedSnap.fr & 8) L.badOther += 1; else L.badPlain += 1; }
       // the last 16 frames while badly hurt: drawn 3+ times, all in one color (the flicker not visible)
-      if (st & 0x10) { (L.win ??= []).push(schedSnap && drawn.has(i) && schedSnap.ty[i] === t ? (schedSnap.st[i] & 0x10 ? 1 + ((schedSnap.fr >> 2) & 1) : 0) : 0); if (L.win.length > 16) L.win.shift(); const d = L.win.filter(Boolean); if (d.length >= 3 && d.every((v) => v === d[0])) { L.steadyF = (L.steadyF ?? 0) + 1; if (L.win.length === 16) L.steadyFullF = (L.steadyFullF ?? 0) + 1; if (d[0] === 1) L.steadyPlainF = (L.steadyPlainF ?? 0) + 1; } }
+      if (st & 0x10) { (L.win ??= []).push(schedSnap && drawn.has(i) && schedSnap.ty[i] === t ? (schedSnap.st[i] & 0x10 ? 1 + ((schedSnap.fr >> 3) & 1) : 0) : 0); if (L.win.length > 16) L.win.shift(); const d = L.win.filter(Boolean); if (d.length >= 3 && d.every((v) => v === d[0])) { L.steadyF = (L.steadyF ?? 0) + 1; if (L.win.length === 16) L.steadyFullF = (L.steadyFullF ?? 0) + 1; if (d[0] === 1) L.steadyPlainF = (L.steadyPlainF ?? 0) + 1; } }
     }
   };
 

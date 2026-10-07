@@ -1251,8 +1251,8 @@
     828  0699		       f0 16		      beq	.plainCol	; quarter or less, flickering between them
     829  069b		       29 10		      and	#$10
     830  069d		       f0 06		      beq	.otherCol
-    831  069f		       a5 9c		      lda	frame	; (every 4 frames: an overlapping enemy is drawn
-    832  06a1		       29 04		      and	#4	; on one frame parity only)
+    831  069f		       a5 9c		      lda	frame	; (every 8 frames: monsters taking turns are drawn
+    832  06a1		       29 08		      and	#8	; on one frame parity, or once in 8, only)
     833  06a3		       f0 0c		      beq	.plainCol
     834  06a5				   .otherCol
     835  06a5		       b9 8a f0 	      lda	R_eType,y

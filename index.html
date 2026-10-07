@@ -102,7 +102,9 @@
 
     /* how to play */
     .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
-    .shot { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+    .shot { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); }
+    .clip { max-width: 640px; margin: 0 auto 28px; }
+    .clip figcaption { font: 14px/1.5 var(--body); color: var(--muted); margin-top: 8px; text-align: center; }
     .steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
     .steps li { position: relative; padding: 14px 16px 14px 60px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
     .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 16px; top: 14px; width: 30px; height: 30px; display: grid; place-items: center; font: 11px/1 var(--pixel); color: #1a1205; background: var(--gold-hi); border-radius: 8px; }
@@ -225,7 +227,7 @@
       <h2>How to play<small>Three shelves, nine slots, one toy box to protect.</small></h2>
       <div class="two">
         <div>
-          <img class="shot px" src="img/screen.png" alt="Toy Wars: the toy box on the left, three slanted shelves with green toys in their slots, and red monsters walking in from the right. The status line shows the score, batteries and wave.">
+          <img class="shot px" src="img/play.gif" width="640" height="384" alt="Toy Wars in play, wave 16: army men and teddies on three slanted shelves, red monsters walking in from the right and chewing on the teddies, bullets flying, a hurt monster turning orange. The status line shows the score, wave and batteries.">
         </div>
         <ol class="steps">
           <li><b>Pick a slot.</b> The joystick moves the cursor over the nine slots, three on each shelf. An empty slot shows a blinking ghost of the toy you're about to place.</li>
@@ -256,6 +258,7 @@
   <section id="toys">
     <div class="wrap">
       <h2>Your toys<small>A new toy unlocks as the waves go on. Only one shot flies along a shelf at a time, so toys on the same shelf take turns.</small></h2>
+      <figure class="clip"><img class="shot px" src="img/showcase.gif" width="640" height="384" alt="A jack-in-the-box is chosen and set on the top shelf, and a mouse pack runs into it; a cannon splashes the monsters chewing a teddy on the middle shelf; two jets fly at a T-Rex on the bottom shelf, which blinks badly hurt before the toys finish it."><figcaption>Choosing and setting a jack-in-the-box, a cannon's splash, and two jets for a T-Rex.</figcaption></figure>
       <div class="grid">
         <article class="card toy"><div class="art"><img class="px" src="img/sprites/army.png" alt="Army man"></div><h3>Army man</h3><div class="tags"><span class="tag"><b>10</b> batteries</span><span class="tag">from wave <b>1</b></span></div><div class="tags"><span class="tag">health <b>8</b></span></div><p>Fires along its shelf about every 0.7 seconds, 1 damage a bullet. Cheap and steady, but its bullets fly over a crawler that's busy chewing.</p></article>
         <article class="card toy"><div class="art"><img class="px" src="img/sprites/teddy.png" alt="Teddy bear"></div><h3>Teddy</h3><div class="tags"><span class="tag"><b>5</b> batteries</span><span class="tag">from wave <b>2</b></span></div><div class="tags"><span class="tag">health <b>40</b></span></div><p>Doesn't fight back. Monsters stop to chew on it, which holds a dino up for about eleven seconds while your other toys work.</p></article>
