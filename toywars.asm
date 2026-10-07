@@ -828,9 +828,9 @@ Schedule:
     beq .plainCol               ; quarter or less, flickering between them
     and #$10
     beq .otherCol
-    lda frame
-    lsr
-    bcc .plainCol
+    lda frame                   ; (every 4 frames: an overlapping enemy is drawn
+    and #4                      ; on one frame parity only)
+    beq .plainCol
 .otherCol:
     lda R_eType,y
     tay

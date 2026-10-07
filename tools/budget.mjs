@@ -1,4 +1,5 @@
-// Overscan logic time in the late-game stress scenario (as in test.mjs):
+// Overscan logic time in the late-game stress scenario (as in test.mjs; monsters keep a half health of
+// 15, so every hit sets the hurt marks):
 // cycles from the jsr CallLogic stub to the timer wait, per frame.
 // usage: node tools/budget.mjs
 import { readFileSync } from 'node:fs';
@@ -40,7 +41,7 @@ const worst = [[0, 0], [0, 0]]; let vbWorst = 0;
 for (let f = 0; f < 3000; f += 1) {
   if (f % 300 === 0) fill();
   set('spawnLeft', 20);
-  for (let i = 0; i < 5; i += 1) if (!get('eType', i)) { const k = (f + i) % 9; set('eType', 1 + k, i); set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); set('eX', 151 - ((f * 7 + i * 23) % 60), i); set('eHP', 9, i); set('eState', 0, i); }
+  for (let i = 0; i < 5; i += 1) if (!get('eType', i)) { const k = (f + i) % 9; set('eType', 1 + k, i); set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); set('eX', 151 - ((f * 7 + i * 23) % 60), i); set('eHP', 9, i); set('eState', 15, i); }
   prof = new Map();
   const c = frame();
   vbWorst = Math.max(vbWorst, vbSpent);

@@ -1181,7 +1181,7 @@
     758  0616		       a4 b0		      ldy	temp+3
     759  0618		       b9 a8 00 	      lda	eOrder,y
     760  061b		       30 03		      bmi	.qTaken
-    761  061d		       4c fc f6 	      jmp	.qNext
+    761  061d		       4c fd f6 	      jmp	.qNext
     762  0620				   .qTaken
     763  0620		       29 7f		      and	#$7F
     764  0622		       a8		      tay
@@ -1219,7 +1219,7 @@
     796  065b		       c5 ad		      cmp	temp
     797  065d		       90 03		      bcc	.qOk
     798  065f				   .qSkip
-    799  065f		       4c fc f6 	      jmp	.qNext	; needs event row > previous feet + 1
+    799  065f		       4c fd f6 	      jmp	.qNext	; needs event row > previous feet + 1
     800  0662				   .qOk
     801  0662		       a9 4f		      lda	#79
     802  0664		       38		      sec
@@ -1248,110 +1248,110 @@
     825  0692		       85 af		      sta	evPrevF
     826  0694		       b9 94 f0 	      lda	R_eState,y	; color page for this kind of enemy; hurt (half
     827  0697		       29 30		      and	#$30	; or less), the other one (red <-> orange); a
-    828  0699		       f0 15		      beq	.plainCol	; quarter or less, flickering between them
+    828  0699		       f0 16		      beq	.plainCol	; quarter or less, flickering between them
     829  069b		       29 10		      and	#$10
-    830  069d		       f0 05		      beq	.otherCol
-    831  069f		       a5 9c		      lda	frame
-    832  06a1		       4a		      lsr
-    833  06a2		       90 0c		      bcc	.plainCol
-    834  06a4				   .otherCol
-    835  06a4		       b9 8a f0 	      lda	R_eType,y
-    836  06a7		       a8		      tay
-    837  06a8		       b9 f1 fb 	      lda	EnColHi,y
-    838  06ab		       49 06		      eor	#>ColArr ^ >ColOrange
-    839  06ad		       4c b7 f6 	      jmp	.col
-    840  06b0				   .plainCol
-    841  06b0		       b9 8a f0 	      lda	R_eType,y
-    842  06b3		       a8		      tay
-    843  06b4		       b9 f1 fb 	      lda	EnColHi,y
-    844  06b7				   .col
-    845  06b7		       95 bf		      sta	QUEUE+5,x
-    846  06b9		       a4 ae		      ldy	temp+1
-    847  06bb		       b9 80 f0 	      lda	R_eX,y	; walking frame: (x >> 2) & 1
-    848  06be		       4a		      lsr
-    849  06bf		       4a		      lsr
-    850  06c0		       29 01		      and	#1
-    851  06c2		       95 c1		      sta	QUEUE+7,x	; (scratch until the next record links here)
-    852  06c4		       b9 8a f0 	      lda	R_eType,y
-    853  06c7		       0a		      asl
-    854  06c8		       15 c1		      ora	QUEUE+7,x
-    855  06ca		       95 c1		      sta	QUEUE+7,x
-    856  06cc		       b9 8a f0 	      lda	R_eType,y
-    857  06cf		       c9 05		      cmp	#5	; a knight without its shield: the charge frame
-    858  06d1		       d0 0b		      bne	.frame
-    859  06d3		       b9 94 f0 	      lda	R_eState,y
-    860  06d6		       29 40		      and	#$40
-    861  06d8		       f0 04		      beq	.frame
-    862  06da		       a9 14		      lda	#20	; (index 20 of EBase: the charge frame)
-    863  06dc		       95 c1		      sta	QUEUE+7,x
-    864  06de				   .frame
-    865  06de		       b4 c1		      ldy	QUEUE+7,x
-    866  06e0		       b5 be		      lda	QUEUE+4,x
-    867  06e2		       18		      clc
-    868  06e3		       79 b7 fb 	      adc	EBaseLo,y
-    869  06e6		       95 bc		      sta	QUEUE+2,x
-    870  06e8		       b9 cc fb 	      lda	EBaseHi,y
-    871  06eb		       69 00		      adc	#0
-    872  06ed		       95 bd		      sta	QUEUE+3,x
-    873  06ef		       a9 ff		      lda	#$FF
-    874  06f1		       95 c1		      sta	QUEUE+7,x
-    875  06f3		       8a		      txa
-    876  06f4		       18		      clc
-    877  06f5		       69 08		      adc	#8
-    878  06f7		       aa		      tax
-    879  06f8		       e0 28		      cpx	#40
-    880  06fa		       b0 0b		      bcs	.park
-    881  06fc				   .qNext
-    882  06fc		       e6 b0		      inc	temp+3
-    883  06fe		       a5 b0		      lda	temp+3
-    884  0700		       c9 05		      cmp	#NENEMY
-    885  0702		       f0 03		      beq	.park
-    886  0704		       4c 16 f6 	      jmp	.q
-    887  0707				   .park		; after the last enemy: point player 1 at zeros
-    888  0707		       e0 00		      cpx	#0
-    889  0709		       f0 44		      beq	.done
-    890  070b		       a5 af		      lda	evPrevF
-    891  070d		       c9 27		      cmp	#39
-    892  070f		       b0 3e		      bcs	.done	; rows below it to the end: 40 at most
-    893  0711		       18		      clc
-    894  0712		       69 29		      adc	#41
-    895  0714		       c9 4e		      cmp	#78
-    896  0716		       90 02		      bcc	.pRow
-    897  0718		       a9 4d		      lda	#77
-    898  071a				   .pRow
-    899  071a		       85 ad		      sta	temp
-    900  071c				   .pDec
-    901  071c		       a4 ad		      ldy	temp
-    902  071e		       b9 64 fb 	      lda	RowBad,y
-    903  0721		       f0 05		      beq	.pOk
-    904  0723		       c6 ad		      dec	temp
-    905  0725		       4c 1c f7 	      jmp	.pDec
-    906  0728				   .pOk
-    907  0728		       a9 4f		      lda	#79
-    908  072a		       38		      sec
-    909  072b		       e5 ad		      sbc	temp
-    910  072d		       95 b9		      sta	QUEUE-1,x
-    911  072f		       ad e1 fb 	      lda	VarLo
-    912  0732		       95 ba		      sta	QUEUE,x
-    913  0734		       ad e9 fb 	      lda	VarHi
-    914  0737		       95 bb		      sta	QUEUE+1,x
-    915  0739		       a9 00		      lda	#<Zeros
-    916  073b		       95 bc		      sta	QUEUE+2,x
-    917  073d		       a9 f6		      lda	#>Zeros
-    918  073f		       95 bd		      sta	QUEUE+3,x
-    919  0741		       a9 00		      lda	#0
-    920  0743		       95 be		      sta	QUEUE+4,x
-    921  0745		       95 c0		      sta	QUEUE+6,x
-    922  0747		       a9 f2		      lda	#>ColArr
-    923  0749		       95 bf		      sta	QUEUE+5,x
-    924  074b		       a9 ff		      lda	#$FF
-    925  074d		       95 c1		      sta	QUEUE+7,x
-    926  074f				   .done
-    927  074f		       60		      rts
-    928  0750
+    830  069d		       f0 06		      beq	.otherCol
+    831  069f		       a5 9c		      lda	frame	; (every 4 frames: an overlapping enemy is drawn
+    832  06a1		       29 04		      and	#4	; on one frame parity only)
+    833  06a3		       f0 0c		      beq	.plainCol
+    834  06a5				   .otherCol
+    835  06a5		       b9 8a f0 	      lda	R_eType,y
+    836  06a8		       a8		      tay
+    837  06a9		       b9 f1 fb 	      lda	EnColHi,y
+    838  06ac		       49 06		      eor	#>ColArr ^ >ColOrange
+    839  06ae		       4c b8 f6 	      jmp	.col
+    840  06b1				   .plainCol
+    841  06b1		       b9 8a f0 	      lda	R_eType,y
+    842  06b4		       a8		      tay
+    843  06b5		       b9 f1 fb 	      lda	EnColHi,y
+    844  06b8				   .col
+    845  06b8		       95 bf		      sta	QUEUE+5,x
+    846  06ba		       a4 ae		      ldy	temp+1
+    847  06bc		       b9 80 f0 	      lda	R_eX,y	; walking frame: (x >> 2) & 1
+    848  06bf		       4a		      lsr
+    849  06c0		       4a		      lsr
+    850  06c1		       29 01		      and	#1
+    851  06c3		       95 c1		      sta	QUEUE+7,x	; (scratch until the next record links here)
+    852  06c5		       b9 8a f0 	      lda	R_eType,y
+    853  06c8		       0a		      asl
+    854  06c9		       15 c1		      ora	QUEUE+7,x
+    855  06cb		       95 c1		      sta	QUEUE+7,x
+    856  06cd		       b9 8a f0 	      lda	R_eType,y
+    857  06d0		       c9 05		      cmp	#5	; a knight without its shield: the charge frame
+    858  06d2		       d0 0b		      bne	.frame
+    859  06d4		       b9 94 f0 	      lda	R_eState,y
+    860  06d7		       29 40		      and	#$40
+    861  06d9		       f0 04		      beq	.frame
+    862  06db		       a9 14		      lda	#20	; (index 20 of EBase: the charge frame)
+    863  06dd		       95 c1		      sta	QUEUE+7,x
+    864  06df				   .frame
+    865  06df		       b4 c1		      ldy	QUEUE+7,x
+    866  06e1		       b5 be		      lda	QUEUE+4,x
+    867  06e3		       18		      clc
+    868  06e4		       79 b7 fb 	      adc	EBaseLo,y
+    869  06e7		       95 bc		      sta	QUEUE+2,x
+    870  06e9		       b9 cc fb 	      lda	EBaseHi,y
+    871  06ec		       69 00		      adc	#0
+    872  06ee		       95 bd		      sta	QUEUE+3,x
+    873  06f0		       a9 ff		      lda	#$FF
+    874  06f2		       95 c1		      sta	QUEUE+7,x
+    875  06f4		       8a		      txa
+    876  06f5		       18		      clc
+    877  06f6		       69 08		      adc	#8
+    878  06f8		       aa		      tax
+    879  06f9		       e0 28		      cpx	#40
+    880  06fb		       b0 0b		      bcs	.park
+    881  06fd				   .qNext
+    882  06fd		       e6 b0		      inc	temp+3
+    883  06ff		       a5 b0		      lda	temp+3
+    884  0701		       c9 05		      cmp	#NENEMY
+    885  0703		       f0 03		      beq	.park
+    886  0705		       4c 16 f6 	      jmp	.q
+    887  0708				   .park		; after the last enemy: point player 1 at zeros
+    888  0708		       e0 00		      cpx	#0
+    889  070a		       f0 44		      beq	.done
+    890  070c		       a5 af		      lda	evPrevF
+    891  070e		       c9 27		      cmp	#39
+    892  0710		       b0 3e		      bcs	.done	; rows below it to the end: 40 at most
+    893  0712		       18		      clc
+    894  0713		       69 29		      adc	#41
+    895  0715		       c9 4e		      cmp	#78
+    896  0717		       90 02		      bcc	.pRow
+    897  0719		       a9 4d		      lda	#77
+    898  071b				   .pRow
+    899  071b		       85 ad		      sta	temp
+    900  071d				   .pDec
+    901  071d		       a4 ad		      ldy	temp
+    902  071f		       b9 64 fb 	      lda	RowBad,y
+    903  0722		       f0 05		      beq	.pOk
+    904  0724		       c6 ad		      dec	temp
+    905  0726		       4c 1d f7 	      jmp	.pDec
+    906  0729				   .pOk
+    907  0729		       a9 4f		      lda	#79
+    908  072b		       38		      sec
+    909  072c		       e5 ad		      sbc	temp
+    910  072e		       95 b9		      sta	QUEUE-1,x
+    911  0730		       ad e1 fb 	      lda	VarLo
+    912  0733		       95 ba		      sta	QUEUE,x
+    913  0735		       ad e9 fb 	      lda	VarHi
+    914  0738		       95 bb		      sta	QUEUE+1,x
+    915  073a		       a9 00		      lda	#<Zeros
+    916  073c		       95 bc		      sta	QUEUE+2,x
+    917  073e		       a9 f6		      lda	#>Zeros
+    918  0740		       95 bd		      sta	QUEUE+3,x
+    919  0742		       a9 00		      lda	#0
+    920  0744		       95 be		      sta	QUEUE+4,x
+    921  0746		       95 c0		      sta	QUEUE+6,x
+    922  0748		       a9 f2		      lda	#>ColArr
+    923  074a		       95 bf		      sta	QUEUE+5,x
+    924  074c		       a9 ff		      lda	#$FF
+    925  074e		       95 c1		      sta	QUEUE+7,x
+    926  0750				   .done
+    927  0750		       60		      rts
+    928  0751
 ------- FILE gen/bank0.inc LEVEL 2 PASS 2
-      0  0750					      include	"gen/bank0.inc"
-      1  0750							; generated by tools/gen.mjs -- do not edit
+      0  0751					      include	"gen/bank0.inc"
+      1  0751							; generated by tools/gen.mjs -- do not edit
       2  0800		       00 00 00 00*	      ALIGN	256
       3  0800				   Title0
       4  0800		       21 23 22 22*	      .byte.b	$21,$23,$22,$22,$22,$FB,$F9

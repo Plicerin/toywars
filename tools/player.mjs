@@ -52,6 +52,15 @@
 //  - LOGIC_ASM=path: the logic.asm matching ROM/SYM (the profiler's labels), for pinned builds
 //  - probes (not play): probeCut (a jet placed during a jack's sweep with every enemy slot taken),
 //    probeLand (a jack in the middle slot and a teddy behind a T-Rex: the throw lands on the teddy)
+//  - 2dfa633 fix: a jet chosen for a full slot (jets take off from any slot) used to stall the player
+//    (the place step waited for the slot to empty, doing nothing else) until the target passed; the
+//    stall kept batteries for wave 24. Fixed, 24 games each (B): heavy mean 26.3 -> 25.4, tank 26.0 ->
+//    25.0, cannon 21.5 -> 21.3, army 17.5 -> 17.5; A heavy 20.5 -> 20.9. OPTS {"overflow":0} (no
+//    overflow jets), paired: heavy B 16 games 25.4 -> 26.3, tank B 8 games 24.5 -> 24.0 (not kept)
+//  - stats.hurt (3f75347 hurt colors): per kind lives, hurt/badly hurt lives and frames, steadyF (badly
+//    hurt frames whose last 16 frames showed 3+ draws all in one color: the flicker hidden; since the
+//    flicker runs 4 frames of every 8, the turn-taking parity no longer hides it), steadyPlainF (shown in its full-health color), halfBad, capped;
+//    stats.hurtMarkBad: frames whose marks disagree with health vs the kept half
 // usage: node tools/player.mjs [games] [strategy: heavy (best on 3527460: B mean 28.6, median 28, 16 games), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
 //   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board, shots and splash per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
@@ -350,12 +359,15 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const cyc = { logicMax: 0, logicAt: null, logicOver: 0, vbMax: 0, vbAt: null, vbPlayMax: 0, vbHist: {}, logicHist: {} };
   const ovf = { points: 0, calls: 0, byAmt: {}, byWave: {} };
   stats.cyc = cyc; stats.overflow = ovf;
-  const P_CALL = SYM.CallLogic, P_OSW = SYM['0.osWait'], P_SEL = SYM.SelectEnemies, P_VBW = SYM['0.vbWait'], P_GAIN = SYM.GainBatt;
+  const P_CALL = SYM.CallLogic, P_OSW = SYM['0.osWait'], P_SEL = SYM.SelectEnemies, P_VBW = SYM['0.vbWait'], P_GAIN = SYM.GainBatt, P_SCHED = SYM.Schedule;
+  let schedSnap = null;
   const stepFrame = () => {
     const cpu = m.cpu, bus = m.bus, f = bus.frame;
     let ls = -1, lg = 0, vs = -1, vb = 0;
+    schedSnap = null;
     while (bus.frame === f) {
       const pc = cpu.pc;
+      if (pc === P_SCHED && bus.bank === 0 && !schedSnap) schedSnap = { fr: m.ram(SYM.frame), st: [0, 1, 2, 3, 4].map((i) => sc('eState', i)), ty: [0, 1, 2, 3, 4].map((i) => sc('eType', i)) };
       if (pc === P_CALL && bus.bank === 0 && ls < 0) ls = cpu.cycles;
       else if (pc === P_OSW && bus.bank === 0 && ls >= 0 && !lg) lg = cpu.cycles - ls;
       else if (pc === P_SEL && bus.bank === 0 && vs < 0) vs = cpu.cycles;
@@ -390,11 +402,55 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     if (disp.battLag > disp.battLagMax) { disp.battLagMax = disp.battLag; disp.battLagAt = { frame: frames, wave: sc('wave') }; }
   };
 
+  // ---- hurt colors (3f75347; read only): marks vs health every frame (bit 5: health <= the half kept in
+  // bits 0-3; bit 4: <= half >> 1), the half kept at spawn vs MaxHP (capped at 15), and what the scheduler
+  // showed: per life, frames drawn plain / in the other page while badly hurt (a flicker that a 2- or
+  // 4-enemy turn-taking parity can hide). stats.hurt[kind]: lives, hurt, bad, hurtF/badF (frames),
+  // badEp (badly hurt lives drawn 8+ times), badPlainOnly / badOtherOnly (drawn only plain / only the other
+  // page), badMixed; halfBad (wrong half at spawn), capped (half 15 from a full health over 31), markBad
+  const EN_HP = [0, 6, 5, 3, 1, 6, 2, 3, 20];
+  const hurt = {}; stats.hurt = hurt; stats.hurtMarkBad = 0;
+  const lives = [null, null, null, null, null];
+  const endLife = (L) => {
+    if (!L) return;
+    const h = hurt[ENAME[L.type]] ??= { lives: 0, hurt: 0, bad: 0, hurtF: 0, badF: 0, badEp: 0, badPlainOnly: 0, badOtherOnly: 0, badMixed: 0, halfBad: 0, capped: 0, maxFull: 0 };
+    h.lives += 1; if (L.hurtF) h.hurt += 1; if (L.badF) h.bad += 1; h.hurtF += L.hurtF; h.badF += L.badF; h.steadyF = (h.steadyF ?? 0) + (L.steadyF ?? 0); h.steadyPlainF = (h.steadyPlainF ?? 0) + (L.steadyPlainF ?? 0);
+    if (L.badPlain + L.badOther >= 8) { h.badEp += 1; if (!L.badOther) h.badPlainOnly += 1; else if (!L.badPlain) h.badOtherOnly += 1; else h.badMixed += 1; }
+    if (L.halfBad) h.halfBad += 1; if (L.capped) h.capped += 1; h.maxFull = Math.max(h.maxFull, L.full ?? 0);
+  };
+  const hurtWatch = () => {
+    if (sc('state') !== 1) { for (let i = 0; i < 5; i += 1) { endLife(lives[i]); lives[i] = null; } return; }
+    const ord = [0, 1, 2, 3, 4].map((k) => m.ram(SYM.eOrder + k)); const drawn = new Set(ord.filter((v) => v & 0x80).map((v) => v & 7));
+    const wave = sc('wave'), fastA = (m.ram(SYM.fast) & 0xA0) === 0xA0;
+    for (let i = 0; i < 5; i += 1) {
+      const t = sc('eType', i), hp = sc('eHP', i), st = sc('eState', i), x = sc('eX', i);
+      let L = lives[i];
+      if (!t || t === EJET) { endLife(L); lives[i] = null; continue; }
+      if (!L || L.type !== t || hp > L.hp || (L.st & 0x30) && !(st & 0x30) || (x >= 139 && L.x < 120)) {
+        endLife(L);
+        L = lives[i] = { type: t, hp, st, x, hurtF: 0, badF: 0, badPlain: 0, badOther: 0 };
+        if (x >= 149) {
+          const full = EN_HP[t] + ((wave >> 2) >> (t === MOUSE || t === BALLOON ? 1 : 0)) + (fastA ? 1 : 0);
+          L.full = full; L.capped = (full >> 1) > 15;
+          if (hp === full && (st & 15) !== Math.min(15, full >> 1)) { L.halfBad = true; anomaly(`${ENAME[t]} spawned with half ${st & 15}, full ${full}`); }
+        }
+      }
+      L.hp = hp; L.st = st; L.x = x;
+      const half = st & 15, wantB5 = hp <= half, wantB4 = hp <= half >> 1;
+      if (!!(st & 0x20) !== wantB5 || !!(st & 0x10) !== wantB4) { stats.hurtMarkBad += 1; if (stats.hurtMarkBad < 6) anomaly(`${ENAME[t]} slot ${i} hp ${hp} half ${half} marks ${(st >> 4) & 3}`); }
+      if (st & 0x20) L.hurtF += 1; if (st & 0x10) L.badF += 1;
+      // what the scheduler drew this frame (its state and frame at Schedule)
+      if (schedSnap && drawn.has(i) && schedSnap.ty[i] === t && (schedSnap.st[i] & 0x10)) { if (schedSnap.fr & 4) L.badOther += 1; else L.badPlain += 1; }
+      // the last 16 frames while badly hurt: drawn 3+ times, all in one color (the flicker not visible)
+      if (st & 0x10) { (L.win ??= []).push(schedSnap && drawn.has(i) && schedSnap.ty[i] === t ? (schedSnap.st[i] & 0x10 ? 1 + ((schedSnap.fr >> 2) & 1) : 0) : 0); if (L.win.length > 16) L.win.shift(); const d = L.win.filter(Boolean); if (d.length >= 3 && d.every((v) => v === d[0])) { L.steadyF = (L.steadyF ?? 0) + 1; if (d[0] === 1) L.steadyPlainF = (L.steadyPlainF ?? 0) + 1; } }
+    }
+  };
+
   // ---- the hands
   const run = (bits = 0, fire = false, swchb = o.diffA ? 0x4b : 0x0b) => {
     m.bus.swcha = 0xff ^ bits; m.bus.inpt4 = fire ? 0 : 0x80; m.bus.swchb = swchb;
     const pre = sc('state') === 1 ? { batt: sc('batt'), n: enemies().filter((e) => e.type !== EJET).length, lids: sc('lids'), wave: sc('wave') } : null;
-    if (PROF_AT.has(frames)) profileFrame(m, frames); else stepFrame();
+    if (PROF_AT.has(frames)) profileFrame(m, frames); else { stepFrame(); hurtWatch(); }
     if (pre && SYM.temp !== undefined && sc('state') === 1 && !(m.ram(SYM.frame) & 1) && m.ram(SYM.temp + 3) && sc('batt') < pre.batt && sc('lids') === pre.lids && enemies().filter((e) => e.type !== EJET).length >= pre.n) {
       // an even frame the spawner sat out only because of a placement (no kill, no lid): the spawn schedule slips 2 frames
       stats.placeHolds = (stats.placeHolds ?? 0) + 1; (stats.placeHoldsW ??= {})[pre.wave] = (stats.placeHoldsW[pre.wave] ?? 0) + 1;
@@ -678,7 +734,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     if (sc('cursor') !== act.slot) { moveTo(act.slot); continue; }
     if (act.op === 'place') {
       if (sc('toy') !== act.toy) { selectToy(act.toy); continue; }
-      if (sc('slotType', act.slot) || sc('batt') < COST[act.toy]) { run(); continue; }
+      if ((act.toy !== JET && sc('slotType', act.slot)) || sc('batt') < COST[act.toy]) { run(); continue; } // (a jet takes off from a full slot too: 2dfa633's player stalled here on full shelves)
       if (act.toy !== JET && standing(enemies(), act.slot, false)) { run(); continue; } // (it would be refused)
       if (log) console.log(`f${frames} place ${TOYNAME[act.toy]} at ${act.slot} (${act.why})`);
       const standRaw = () => { const L = Math.floor(act.slot / 3), x0 = COLX[act.slot % 3]; return enemies().some((e) => e.type !== EJET && e.type !== BALLOON && e.lane === L && e.x >= x0 && e.x - x0 <= 8); };
@@ -712,6 +768,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       if (act.why === 'clear runway for jet') pickedFor = { slot: act.slot, toy: JET, at: frames };
     }
   }
+  for (let i = 0; i < 5; i += 1) { endLife(lives[i]); lives[i] = null; }
   const score = Number([0, 1, 2].map((i) => sc('score', i).toString(16).padStart(2, '0')).join(''));
   const final = { enemies: enemies().map((e) => `${ENAME[e.type]}@L${e.lane}x${e.x}hp${e.hp}st${e.st.toString(16)}`), slots: slots().map((q) => `${TOYNAME[q.type]}${q.type ? q.hp : ''}`), spawnLeft: sc('spawnLeft'), spawnTimer: sc('spawnTimer'), packLeft: sc('packLeft'), bossLeft: sc('bossLeft'), batt: sc('batt') };
   return { strategy, seedFrames, final, wave: sc('wave'), seconds: Math.round(frames / 60), frames, score, over: sc('state') === 2, lids: sc('lids'), mistimed, mistimedAt, mistimedAll: mistimedAll.slice(0, 200), jetFrames, stats: { ...stats, longestWave: Math.max(0, ...Object.values(stats.waveFrames), frames - waveStart) }, scViolations: m.bus.scViolations, anomalies, events: events.filter((e) => /LID|GAME OVER|burst/.test(e)) };

@@ -126,7 +126,7 @@ for (const [name, toys] of [['nine toys acting', [1, 3, 5, 1, 2, 3, 1, 4, 5]], [
     if (f % 300 === 0) toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', 40, s); });
     g.set('spawnLeft', 20);
     let added = false;
-    for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { added = true; const k = (f + i) % 9; g.set('eType', 1 + k, i); g.set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 0, i); }
+    for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { added = true; const k = (f + i) % 9; g.set('eType', 1 + k, i); g.set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 15, i); }
     if (added) { g.frames(2); continue; } // the game updates each enemy's rows every other frame: let it see them
     const d = frameDiffs(g, {});
     if (d.length) { bad += 1; if (!first) first = `frame ${f}: ${d.slice(0, 2).join('; ')}`; }
@@ -135,6 +135,42 @@ for (const [name, toys] of [['nine toys acting', [1, 3, 5, 1, 2, 3, 1, 4, 5]], [
     most = Math.max(most, [0, 1, 2, 3, 4].filter((i) => g.sc('eType', i)).length);
   }
   check(`late game (second lap, ${name}, fast enemies and flying jets): 1,500 frames at 262 lines, every pixel as the reference`, bad === 0 && mistimed === 0, `${bad} frames differ, ${mistimed} mistimed, up to ${most} enemies${first ? `; ${first}` : ''}`);
+}
+
+{
+  // the costliest hits: a shot on every shelf hurting (not killing) a monster in the same frame, the
+  // hurt and badly-hurt marks both set, while the spawner adds one; overscan logic cycles measured
+  // from the jsr CallLogic to the timer wait
+  const g = boot();
+  g.press();
+  g.frames(2);
+  g.set('wave', 14); g.set('unlock', 6); g.set('batt', 99);
+  const CALL = SYM.CallLogic, WAIT = SYM['0.osWait'];
+  const logicFrame = () => {
+    const m = g.m, f = m.bus.frame; let start = -1, spent = 0;
+    m.bus.swcha = 0xff; m.bus.inpt4 = 0x80; m.bus.swchb = 0x0b;
+    while (m.bus.frame === f) {
+      const pc = m.cpu.pc;
+      if (pc === CALL && m.bus.bank === 0 && start < 0) start = m.cpu.cycles;
+      if (pc === WAIT && m.bus.bank === 0 && start >= 0 && !spent) spent = m.cpu.cycles - start;
+      m.cpu.step();
+    }
+    return spent;
+  };
+  let triples = 0, worst = 0, mistimed = 0;
+  for (let f = 0; f < 600; f += 1) {
+    for (let i = 0; i < 5; i += 1) {
+      if (i < 3) { g.set('eLane', i, i); g.set('eX', 140, i); g.set('eType', 1, i); g.set('eHP', 6, i); g.set('eState', 15, i); } // half of 30
+      else { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+    }
+    if ([0, 1, 2].every((l) => !g.sc('shotDmg', l))) for (const l of [0, 1, 2]) { g.set('shotDmg', 1, l); g.set('shotKind', 1, l); g.m.poke(SYM.shotPtr + l, layout.shotStart[3 * l + 2]); }
+    g.set('spawnLeft', 20); g.set('spawnTimer', 0);
+    const c = logicFrame();
+    const { vb, total } = g.m.layout();
+    if (total !== 262 || vb[0][0] !== 40) mistimed += 1;
+    if ([0, 1, 2].every((i) => g.sc('eHP', i) === 5 && (g.sc('eState', i) & 0x30) === 0x30)) { triples += 1; worst = Math.max(worst, c); }
+  }
+  check('three hurting hits in one frame, with a spawn, fit the overscan (2216 usable cycles)', triples > 0 && worst <= 2216 && mistimed === 0, `${triples} such frames, worst ${worst} cycles, ${mistimed} mistimed`);
 }
 
 // ---------------------------------------------------------------- rules

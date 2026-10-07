@@ -69,9 +69,9 @@ export function expectedFrame(scene, frame) {
   const enemyLines = new Map(); // line -> player 1's color there
   for (const e of drawn) {
     const g = ENEMIES[enemyFrame(e.type, e.x, e.state)];
-    // hurt (state bit 5): the other color, red <-> orange; a quarter or less (bit 4): that on odd frames
+    // hurt (state bit 5): the other color, red <-> orange; a quarter or less (bit 4): that 4 frames of every 8
     const base = KIND_COLOR[e.type] ?? 'red', other = base === 'orange' ? 'red' : base === 'red' ? 'orange' : base;
-    const swapped = (e.state & 0x20) && (!(e.state & 0x10) || (frame & 1));
+    const swapped = (e.state & 0x20) && (!(e.state & 0x10) || (frame & 4));
     const tones = TONES[swapped ? other : base];
     const tone = (k) => tones[k < DARK_ROWS ? 0 : 1]; // k: rows up from the feet
     for (let k = 0; k < EH; k += 1) { const r = e.f - k; enemyLines.set(PLAY + 2 * r + 1, tone(k)); enemyLines.set(PLAY + 2 * r + 2, tone(k)); }
