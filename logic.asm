@@ -1767,7 +1767,7 @@ EnScore:    .byte 0, $10, $15, $10,  $05,  $20,   $15,   $15, $50   ; BCD points
 ; pixels; four blocks: first lap, second lap, knight charging (first lap,
 ; second lap)
 EnMask:     .byte 0,   1,   0,   0,    0,    1,     1,     0,   3
-            .byte 0,   0,   0,   0,    0,    0,     1,     0,   1   ; (balloon: its first-lap pace)
+            .byte 0,   0,   0,   0,    0,    0,     1,     0,   3   ; (balloon and T-Rex: their first-lap pace)
             .byte 0,   0,   0,   0,    0,    0,     0,     0,   0
             .byte 0,   0,   0,   0,    0,    0,     0,     0,   0
 EnStep:     .byte 0,   1,   1,   1,    2,    1,     1,     1,   1

@@ -93,8 +93,10 @@ an odd frame, through the cannon's splash sweep (about ten frames).
 As built (logic.asm: EnHP, EnReward, EnScore, EnMask/EnStep). Speeds in
 pixels per second, first lap / second lap (wave 13+); every
 enemy gains 1 health every fourth wave (wave / 4), laps included; wind-up mice
-and balloon clowns every eighth (wave / 8); balloon clowns also keep their
-first-lap pace in the second lap *(2026-10-06: they ended 46 of 47 lid slams
+and balloon clowns every eighth (wave / 8); balloon clowns and the T-Rex also keep
+their first-lap pace in the second lap *(T-Rex 2026-10-07: wave 24, the
+second lap's two T-Rexes, ended 8 of 10 games for the strongest layout; at
+its first-lap pace, 4 of 10; mean 24.6 -> 26.0, tank 25.2 -> 26.5)* *(2026-10-06: they ended 46 of 47 lid slams
 for the strongest layout, crossing before army men and cannons could hit
 them enough)* *(2026-10-05: at wave / 4 a wave-20
 mouse had six times its base health and a balloon three and a half, and the
@@ -106,7 +108,7 @@ two caused about three quarters of the bot's second-lap losses)*.
 | 4 | Wind-up Mouse | Imp | 3 | 1 | 60 / 90 | 1 / 5 | Comes in packs of three. |
 | 3 | Crawler | — | 4 | 3 | 30 / 60 | 1 / 10 | Low: army men's bullets pass over it while it chews; tanks and cannons still hit it. |
 | 5 | Knight | Newspaper | 5 | 6 | 15 / 30; charging 60 / 90 | 2 / 20 | Shield breaks when its health drops below 3, then it charges at four times its pace (three in the second lap). |
-| 8 | T-Rex (boss) | Gargantuar | 6 (and two in 12) | 20 | 7.5 / 15 | 5 / 50 | Crushes a toy in one bite. Single-width (a five-pull variant can't be scheduled). |
+| 8 | T-Rex (boss) | Gargantuar | 6 (and two in 12) | 20 | 7.5 / 7.5 | 5 / 50 | Crushes a toy in one bite. Single-width (a five-pull variant can't be scheduled). |
 | 2 | Helicopter | Pole Vaulter | 7 | 5 | 30 / 60 | 2 / 15 | Hops over the first toy it reaches, once; then chews. |
 | 6 | Balloon Clown | Balloon | 8 | 2 | 15 / 15 | 2 / 15 | Floats over every toy. Tank shells can't reach it; army men and cannons can. |
 | 7 | Pogo Frog | lane changer | 9 | 3 | 30 / 60 | 2 / 15 | The first time a toy blocks it, it jumps to the next shelf; then it chews. |
@@ -182,7 +184,7 @@ pack can briefly take the count to five.
 | 10 | — | — | 18 | 3 s | 5 | Full mix |
 | 11 | — | — | 20 | 3 s | 5 | |
 | 12 | — | 2 × T-Rex | 2 bosses + 10 | 3 s | 5 | Final |
-| 13+ | — | — | waves 1–12 | ×0.75 (A ×0.625) | 5 | Second lap: every kind but the balloon clown at its fast pace (about twice as fast); laps repeat |
+| 13+ | — | — | waves 1–12 | ×0.75 (A ×0.625) | 5 | Second lap: every kind but the balloon clown and the T-Rex at its fast pace (about twice as fast); laps repeat |
 
 Within a wave the spawn gap is constant; the next wave starts when its last
 enemy is gone. The shelves flash white only for a lid slam or a jet. Score:

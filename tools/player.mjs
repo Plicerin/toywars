@@ -59,9 +59,14 @@
 //    overflow jets), paired: heavy B 16 games 25.4 -> 26.3, tank B 8 games 24.5 -> 24.0 (not kept)
 //  - stats.hurt (3f75347 hurt colors): per kind lives, hurt/badly hurt lives and frames, steadyF (badly
 //    hurt frames whose last 16 frames showed 3+ draws all in one color: the flicker hidden; since the
-//    flicker runs 4 frames of every 8, the turn-taking parity no longer hides it), steadyPlainF (shown in its full-health color), halfBad, capped;
+//    flicker runs 4 frames of every 8, the turn-taking parity no longer hides it), steadyPlainF (shown in its full-health color), steadyFullF (steadyF
+//    with a full 16-frame window: not just the first frames after turning badly hurt), halfBad, capped; stats.hurtOneColor:
+//    badly hurt lives drawn 8+ times all in one color (kind, draws, frames from-to);
 //    stats.hurtMarkBad: frames whose marks disagree with health vs the kept half
-// usage: node tools/player.mjs [games] [strategy: heavy (best on 3527460: B mean 28.6, median 28, 16 games), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
+//  - 3f08647 (10 games each, seeds 0..333): B heavy median 24 (8 of 10 end in wave 24), tank 24, cannon 22, army 17;
+//    A heavy 21, cannon 20.5. OPTS {"bossSave":60} on heavy B: 24.5 vs 24.6 mean (T-Rex lids 7 -> 4, mouse lids up; not kept)
+//  - HURTDBG=a-b prints, per frame, every enemy slot and which were drawn (the hurt-color flicker)
+// usage: node tools/player.mjs [games] [strategy: heavy (best; on 3f08647 B median 24), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
 //   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board, shots and splash per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
@@ -411,17 +416,20 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const EN_HP = [0, 6, 5, 3, 1, 6, 2, 3, 20];
   const hurt = {}; stats.hurt = hurt; stats.hurtMarkBad = 0;
   const lives = [null, null, null, null, null];
+  const HURTDBG = process.env.HURTDBG ? process.env.HURTDBG.split('-').map(Number) : null; // HURTDBG=a-b: per frame, the enemies and which ones were drawn
   const endLife = (L) => {
     if (!L) return;
     const h = hurt[ENAME[L.type]] ??= { lives: 0, hurt: 0, bad: 0, hurtF: 0, badF: 0, badEp: 0, badPlainOnly: 0, badOtherOnly: 0, badMixed: 0, halfBad: 0, capped: 0, maxFull: 0 };
     h.lives += 1; if (L.hurtF) h.hurt += 1; if (L.badF) h.bad += 1; h.hurtF += L.hurtF; h.badF += L.badF; h.steadyF = (h.steadyF ?? 0) + (L.steadyF ?? 0); h.steadyPlainF = (h.steadyPlainF ?? 0) + (L.steadyPlainF ?? 0);
-    if (L.badPlain + L.badOther >= 8) { h.badEp += 1; if (!L.badOther) h.badPlainOnly += 1; else if (!L.badPlain) h.badOtherOnly += 1; else h.badMixed += 1; }
+    if (L.badPlain + L.badOther >= 8) { h.badEp += 1; if (!L.badOther) h.badPlainOnly += 1; else if (!L.badPlain) h.badOtherOnly += 1; else h.badMixed += 1; if (!L.badOther || !L.badPlain) (stats.hurtOneColor ??= []).push({ kind: ENAME[L.type], draws: L.badPlain + L.badOther, plain: !L.badOther, from: L.badFrom, to: frames, wave: sc('wave') }); }
+    h.steadyFullF = (h.steadyFullF ?? 0) + (L.steadyFullF ?? 0);
     if (L.halfBad) h.halfBad += 1; if (L.capped) h.capped += 1; h.maxFull = Math.max(h.maxFull, L.full ?? 0);
   };
   const hurtWatch = () => {
     if (sc('state') !== 1) { for (let i = 0; i < 5; i += 1) { endLife(lives[i]); lives[i] = null; } return; }
     const ord = [0, 1, 2, 3, 4].map((k) => m.ram(SYM.eOrder + k)); const drawn = new Set(ord.filter((v) => v & 0x80).map((v) => v & 7));
     const wave = sc('wave'), fastA = (m.ram(SYM.fast) & 0xA0) === 0xA0;
+    if (HURTDBG && frames >= HURTDBG[0] && frames <= HURTDBG[1]) console.log('H', frames, 'fr', schedSnap?.fr, 'drawn', [...drawn].join(''), [0, 1, 2, 3, 4].map((k) => `${ENAME[sc('eType', k)]}L${sc('eLane', k) & 7}x${sc('eX', k)}hp${sc('eHP', k)}s${sc('eState', k).toString(16)}`).join(' '));
     for (let i = 0; i < 5; i += 1) {
       const t = sc('eType', i), hp = sc('eHP', i), st = sc('eState', i), x = sc('eX', i);
       let L = lives[i];
@@ -438,11 +446,11 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       L.hp = hp; L.st = st; L.x = x;
       const half = st & 15, wantB5 = hp <= half, wantB4 = hp <= half >> 1;
       if (!!(st & 0x20) !== wantB5 || !!(st & 0x10) !== wantB4) { stats.hurtMarkBad += 1; if (stats.hurtMarkBad < 6) anomaly(`${ENAME[t]} slot ${i} hp ${hp} half ${half} marks ${(st >> 4) & 3}`); }
-      if (st & 0x20) L.hurtF += 1; if (st & 0x10) L.badF += 1;
+      if (st & 0x20) L.hurtF += 1; if (st & 0x10) { L.badF += 1; L.badFrom ??= frames; }
       // what the scheduler drew this frame (its state and frame at Schedule)
       if (schedSnap && drawn.has(i) && schedSnap.ty[i] === t && (schedSnap.st[i] & 0x10)) { if (schedSnap.fr & 4) L.badOther += 1; else L.badPlain += 1; }
       // the last 16 frames while badly hurt: drawn 3+ times, all in one color (the flicker not visible)
-      if (st & 0x10) { (L.win ??= []).push(schedSnap && drawn.has(i) && schedSnap.ty[i] === t ? (schedSnap.st[i] & 0x10 ? 1 + ((schedSnap.fr >> 2) & 1) : 0) : 0); if (L.win.length > 16) L.win.shift(); const d = L.win.filter(Boolean); if (d.length >= 3 && d.every((v) => v === d[0])) { L.steadyF = (L.steadyF ?? 0) + 1; if (d[0] === 1) L.steadyPlainF = (L.steadyPlainF ?? 0) + 1; } }
+      if (st & 0x10) { (L.win ??= []).push(schedSnap && drawn.has(i) && schedSnap.ty[i] === t ? (schedSnap.st[i] & 0x10 ? 1 + ((schedSnap.fr >> 2) & 1) : 0) : 0); if (L.win.length > 16) L.win.shift(); const d = L.win.filter(Boolean); if (d.length >= 3 && d.every((v) => v === d[0])) { L.steadyF = (L.steadyF ?? 0) + 1; if (L.win.length === 16) L.steadyFullF = (L.steadyFullF ?? 0) + 1; if (d[0] === 1) L.steadyPlainF = (L.steadyPlainF ?? 0) + 1; } }
     }
   };
 

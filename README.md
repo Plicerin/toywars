@@ -86,7 +86,7 @@ How the screen is drawn:
 - `tools/player.mjs` — the playtest player: plays full games through the
   joystick, fire button and console switches only (it reads RAM to decide),
   with several toy layouts and difficulty A or B, and reports how far it gets
-  with detailed statistics (the best layouts reach waves 21-28 on B).
+  with detailed statistics (the best layouts reach waves 23-32 on B).
 - `tools/budget.mjs` — measures the game logic's time per frame in a
   late-game stress scene.
 - `tools/bot.mjs` — the first, simpler joystick-only player.

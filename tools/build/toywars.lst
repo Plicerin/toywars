@@ -4488,7 +4488,7 @@
    1767  2ca6							; pixels; four blocks: first lap, second lap, knight charging (first lap,
    1768  2ca6							; second lap)
    1769  2ca6		       00 01 00 00*EnMask     .byte.b	0, 1, 0, 0, 0, 1, 1, 0, 3
-   1770  2caf		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 1, 0, 1	; (balloon: its first-lap pace)
+   1770  2caf		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 1, 0, 3	; (balloon and T-Rex: their first-lap pace)
    1771  2cb8		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 0
    1772  2cc1		       00 00 00 00*	      .byte.b	0, 0, 0, 0, 0, 0, 0, 0, 0
    1773  2cca		       00 01 01 01*EnStep     .byte.b	0, 1, 1, 1, 2, 1, 1, 1, 1
