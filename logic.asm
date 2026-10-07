@@ -27,8 +27,8 @@ SHOT_CANNON = 3
 SPLASH      = 12                ; a cannonball's splash reach, pixels each way
 CANNON_DMG  = 3
 JET_DMG     = 10
-KILLED      = temp+3            ; this frame an enemy died (overscan only: VBLANK
-                                ;   uses temp for the status line)
+KILLED      = temp+3            ; this frame an enemy died or a toy went down (the
+                                ;   spawner waits; overscan only: VBLANK uses temp)
 JACK_DMG    = 20                ; a jack-in-the-box's spring: damage to each enemy
 JACK_REACH  = 8                 ;   within this many pixels of the one that sprang it,
 JACK_THROW  = 16                ;   thrown this many pixels back up the shelf (short of
@@ -520,6 +520,8 @@ Act:
     bcc .cant
     sbc ToyCost,y
     jsr SetBatt
+    lda #1                      ; (a busy frame: the spawner waits a frame)
+    sta KILLED
     cpy #TOY_JET
     beq JetStrike
     tya
@@ -1712,7 +1714,7 @@ ToySound:   .byte 0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
 ;-------------------------------------------------------------------------------
 ; tables (toy and enemy types index from 1)
 ToyCost:    .byte 0, 10, 5, 25, 15, 20, 30
-ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1         ; (the jack's 8: chewed while a burst is busy)
+ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1         ; (the jack's 8 is never bitten: walkers spring it or wait)
 ToyPeriod:  .byte 0, 7, 0, 50, 0, 33, 0         ; visits (6 frames) between shots
 ToyDmg:     .byte 0, 1, 0, 8, 0, CANNON_DMG, 0
 ; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex

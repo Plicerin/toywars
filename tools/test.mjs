@@ -392,6 +392,20 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a monster at a jack waits while another burst is being swept (a T-Rex doesn\'t crush it), then springs it', waited && g.sc('slotType', 4) === 0 && f < 200, `waited ${waited}, sprang after ${f} frames`);
 }
 {
+  // a toy going down makes a busy frame: a spawn due then waits for the next even frame
+  const g = boot();
+  g.press(); g.frames(2);
+  for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
+  g.set('toy', 1); g.set('batt', 40); g.set('spawnTimer', 200); // (the cursor is on slot 3)
+  g.frames(1, { fire: true });
+  if ((g.r('frame') + 1) & 1) g.frames(1, { fire: true }); // release on an even frame (the spawner's)
+  g.set('spawnLeft', 5); g.set('spawnTimer', 0);
+  g.frames(1); // fire released: the army man goes down
+  const placed = g.sc('slotType', 3) === 1, waited = g.sc('spawnLeft') === 5;
+  g.frames(2);
+  check('a spawn due on the frame a toy goes down waits for the next even frame', placed && waited && g.sc('spawnLeft') === 4, `placed ${placed}, waited ${waited}, then ${g.sc('spawnLeft')} left`);
+}
+{
   // no jet while a jack's spring is being swept
   const g = quietGame();
   g.set('splashN', 0x75); g.set('splashL', 2); g.set('splashX', 90); // a jack's burst

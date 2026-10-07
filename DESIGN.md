@@ -168,7 +168,7 @@ pack can briefly take the count to five.
 | 10 | — | — | 18 | 3 s | 5 | Full mix |
 | 11 | — | — | 20 | 3 s | 5 | |
 | 12 | — | 2 × T-Rex | 2 bosses + 10 | 3 s | 5 | Final |
-| 13+ | — | — | waves 1–12 | ×0.75 (A ×0.625) | 5 | Second lap: every kind at its fast pace (about twice as fast); laps repeat |
+| 13+ | — | — | waves 1–12 | ×0.75 (A ×0.625) | 5 | Second lap: every kind but the balloon clown at its fast pace (about twice as fast); laps repeat |
 
 Within a wave the spawn gap is constant; the next wave starts when its last
 enemy is gone. The shelves flash white only for a lid slam or a jet. Score:

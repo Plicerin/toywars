@@ -33,9 +33,18 @@
 //  - jackTrap knobs: jackBunch (walkers within jackSpan pixels of the lead, default 2 within 10),
 //    jackTrex (a T-Rex on the shelf, default on). On a328fe5 every jack the cannon player placed came
 //    from the T-Rex rule (jackBunch 99: identical games; jackTrex false: identical to no jacks)
+//  - result.stats.cyc: overscan logic (CallLogic -> osWait) and VBLANK (SelectEnemies -> vbWait) cycles per
+//    frame (max, where, histograms; logicOver: frames over ~2216); result.stats.overflow: batteries over
+//    the cap turned into points (GainBatt entered with A > 99: points, calls, per wave); result.stats.display:
+//    longest runs of frames the status line's score / batteries differ from the real ones;
+//    stats.jack.offMid: the springer's x (the reach's centre, splashX) minus the jack's middle
+//  - jackSwap is on for every strategy now (3527460, heavy, 16 games each: B seeds 0 mean 25.3 -> 28.6, median 24 -> 28,
+//    seeds 1000 24.8 -> 26.8; A 19.8 -> 20.4; T-Rex lids at wave 24 8 -> 1): a jack in front of a lap-2 T-Rex kills it
+//  - jackSwapTrex: swap the front teddy for a jack only for a T-Rex (on 3527460 heavy: identical to jackSwap)
+//  - DBGCYC=frame prints the measured cycles for frames around it
 //  - probes (not play): probeCut (a jet placed during a jack's sweep with every enemy slot taken),
 //    probeLand (a jack in the middle slot and a teddy behind a T-Rex: the throw lands on the teddy)
-// usage: node tools/player.mjs [games] [strategy: heavy (best on a328fe5: B mean 22.4, median 22, 16 games), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
+// usage: node tools/player.mjs [games] [strategy: heavy (best on 3527460: B mean 28.6, median 28, 16 games), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
 //   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board, shots and splash per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
 import { Machine } from './atari/machine.mjs';
@@ -50,7 +59,7 @@ const TOYNAME = ['-', 'army', 'teddy', 'tank', 'jack', 'cannon', 'jet'];
 const DINO = 1, HELI = 2, CRAWL = 3, MOUSE = 4, KNIGHT = 5, BALLOON = 6, POGO = 7, TREX = 8, EJET = 9;
 const ENAME = ['-', 'dino', 'heli', 'crawler', 'mouse', 'knight', 'balloon', 'pogo', 'trex', 'jet'];
 const COLX = [48, 80, 112];
-const EN_MASK = [[0, 1, 0, 0, 0, 1, 1, 0, 3], [0, 0, 0, 0, 0, 0, 0, 0, 1]]; // logic.asm EnMask/EnStep (laps 1/2; knights charging: rows 2/3)
+const EN_MASK = [[0, 1, 0, 0, 0, 1, 1, 0, 3], [0, 0, 0, 0, 0, 0, 1, 0, 1]]; // logic.asm EnMask/EnStep (laps 1/2; knights charging: rows 2/3)
 const EN_STEP = [[0, 1, 1, 1, 2, 1, 1, 1, 1], [0, 1, 2, 2, 3, 1, 1, 2, 1], [0, 1, 1, 1, 1, 2, 1, 1, 1], [0, 1, 1, 1, 1, 3, 1, 1, 1]];
 const BREACH_X = 41;
 const UP = 0x10, DOWN = 0x20, LEFT = 0x40, RIGHT = 0x80; // SWCHA bits (active low)
@@ -89,21 +98,25 @@ function profileFrame(m, at) {
   const labelOf = (pc, bank) => { let best = '?'; for (const [n, a] of LISTS[bank === 2 ? 1 : 0]) { if (a <= pc) best = n; else break; } return best; };
   const CALL = SYM.CallLogic, WAIT = SYM['0.osWait'];
   const f = m.bus.frame, prof = new Map();
-  let start = -1, spent = 0;
+  let start = -1, spent = 0, vs = -1, vb = 0; const vprof = new Map();
   while (m.bus.frame === f) {
     const pc = m.cpu.pc;
-    if (pc === CALL && start < 0) start = m.cpu.cycles;
-    if (pc === WAIT && start >= 0 && !spent) spent = m.cpu.cycles - start;
+    if (pc === CALL && m.bus.bank === 0 && start < 0) start = m.cpu.cycles;
+    if (pc === WAIT && m.bus.bank === 0 && start >= 0 && !spent) spent = m.cpu.cycles - start; // (bank 0: logic in bank 2 can pass the same address)
+    if (pc === SYM.SelectEnemies && m.bus.bank === 0 && vs < 0) vs = m.cpu.cycles;
+    if (pc === SYM['0.vbWait'] && m.bus.bank === 0 && vs >= 0 && !vb) vb = m.cpu.cycles - vs;
     const c0 = m.cpu.cycles, bank = m.bus.bank; m.cpu.step();
     if (start >= 0 && !spent) { const l = labelOf(pc, bank); prof.set(l, (prof.get(l) ?? 0) + m.cpu.cycles - c0); }
+    if (vs >= 0 && !vb) { const l = `${labelOf(pc, bank)}@b${bank}`; vprof.set(l, (vprof.get(l) ?? 0) + m.cpu.cycles - c0); }
   }
   console.log(`PROF frame ${at}: logic ${spent} cycles (budget ~${35 * 64}):`, [...prof].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([n, v]) => `${n} ${v}`).join(', '));
+  console.log(`PROF frame ${at}: VBLANK ${vb} cycles (of ~${44 * 64}; labels approximate outside bank 2):`, [...vprof].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([n, v]) => `${n} ${v}`).join(', '));
 }
 
 export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 216000, opts = {}, log = false } = {}) {
   // legacy: the old player (repairs by picking up a chewed toy and dropping a
   // fresh one on the monster; the game now refuses that drop)
-  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: strategy !== 'heavy', bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, ...opts };
+  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, ...opts };
   if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; if (!('cover' in opts)) o.cover = false; }
   const strat = STRATEGIES[strategy];
   const m = new Machine(ROM);
@@ -130,7 +143,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   // ---- the jack-in-the-box (read only): springs (by what), every sweep check (hit, killed,
   // thrown, where it landed, out of reach), bites taken while another burst was busy, jacks
   // eaten, a jack's sweep cut short by a jet's full-slots burst
-  const jk = { placed: 0, sprung: 0, by: {}, hits: 0, kills: 0, thrown: 0, capped: 0, dmg: 0, missOut: 0, missD: {}, escaped: {}, landedOn: {}, landedRight: 0, bites: 0, eaten: 0, eatenBy: {}, cut: 0, cutLeft: 0, picked: 0, perSpring: {}, killsBy: {}, thrownBy: {}, thrownInto: 0, chewBusyBy: {} };
+  const jk = { placed: 0, sprung: 0, by: {}, hits: 0, kills: 0, thrown: 0, capped: 0, dmg: 0, missOut: 0, missD: {}, escaped: {}, landedOn: {}, landedRight: 0, bites: 0, eaten: 0, eatenBy: {}, cut: 0, cutLeft: 0, picked: 0, perSpring: {}, killsBy: {}, thrownBy: {}, thrownInto: 0, chewBusyBy: {}, offMid: {} };
   stats.jack = jk;
   let pickSlot = -1; let curJack = null;
   const jackWatch = (cur, checked) => {
@@ -149,7 +162,9 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         const trig = inSpan.sort((a, b) => Math.abs(a.x - mid) - Math.abs(b.x - mid))[0];
         const by = trig ? ENAME[trig.type] : '?';
         jk.by[by] = (jk.by[by] ?? 0) + 1;
-        curJack = { lane: L, col: c, mid, at: frames, by, cands: prev.en.filter((e) => e.type !== EJET && e.lane === L && Math.abs(e.x - mid) <= 8).map((e) => ({ i: e.i, type: e.type })), hit: 0 };
+        const cx = sc('splashX'); // (cff0042: the reach is centred on the enemy that sprang it, splashX)
+        curJack = { lane: L, col: c, mid: cx, at: frames, by, cands: cur.en.filter((e) => e.type !== EJET && e.lane === L && Math.abs(e.x - cx) <= 8).map((e) => ({ i: e.i, type: e.type })), hit: 0 };
+        jk.offMid[cx - mid] = (jk.offMid[cx - mid] ?? 0) + 1;
         note(`jack sprung at slot ${s} by ${by}; in reach ${curJack.cands.map((e) => ENAME[e.type]).join(',')}`);
       } else { jk.eaten += 1; const by = inSpan[0] ? ENAME[inSpan[0].type] : '?'; jk.eatenBy[by] = (jk.eatenBy[by] ?? 0) + 1; note(`jack at slot ${s} eaten by ${by} (burst ${prev.splash.toString(16)})`); }
     }
@@ -158,7 +173,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       if (pe) {
         if (!ce || ce.type !== pe.type) { jk.kills += 1; jk.hits += 1; jk.dmg += pe.hp; curJack.hit += 1; jk.killsBy[ENAME[pe.type]] = (jk.killsBy[ENAME[pe.type]] ?? 0) + 1; }
         else if (ce.hp <= pe.hp - 10) {
-          jk.hits += 1; jk.dmg += 10; curJack.hit += 1;
+          jk.hits += 1; jk.dmg += pe.hp - ce.hp; curJack.hit += 1;
           if (ce.x > pe.x || pe.x >= 151) {
             jk.thrown += 1; jk.thrownBy[ENAME[pe.type]] = (jk.thrownBy[ENAME[pe.type]] ?? 0) + 1;
             if (ce.x === 151) jk.capped += 1;
@@ -320,10 +335,56 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     prev = cur;
   };
 
+  // ---- cycle watch (read only): overscan logic (CallLogic -> osWait) and VBLANK (SelectEnemies ->
+  // vbWait) cycles per frame; batteries over the cap turned into points (GainBatt entered with A > 99)
+  const cyc = { logicMax: 0, logicAt: null, logicOver: 0, vbMax: 0, vbAt: null, vbPlayMax: 0, vbHist: {}, logicHist: {} };
+  const ovf = { points: 0, calls: 0, byAmt: {}, byWave: {} };
+  stats.cyc = cyc; stats.overflow = ovf;
+  const P_CALL = SYM.CallLogic, P_OSW = SYM['0.osWait'], P_SEL = SYM.SelectEnemies, P_VBW = SYM['0.vbWait'], P_GAIN = SYM.GainBatt;
+  const stepFrame = () => {
+    const cpu = m.cpu, bus = m.bus, f = bus.frame;
+    let ls = -1, lg = 0, vs = -1, vb = 0;
+    while (bus.frame === f) {
+      const pc = cpu.pc;
+      if (pc === P_CALL && bus.bank === 0 && ls < 0) ls = cpu.cycles;
+      else if (pc === P_OSW && bus.bank === 0 && ls >= 0 && !lg) lg = cpu.cycles - ls;
+      else if (pc === P_SEL && bus.bank === 0 && vs < 0) vs = cpu.cycles;
+      else if (pc === P_VBW && bus.bank === 0 && vs >= 0 && !vb) vb = cpu.cycles - vs;
+      else if (pc === P_GAIN && bus.bank === 2 && cpu.a >= 100) { const n = cpu.a - 99; ovf.points += n; ovf.calls += 1; ovf.byAmt[n] = (ovf.byAmt[n] ?? 0) + 1; const w = sc('wave'); ovf.byWave[w] = (ovf.byWave[w] ?? 0) + n; }
+      cpu.step();
+    }
+    if (process.env.DBGCYC && Math.abs(frames - +process.env.DBGCYC) <= 3) console.log("CYC", frames, "logic", lg, "vb", vb, "ls", ls, "vs", vs);
+    const playing = sc('state') === 1;
+    const snap = () => ({ frame: frames, wave: sc('wave'), en: enemies().map((e) => `${ENAME[e.type]}@L${e.lane & 7}x${e.x}`).join(' '), toys: slots().map((q) => TOYNAME[q.type][0] ?? '-').join(''), splashN: sc('splashN').toString(16), dirty: sc('dirty') });
+    if (lg > cyc.logicMax) { cyc.logicMax = lg; cyc.logicAt = snap(); }
+    if (lg > 2216) cyc.logicOver += 1;
+    if (vb > cyc.vbMax) { cyc.vbMax = vb; cyc.vbAt = { ...snap(), state: sc('state') }; }
+    if (playing && vb > cyc.vbPlayMax) cyc.vbPlayMax = vb;
+    if (playing) { const b = Math.floor(vb / 100) * 100; cyc.vbHist[b] = (cyc.vbHist[b] ?? 0) + 1; const b2 = Math.floor(lg / 200) * 200; cyc.logicHist[b2] = (cyc.logicHist[b2] ?? 0) + 1; }
+  };
+  // status line vs the state: frames the shown score / batteries differ from the real ones (longest run)
+  const DH = SYM.DigitHi & 0xfff, DL = SYM.DigitLo & 0xfff;
+  const disp = { scoreLag: 0, scoreLagMax: 0, battLag: 0, battLagMax: 0, scoreLagAt: null, battLagAt: null };
+  stats.display = disp;
+  const checkDisplay = () => {
+    if (sc('state') !== 1) { disp.scoreLag = disp.battLag = 0; return; }
+    const cells = sc.bind(null, 'cells');
+    const s = [0, 1, 2].map((i) => sc('score', i));
+    const dg = [s[0] & 15, s[1] >> 4, s[1] & 15, s[2] >> 4, s[2] & 15];
+    let okS = true;
+    for (let c = 0; c < 3 && okS; c += 1) for (let r = 0; r < 5; r += 1) { const v = ROM[DH + dg[2 * c] * 5 + r] | ROM[DL + (c === 2 ? 50 : dg[2 * c + 1] * 5) + r]; if (cells(c * 5 + r) !== v) { okS = false; break; } }
+    const bt = sc('batt'); let okB = true;
+    for (let r = 0; r < 5; r += 1) if (cells(25 + r) !== (ROM[DH + Math.floor(bt / 10) * 5 + r] | ROM[DL + (bt % 10) * 5 + r])) { okB = false; break; }
+    disp.scoreLag = okS ? 0 : disp.scoreLag + 1; disp.battLag = okB ? 0 : disp.battLag + 1;
+    if (disp.scoreLag > disp.scoreLagMax) { disp.scoreLagMax = disp.scoreLag; disp.scoreLagAt = { frame: frames, wave: sc('wave') }; }
+    if (disp.battLag > disp.battLagMax) { disp.battLagMax = disp.battLag; disp.battLagAt = { frame: frames, wave: sc('wave') }; }
+  };
+
   // ---- the hands
   const run = (bits = 0, fire = false, swchb = o.diffA ? 0x4b : 0x0b) => {
     m.bus.swcha = 0xff ^ bits; m.bus.inpt4 = fire ? 0 : 0x80; m.bus.swchb = swchb;
-    if (PROF_AT.has(frames)) profileFrame(m, frames); else m.runFrame();
+    if (PROF_AT.has(frames)) profileFrame(m, frames); else stepFrame();
+    checkDisplay();
     const { total, vb } = m.layout();
     if (total !== 262 || vb[0][0] !== 40) { mistimed += 1; mistimedAll.push(frames); if (mistimedAt.length < 10) mistimedAt.push({ frame: frames, wave: sc('wave'), total, vb: JSON.stringify(vb), en: enemies().map((e) => `${ENAME[e.type]}@L${e.lane}x${e.x}`).join(' '), toys: slots().map((q) => TOYNAME[q.type][0] ?? '-').join(''), shots: [0, 1, 2].map((L) => sc('shotDmg', L)).join(','), splashN: sc('splashN'), cursor: sc('cursor'), stick: m.bus.swcha.toString(16), fire: m.bus.inpt4 === 0, sound: sc('sndPos') }); }
     if (SYM.temp !== undefined && sc('state') === 1 && !(m.ram(SYM.frame) & 1) && m.ram(SYM.temp + 3)) { stats.killSkips += 1; stats.killSkipsW[sc('wave')] = (stats.killSkipsW[sc('wave')] ?? 0) + 1; } // an even frame with a kill (KILLED = temp+3): the spawner waits it out
@@ -381,7 +442,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
 
   // the game refuses a toy (not a jet) on a slot where a monster stands: its x
   // is the toy's x to x + 8. margin: pixels it may still walk before the drop
-  const PXF = [[0, 0.5, 1, 1, 2, 0.5, 0.5, 1, 0.25], [0, 1, 2, 2, 3, 1, 1, 2, 0.5]]; // pixels per frame, laps 1/2
+  const PXF = [[0, 0.5, 1, 1, 2, 0.5, 0.5, 1, 0.25], [0, 1, 2, 2, 3, 1, 0.5, 2, 0.5]]; // (3527460: balloons keep the first-lap pace) // pixels per frame, laps 1/2
   const pace = (e) => (e.type === KNIGHT && (e.st & 0x40) ? [2, 3] : PXF.map((r) => r[e.type]))[m.ram(SYM.fast) & 0x80 ? 1 : 0] ?? 1;
   const standing = (en, slot, margin = true) => {
     if (o.legacy) return false;
@@ -454,7 +515,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
           const s = L * 3 + c;
           if (COLX[c] > lead.x) continue; // already behind them
           // the front teddy, while they're still a way off: make room (half its cost back)
-          if (o.jackSwap && sl[s].type === TEDDY && lead.x - COLX[c] >= 30 && batt + (COST[TEDDY] >> 1) >= COST[JACK] && !standing(en, s)) { add(150, s, 'pick', 0, 'room for a jack'); break; }
+          if ((o.jackSwap || o.jackSwapTrex && walkers.some((e) => e.type === TREX && e.x - COLX[c] < 60)) && sl[s].type === TEDDY && lead.x - COLX[c] >= 30 && batt + (COST[TEDDY] >> 1) >= COST[JACK] && !standing(en, s)) { add(150, s, 'pick', 0, 'room for a jack'); break; }
           if (sl[s].type) break; // a toy stops them first
           if (lead.x - COLX[c] >= 14 && !standing(en, s)) { add(155, s, 'place', JACK, `jack for ${walkers.length} on shelf ${L}`); break; }
         }

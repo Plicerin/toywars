@@ -82,8 +82,13 @@ How the screen is drawn:
   late-game stress test, every visible pixel against `tools/expect.mjs` (a
   reference picture drawn from the game state), the rules scenario by
   scenario, booting from each bank, and correct Super Chip use.
-- `tools/bot.mjs` — a player that uses only the joystick; reports how far it
-  gets (it reaches waves 12-18).
+- `tools/player.mjs` — the playtest player: plays full games through the
+  joystick, fire button and console switches only (it reads RAM to decide),
+  with several toy layouts and difficulty A or B, and reports how far it gets
+  with detailed statistics (the best layouts reach waves 21-28 on B).
+- `tools/budget.mjs` — measures the game logic's time per frame in a
+  late-game stress scene.
+- `tools/bot.mjs` — the first, simpler joystick-only player.
 - `src/` — the emulator core used by the tests and the web page (6502, TIA,
   RIOT, F8/F6 bank switching, Super Chip).
 

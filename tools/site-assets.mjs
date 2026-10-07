@@ -42,6 +42,23 @@ for (const [l, f] of [['D_ARMY', 'army'], ['D_TEDDY', 'teddy'], ['D_TANK', 'tank
 for (const [l, f] of [['E_DINO', 'dino'], ['E_MOUSE', 'mouse'], ['E_CROUCH', 'crawler'], ['E_KNIGHT', 'knight'], ['E_HELI', 'heli'], ['E_BALLOON', 'balloon'], ['E_POGO', 'pogo']]) sprite(l, f, [RED_DK, RED]);
 sprite('E_TREX', 'trex', [ORANGE_DK, ORANGE]);
 
+// favicons: the army man, whole-pixel scaled and centred (16 and 32 transparent;
+// 180 on the header navy, for home screens, which want an opaque icon)
+function icon(path, size, scale, bg) {
+  const rows = Array.from({ length: 11 }, (_, i) => bank1(SYM.D_ARMY + i));
+  while (rows.length > 1 && rows.at(-1) === 0) rows.pop();
+  const art = rows.reverse().map((v) => Array.from({ length: 8 }, (_, b) => (v & (0x80 >> b) ? GREEN : 0)));
+  const w = 8 * scale, h = art.length * scale, x0 = (size - w) >> 1, y0 = (size - h) >> 1;
+  const px = Array.from({ length: size }, (_, y) => Uint8Array.from({ length: size }, (_, x) => {
+    const ax = Math.floor((x - x0) / scale), ay = Math.floor((y - y0) / scale);
+    return (x >= x0 && y >= y0 && ax < 8 && ay < art.length && art[ay][ax]) || bg;
+  }));
+  writeSpritePng(path, px, 1, 1);
+}
+icon('img/favicon-16.png', 16, 1, 0);
+icon('img/favicon-32.png', 32, 2, 0);
+icon('img/apple-touch-icon.png', 180, 12, 0xa0);
+
 // a busy moment of wave 7, every overlapping monster's turn merged
 const m = new Machine(rom);
 const set = (n, v, i = 0) => m.poke(SYM[`W_${n}`] + i, v);
