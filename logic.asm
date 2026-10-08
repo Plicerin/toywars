@@ -372,11 +372,18 @@ Cursor:
     sta W_fireState
     lda lt1                     ; left or right already down as fire goes down
     and #$0C                    ; (pressed a frame early, or on a shelf's end
-    beq .noPress                ; slot, where it doesn't move the cursor): a
+    beq .noLR                   ; slot, where it doesn't move the cursor): a
     and #$08                    ; toy change too, never a boost on release
     bne .next
     jsr PrevToy
     jmp .changed
+.noLR:
+    lda R_repeat                ; a step still waiting (up/down, or a tap let
+    bpl .noPress                ; go): take it now, so fire acts where the
+    and #$0F                    ; player was going
+    ldx #0
+    stx W_repeat
+    jmp .step
 .noPress:
     lda lt1
     bpl .notHeld
@@ -430,6 +437,14 @@ Cursor:
     lda lt2
     and #$0F
     beq .held
+    sta lt0
+    lda R_repeat                ; (rolled into a diagonal: both directions)
+    bpl .fresh
+    and #$0F
+    ora lt0
+    sta lt0
+.fresh:
+    lda lt0
     ora #$B0                    ; waiting, 3 frames, this direction
     sta W_repeat
     rts
@@ -442,9 +457,13 @@ Cursor:
     sta W_repeat
     and #$70
     bne .done
-    lda #15                     ; the wait is over: step; the first repeat
-    sta W_repeat                ; 15 frames on (18 from the press)
-    lda lt1
+    lda R_repeat                ; the wait is over: step (every direction
+    and #$0F                    ; pressed in it, and any still held); the
+    ora lt1                     ; first repeat 15 frames on (18 from the press)
+    tay
+    lda #15
+    sta W_repeat
+    tya
     jmp .step
 .again:
     sec
@@ -1600,6 +1619,8 @@ ShotHit:
     ora #NENEMY
     sta W_splashN
 .direct:
+    lda #1                      ; (a busy frame, killing or not: the spawner
+    sta KILLED                  ; waits a frame; three hits and a spawn overran)
     lda R_shotDmg,x
     sty lt2
     ldx lt2

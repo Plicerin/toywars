@@ -20,7 +20,9 @@ place toys in the nine slots (three per shelf) to stop them.
   pips at the right end of the status line show its health in thirds.
 - **Fire / Space:** place that toy on an empty slot (it costs batteries). On a
   toy, fire boosts it: a teddy is mended to full, an army man, tank or cannon
-  fires a power shot (5, 5, 10, 10 batteries). With the shovel chosen (last in
+  fires a power shot (5, 5, 10, 10 batteries). The jack has no boost, and a
+  boost that would do nothing (a teddy at full health, a power shot still to
+  come) just buzzes, free. With the shovel chosen (last in
   the toy list), fire digs the toy up instead (half its cost back); the toy
   under the cursor blinks to the shovel (or the jet) to show it. With the
   jet chosen, fire launches it
@@ -93,8 +95,8 @@ How the screen is drawn:
   joystick, fire button and console switches only (it reads RAM to decide),
   with several toy layouts and difficulty A or B, and reports how far it gets
   with detailed statistics (the best layouts reach waves 23-32 on B).
-- `tools/budget.mjs` — measures the game logic's time per frame in a
-  late-game stress scene.
+- `tools/budget.mjs` — measures the game logic's time per frame in two
+  late-game stress scenes: a full board, and spawns while shots land.
 - `tools/bot.mjs` — the first, simpler joystick-only player.
 - `src/` — the emulator core used by the tests and the web page (6502, TIA,
   RIOT, F8/F6 bank switching, Super Chip).

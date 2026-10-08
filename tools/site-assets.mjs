@@ -38,7 +38,7 @@ function sprite(label, file, [dark, light]) {
   const out = rows.map((v, k) => Array.from({ length: 8 }, (_, b) => (v & (0x80 >> b) ? (k < 3 ? dark : light) : 0))).reverse();
   writeSpritePng(`img/sprites/${file}.png`, out.flatMap((r) => [Uint8Array.from(r), Uint8Array.from(r)]), 6, 3);
 }
-for (const [l, f] of [['D_ARMY', 'army'], ['D_TEDDY', 'teddy'], ['D_TANK', 'tank'], ['D_JACK', 'jack'], ['D_CANNON', 'cannon'], ['D_JET', 'jet']]) sprite(l, f, [GREEN, GREEN]);
+for (const [l, f] of [['D_ARMY', 'army'], ['D_TEDDY', 'teddy'], ['D_TANK', 'tank'], ['D_JACK', 'jack'], ['D_CANNON', 'cannon'], ['D_JET', 'jet'], ['D_SHOVEL', 'shovel']]) sprite(l, f, [GREEN, GREEN]);
 for (const [l, f] of [['E_DINO', 'dino'], ['E_MOUSE', 'mouse'], ['E_CROUCH', 'crawler'], ['E_KNIGHT', 'knight'], ['E_HELI', 'heli'], ['E_BALLOON', 'balloon'], ['E_POGO', 'pogo']]) sprite(l, f, [RED_DK, RED]);
 sprite('E_TREX', 'trex', [ORANGE_DK, ORANGE]);
 

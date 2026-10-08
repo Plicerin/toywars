@@ -231,29 +231,6 @@ MainLoop:
     jsr Schedule
     jsr BuildStatus
     jsr CallSound               ; bank 2: sound steps or music
-    ; the health pips (status line, right end): the toy under the cursor's health
-    ; in thirds, 1-3 (temp+1, which the header loops leave alone); 0 = none
-    ldx #0
-    lda R_state
-    cmp #1                      ; (ST_PLAY)
-    bne .pips
-    ldy R_cursor
-    lda R_slotType,y
-    beq .pips
-    tax
-    lda R_slotHP,y
-    ldy #1
-    cmp PipT1,x
-    bcc .level
-    iny
-    cmp PipT2,x
-    bcc .level
-    iny
-.level:
-    tya
-    tax
-.pips:
-    stx temp+1
     lda #161                    ; defenders: rows 0-16 read the page's zero tail
     sta pc0
     sta pc1
@@ -324,6 +301,25 @@ MainLoop:
     sta HMCLR
     lda #0
     sta VBLANK
+    ; the health pips (status line, right end): the toy under the cursor's
+    ; health in thirds, 1-3, 0 = none (temp+1, which the header loops leave
+    ; alone), by table, here on s0 rather than in VBLANK (at most 45 cycles)
+    lda R_state
+    cmp #1                      ; (ST_PLAY)
+    bne .noPips
+    ldy R_cursor
+    lda R_slotType,y
+    beq .noPips                 ; (an empty slot keeps the last toy's health)
+    tax
+    lda R_slotHP,y
+    clc
+    adc PipBase,x
+    tax
+    lda PipLevel,x
+    .byte $2C                   ; (bit abs: skips the lda #0)
+.noPips:
+    lda #0
+    sta temp+1
     lda #13
     sta lineCnt
     ldy #6
@@ -625,10 +621,7 @@ PipRow:     .byte 0, 0, 0, 0
             .byte 0, $04, $14, $54
             .byte 0, $04, $14, $54
             .byte 0, 0, 0, 0
-; a toy's health from which it shows 2 and 3 pips: max / 3 + 1, 2 max / 3 + 1
-; (logic.asm ToyHP: army 8, teddy 40, tank 12, jack 8, cannon 10)
-PipT1:      .byte 0, 3, 14, 5, 3, 4, 0
-PipT2:      .byte 0, 6, 27, 9, 6, 7, 0
+; (PipLevel / PipBase, the pips per toy and health: gen.mjs, from ToyHP)
 
 TwoDigits:                      ; X = 0-99 -> temp = tens*5, temp+1 = ones*5
     lda Bin2BCD,x

@@ -73,6 +73,13 @@
 //  - stats.shots (per kind, '*' = power shot: fired, hit, kills, dmg = health actually taken), stats.boostLife
 //    (power flags set/fired/lost, latency, waiting frames noTgt/busy/free), stats.flagCarry, stats.mend
 //    (n, health before, under a chewer), stats.busy (idle/wait/act frames, idle stretches, actions)
+//  - stats.splash (cf3524e): cannon bursts, plain vs power (bit 7 of splashL): bursts, hits/dmg/kills on the
+//    other monsters on the shelf. On cf3524e (B, boostSmart) the power shot mostly waits for a target and hits a
+//    lone newcomer: heavy 36 power bursts, 0 splash hits (plain 149 of 766). OPTS cannonBunch (opt-in): boost a
+//    cannon only for a bunch with its shelf's shot free: heavy 26.9 -> 27.5 (8 games, same seeds; nearly all
+//    cannon boosts drop out), cannon 20.5 -> 21.2 (6; 43 power splash hits in 40 bursts); within noise, not default
+//  - cf3524e, 6-8 games each, B: boosts on/off heavy 26.9/25.0, tank 27.4/24.7, cannon 20.5/21.3, army 15.0/17.5
+//    (army mends ~50 a game at mendAt 25 and never banks for wave-12 jets; mendAt 45: 16.3)
 // usage: node tools/player.mjs [games] [strategy: heavy (best; on 3f08647 B median 24), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
 //   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board, shots and splash per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
@@ -374,8 +381,22 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
   const shotSt = {}; stats.shots = shotSt; const bl = {}; stats.boostLife = bl; stats.flagCarry = 0;
   const POWER = [0, 4, 0, 16, 0, 6, 0];
   const shotPrev = [null, null, null]; const flagAt = Array(9).fill(-1);
+  const splashSt = { plain: { bursts: 0, hits: 0, dmg: 0, kills: 0 }, power: { bursts: 0, hits: 0, dmg: 0, kills: 0 } }; stats.splash = splashSt;
   const shotWatch = (cur) => {
     if (cur.state !== 1) return;
+    // stats.splash: cannon bursts (splashN's high nibble 0-4, the monster hit) plain vs power (bit 7 of
+    // splashL): health the sweep took from the others on its shelf (frames after the direct hit's)
+    const pc = prev.splash && prev.splash >> 4 < 5, cc = cur.splash && cur.splash >> 4 < 5;
+    if (cc || (pc && !cur.splash)) {
+      const sl = sc('splashL'), r = splashSt[sl & 0x80 ? 'power' : 'plain'], L = sl & 0x7f;
+      const going = pc && (!cur.splash || (prev.splash >> 4 === cur.splash >> 4 && (prev.splash & 15) >= (cur.splash & 15)));
+      if (!going) r.bursts += 1;
+      else for (const e of prev.en) {
+        if (e.type === EJET || e.lane !== L || e.i === prev.splash >> 4) continue;
+        const now = cur.en.find((q) => q.i === e.i && q.type === e.type), dd = now ? e.hp - now.hp : e.hp;
+        if (dd > 0) { r.hits += 1; r.dmg += dd; if (!now) r.kills += 1; }
+      }
+    }
     for (let L = 0; L < 3; L += 1) {
       const d = sc('shotDmg', L), k = sc('shotKind', L), p = shotPrev[L];
       if (p && !d) {
@@ -587,7 +608,11 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     if (front.some((e) => e.type === TREX && e.x >= COLX[c] && e.x - COLX[c] <= 8)) return false;
     if (type === TANK) return t.type !== BALLOON && (t.hp >= 9 || (sc('slotCool', s) & 0x7f) >= 10);
     if (type === ARMY) return t.hp >= 2 && !(t.type === CRAWL && (t.st & 0x80)) && t.x - COLX[c] <= o.boostReach;
-    return t.hp >= 4 || ahead.some((e) => e !== t && Math.abs(e.x - t.x) <= 12);
+    const bunch = ahead.some((e) => e !== t && Math.abs(e.x - t.x) <= 12);
+    // cannonBunch: only for a bunch, with the shelf's shot free (the power shot leaves now, at that bunch:
+    // otherwise it waits, and on cf3524e mostly hit a lone newcomer; its doubled splash never landed)
+    if (o.cannonBunch) return bunch && !sc('shotDmg', Math.floor(s / 3));
+    return t.hp >= 4 || bunch;
   };
   let lastLog = 0;
   // a jet in flight on the shelf, or one placed in the last 20 frames (with every

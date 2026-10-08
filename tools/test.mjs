@@ -128,10 +128,10 @@ for (const [name, toys] of [['nine toys acting', [1, 3, 5, 1, 2, 3, 1, 4, 5]], [
   g.press();
   g.frames(2);
   g.set('wave', 14); g.set('unlock', 6); g.set('batt', 99); g.set('dirty', 7);
-  toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', 40, s); g.set('slotCool', 0, s); });
+  toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', TOY_HP[t], s); g.set('slotCool', 0, s); }); // (full health: the pips read it)
   let bad = 0, mistimed = 0, first = '', most = 0;
   for (let f = 0; f < 1500; f += 1) {
-    if (f % 300 === 0) toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', 40, s); });
+    if (f % 300 === 0) toys.forEach((t, s) => { g.set('slotType', t, s); g.set('slotHP', TOY_HP[t], s); });
     g.set('spawnLeft', 20);
     let added = false;
     for (let i = 0; i < 5; i += 1) if (!g.sc('eType', i)) { added = true; const k = (f + i) % 9; g.set('eType', 1 + k, i); g.set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); g.set('eX', 151 - ((f * 7 + i * 23) % 60), i); g.set('eHP', 9, i); g.set('eState', 15, i); }
@@ -600,6 +600,17 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   const stayed = g.sc('cursor') === 4 && g.sc('toy') === 2 && g.sc('slotHP', 4) === 12 && g.sc('batt') === 50;
   g.run(1, { stick: RIGHT }); g.run(3);
   check('right 2 frames before fire, mid-shelf: the cursor waits, the toy changes, no boost; a 1-frame tap still steps', stayed && g.sc('cursor') === 5, `stayed ${stayed}, cursor after a tap ${g.sc('cursor')}`);
+}
+{
+  // move, then fire within the cursor's 3-frame wait: the step comes first, the toy goes where the player was going
+  const g = quietGame();
+  g.set('unlock', 5); g.set('batt', 50); g.set('toy', 1); g.set('cursor', 3); g.run(3);
+  g.run(3, { stick: DOWN }); g.run(3, { stick: DOWN, fire: true }); g.run(4);
+  const moveFire = g.sc('cursor') === 6 && g.sc('slotType', 6) === 1 && g.sc('slotType', 3) === 0;
+  // a diagonal rolled in (down, then down + right a frame later): both directions
+  g.set('cursor', 0); g.run(3);
+  g.run(1, { stick: DOWN }); g.run(2, { stick: DOWN & RIGHT }); g.run(4);
+  check('down then fire within the wait places on the new slot; a rolled diagonal steps both ways', moveFire && g.sc('cursor') === 4, `move+fire ${moveFire}, diagonal to ${g.sc('cursor')}`);
 }
 {
   // boosts: fire on a toy with any toy but the shovel chosen

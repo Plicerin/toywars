@@ -18,7 +18,7 @@ const labels = Object.entries(SYM).filter(([n]) => logicLabels.has(n)).sort((a, 
 const labelOf = (pc) => { let best = '?'; for (const [n, a] of labels) { if (a <= pc) best = n; else break; } return best; };
 let prof = new Map();
 function frame(input = {}) {
-  m.bus.swcha = 0xff; m.bus.inpt4 = input.fire ? 0 : 0x80; m.bus.swchb = 0x0b;
+  m.bus.swcha = 0xff; m.bus.inpt4 = input.fire ? 0 : 0x80; m.bus.swchb = input.reset ? 0x0a : 0x0b;
   const f = m.bus.frame; start = -1; spent = 0; vbStart = -1; vbSpent = 0;
   while (m.bus.frame === f) {
     const pc = m.cpu.pc;
@@ -40,7 +40,7 @@ fill(); toys.forEach((t, s) => set('slotCool', 0, s));
 const worst = [[0, 0], [0, 0]]; let vbWorst = 0;
 for (let f = 0; f < 3000; f += 1) {
   if (f % 300 === 0) fill();
-  set('spawnLeft', 20);
+  set('spawnLeft', 20); set('lids', 0); // (no game over: the scene runs its whole length)
   for (let i = 0; i < 5; i += 1) if (!get('eType', i)) { const k = (f + i) % 9; set('eType', 1 + k, i); set('eLane', ((f + i) % 3) | (k === 8 ? 4 : 0), i); set('eX', 151 - ((f * 7 + i * 23) % 60), i); set('eHP', 9, i); set('eState', 15, i); }
   prof = new Map();
   const c = frame();
@@ -48,6 +48,25 @@ for (let f = 0; f < 3000; f += 1) {
   const odd = m.ram(SYM.frame) & 1;
   const L = m.layout(); if (L.total !== 262 || L.vb[0][0] !== 40) console.log('mistimed frame', f, 'logic', c, 'lines', L.total);
   if (c > worst[odd][0]) { worst[odd] = [c, f]; if (PROF) worst[odd][2] = [...prof].sort((a, b) => b[1] - a[1]).slice(0, 14).map(([n, v]) => `${n} ${v}`).join(', '); }
+}
+// the spawn scene (as the playtests' worst frames: a spawn while shots hit): four
+// monsters kept up, three at the end of their shelf's shot, the fifth slot left
+// for the game's spawner (emptied after each spawn), a spawn due every frame
+// and every shelf's shot re-armed as it lands (wave 21: five on screen)
+frame({ reset: true }); frame(); frame();
+set('wave', 21); set('unlock', 6); set('batt', 99); set('dirty', 7);
+for (let f = 0; f < 3000; f += 1) {
+  if (f % 300 === 0) fill();
+  set('spawnLeft', 20); set('spawnTimer', 0); set('lids', 0);
+  for (let i = 0; i < 4; i += 1) if (!get('eType', i) || get('eHP', i) < 4) { const k = (f + i) % 8; set('eType', 1 + k, i); set('eLane', i % 3, i); set('eX', i < 3 ? 112 + ((f + 5 * i) % 9) : 140, i); set('eHP', 12, i); set('eState', 15, i); }
+  if (get('eType', 4)) { set('eType', 0, 4); set('eLane', 0xff, 4); }
+  for (let L = 0; L < 3; L += 1) if (!get('shotDmg', L)) { set('shotDmg', 1, L); set('shotKind', 1, L); m.poke(SYM.shotPtr + L, [11, 31, 51][L] + 6); }
+  prof = new Map();
+  const c = frame();
+  vbWorst = Math.max(vbWorst, vbSpent);
+  const odd = m.ram(SYM.frame) & 1;
+  const L = m.layout(); if (L.total !== 262 || L.vb[0][0] !== 40) console.log('mistimed frame (spawn scene)', f, 'logic', c, 'lines', L.total);
+  if (c > worst[odd][0]) { worst[odd] = [c, 3000 + f]; if (PROF) worst[odd][2] = [...prof].sort((a, b) => b[1] - a[1]).slice(0, 14).map(([n, v]) => `${n} ${v}`).join(', '); }
 }
 if (PROF) console.log(worst.map((w) => w[2]).join('\n'));
 console.log(`timer ${35 * 64} cycles (about 2216 usable for the logic); worst logic: even ${worst[0][0]} (frame ${worst[0][1]}), odd ${worst[1][0]} (frame ${worst[1][1]}); VBLANK ${vbWorst} of about ${44 * 64}`);

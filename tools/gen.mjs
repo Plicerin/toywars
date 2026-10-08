@@ -5,7 +5,7 @@
 //   gen/bank2.inc  game logic tables
 //   gen/layout.json geometry for the tests
 // usage: node tools/gen.mjs
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 // ---------------------------------------------------------------- geometry
 // The play area is 80 rows of two scanlines (rows 0-79 top to bottom); the
@@ -282,6 +282,13 @@ export function build() {
   // GAME 1-3 for the status line, laid out like W_cells (cell by cell, bottom row first)
   out0.push('GameText:', bytes([1, 2, 3].flatMap((n) => cells48(gameLines(n)).flat())));
   out0.push('GameTextAt:', '    .byte 0, 0, 30, 60');
+  // the health pips: per toy (ToyHP in logic.asm) and health, its thirds rounded up (0 for an empty slot)
+  const toyHP = /^ToyHP:\s*\.byte\s*([\d,\s]+)/m.exec(readFileSync('logic.asm', 'latin1'))[1].split(',').map(Number);
+  const pipLevel = [0], pipBase = [0];
+  for (let t = 1; t <= 5; t += 1) { pipBase.push(pipLevel.length); for (let h = 0; h <= toyHP[t]; h += 1) pipLevel.push(Math.ceil((3 * h) / toyHP[t])); }
+  pipBase.push(0); // (the jet never stands)
+  if (pipLevel.length > 256) throw new Error('pip table over a page');
+  out0.push('PipLevel:', bytes(pipLevel), 'PipBase:', bytes(pipBase));
   out0.push('Bin2BCD:', bytes([...Array(100).keys()].map((n) => ((n / 10) | 0) * 16 + (n % 10))));
 
   // scheduler tables (bank 0)
