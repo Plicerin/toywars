@@ -66,6 +66,13 @@
 //  - 3f08647 (10 games each, seeds 0..333): B heavy median 24 (8 of 10 end in wave 24), tank 24, cannon 22, army 17;
 //    A heavy 21, cannon 20.5. OPTS {"bossSave":60} on heavy B: 24.5 vs 24.6 mean (T-Rex lids 7 -> 4, mouse lids up; not kept)
 //  - HURTDBG=a-b prints, per frame, every enemy slot and which were drawn (the hurt-color flicker)
+//  - boosts (5090733; 6 games each, pinned 5090733 ROM, B): boostSmart (power shots aimed at the toy's real
+//    target: tanks first, any range, not at a balloon; army men not at a chewing crawler or 1-health monsters;
+//    cannons at 4+ health or a bunch) with boostAt 60 (keeps batteries for jets): heavy 26.6 -> 27.8, tank 22.0 ->
+//    27.3 (boosts off: 24.8 / 24.7). The previous defaults: OPTS {"boostSmart":false,"boostAt":40}
+//  - stats.shots (per kind, '*' = power shot: fired, hit, kills, dmg = health actually taken), stats.boostLife
+//    (power flags set/fired/lost, latency, waiting frames noTgt/busy/free), stats.flagCarry, stats.mend
+//    (n, health before, under a chewer), stats.busy (idle/wait/act frames, idle stretches, actions)
 // usage: node tools/player.mjs [games] [strategy: heavy (best; on 3f08647 B median 24), tank, cannon, cannon0, army, wall, wallArmy, jackFront, jackMid] [seedBase] [maxFrames]
 //   env: OPTS='{"repairAt":20}' (strategy knobs), ROM=path SYM=path (another build), LOG=1 (actions), TRACE=a-b (board, shots and splash per frame), PROF_AT=f,f (logic cycle profile)
 import { readFileSync } from 'node:fs';
@@ -139,7 +146,7 @@ function profileFrame(m, at) {
 export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 216000, opts = {}, log = false } = {}) {
   // legacy: the old player (repairs by picking up a chewed toy and dropping a
   // fresh one on the monster; the game now refuses that drop)
-  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, boost: true, boostAt: 40, boostReach: 60, mendHp: 12, mendAt: 25, ...opts };
+  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, boost: true, boostSmart: true, boostAt: 60, boostReach: 60, mendHp: 12, mendAt: 25, ...opts };
   if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; if (!('cover' in opts)) o.cover = false; }
   const strat = STRATEGIES[strategy];
   const m = new Machine(ROM);
@@ -357,7 +364,45 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     }
     if (process.env.TRACE && frames >= +process.env.TRACE.split('-')[0] && frames <= +process.env.TRACE.split('-')[1]) console.log('T', frames, sc('batt'), cur.sl.map((q) => q.type + ':' + q.hp).join(' '), '|', cur.en.map((e) => `${ENAME[e.type]}L${e.lane}x${e.x}hp${e.hp}s${e.st.toString(16)}`).join(' '), '| shots', [0, 1, 2].map((L) => sc('shotDmg', L) ? `${'-atc'[sc('shotKind', L)]}${sc('shotDmg', L)}` : '.').join(''), 'splash', sc('splashN').toString(16));
     cur.jets = jetsNow;
+    if (prev) shotWatch(cur);
     prev = cur;
+  };
+  // ---- shots and boosts (read only). stats.shots[kind + (power ? '*' : '')]: fired, hit, kills, dmg (health
+  // actually taken: min(damage, health before)), miss (left the shelf); stats.boostLife[kind]: power flags
+  // set (bit 7 of slotCool), fired (latency frames: sum, max), lost (the toy gone first); flagCarry: a new
+  // toy found with bit 7 set
+  const shotSt = {}; stats.shots = shotSt; const bl = {}; stats.boostLife = bl; stats.flagCarry = 0;
+  const POWER = [0, 4, 0, 16, 0, 6, 0];
+  const shotPrev = [null, null, null]; const flagAt = Array(9).fill(-1);
+  const shotWatch = (cur) => {
+    if (cur.state !== 1) return;
+    for (let L = 0; L < 3; L += 1) {
+      const d = sc('shotDmg', L), k = sc('shotKind', L), p = shotPrev[L];
+      if (p && !d) {
+        // gone: hit (an enemy on the shelf lost health or vanished this frame) or off the shelf
+        let best = null, drop = 0;
+        for (const e of prev.en) {
+          if (e.type === EJET || e.lane !== L) continue;
+          const now = cur.en.find((q) => q.i === e.i && q.type === e.type);
+          const dd = now ? e.hp - now.hp : e.hp;
+          if (dd > drop) { drop = dd; best = { e, dead: !now }; }
+        }
+        const r = shotSt[p.key] ??= { fired: 0, hit: 0, kills: 0, dmg: 0, miss: 0 };
+        if (best) { r.hit += 1; r.dmg += Math.min(p.d, best.e.hp); if (best.dead) r.kills += 1; } else r.miss += 1;
+        shotPrev[L] = null;
+      }
+      if (d && !p) { const kind = ['-', 'army', 'tank', 'cannon'][k]; const pw = POWER[[0, ARMY, TANK, CANNON][k]] === d; const key = kind + (pw ? '*' : ''); (shotSt[key] ??= { fired: 0, hit: 0, kills: 0, dmg: 0, miss: 0 }).fired += 1; shotPrev[L] = { d, key }; }
+    }
+    for (let s = 0; s < 9; s += 1) {
+      const t = cur.sl[s].type, pt = prev.sl[s].type, cool = sc('slotCool', s);
+      if (t && !pt && (cool & 0x80)) { stats.flagCarry += 1; anomaly(`new ${TOYNAME[t]} at slot ${s} with the power flag set`); }
+      if (flagAt[s] >= 0) {
+        const r = bl[TOYNAME[pt]] ??= { set: 0, fired: 0, lat: 0, latMax: 0, lost: 0 };
+        // while it waits: frames with no monster ahead (noTgt), the shelf's shot in flight (busy), or both free (free)
+        if (t === pt && (cool & 0x80)) { const L = Math.floor(s / 3), x0 = COLX[s % 3]; const tg = cur.en.some((e) => e.type !== EJET && e.lane === L && e.x > x0); const k2 = !tg ? 'noTgt' : sc('shotDmg', L) ? 'busy' : 'free'; r[k2] = (r[k2] ?? 0) + 1; }
+        if (t !== pt) { r.lost += 1; flagAt[s] = -1; } else if (!(cool & 0x80)) { r.fired += 1; const l = frames - flagAt[s]; r.lat += l; r.latMax = Math.max(r.latMax, l); flagAt[s] = -1; }
+      } else if (t && t === pt && (cool & 0x80)) { flagAt[s] = frames; (bl[TOYNAME[t]] ??= { set: 0, fired: 0, lat: 0, latMax: 0, lost: 0 }).set += 1; }
+    }
   };
 
   // ---- cycle watch (read only): overscan logic (CallLogic -> osWait) and VBLANK (SelectEnemies ->
@@ -530,6 +575,20 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     return en.some((e) => e.type !== EJET && !(o.balloonFree && e.type === BALLOON) && e.lane === L && e.x >= x0 && e.x - x0 <= 8 + (margin ? Math.ceil(pace(e) * 12) + 1 : 0));
   };
 
+  // boostSmart: a power shot only where it pays. The game fires it at the nearest monster ahead
+  // (FindAhead), so that one decides: tank, not a balloon (the shell passes it), 9+ health (more than a
+  // plain shell does) or the tank cooling for 10+ visits (the boost fires now: a shell bought early);
+  // army man, 2+ health and not a chewing crawler (bullets pass over it), within boostReach; cannon, 4+
+  // health or another monster within its splash; none for a toy a T-Rex is about to crush
+  const smartBoost = (s, c, type, front) => {
+    const ahead = front.filter((e) => e.type !== EJET && e.x > COLX[c]).sort((a, b) => a.x - b.x);
+    const t = ahead[0];
+    if (!t) return false;
+    if (front.some((e) => e.type === TREX && e.x >= COLX[c] && e.x - COLX[c] <= 8)) return false;
+    if (type === TANK) return t.type !== BALLOON && (t.hp >= 9 || (sc('slotCool', s) & 0x7f) >= 10);
+    if (type === ARMY) return t.hp >= 2 && !(t.type === CRAWL && (t.st & 0x80)) && t.x - COLX[c] <= o.boostReach;
+    return t.hp >= 4 || ahead.some((e) => e !== t && Math.abs(e.x - t.x) <= 12);
+  };
   let lastLog = 0;
   // a jet in flight on the shelf, or one placed in the last 20 frames (with every
   // enemy slot taken it strikes as a burst over 10 frames, with no jet to see)
@@ -635,7 +694,10 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         } else if (o.boost && sl[s].type === TEDDY && sl[s].hp < o.mendHp && batt >= o.mendAt) {
           // mend it where it stands (a boost), chewer or not
           add(60 + pressure[L], s, 'boost', 0, 'mend teddy');
-        } else if (o.boost && (sl[s].type === ARMY || sl[s].type === TANK || sl[s].type === CANNON) && batt >= o.boostAt && sc('slotCool', s) < 0x80
+        } else if (o.boost && o.boostSmart && (sl[s].type === ARMY || sl[s].type === TANK || sl[s].type === CANNON) && batt >= o.boostAt && sc('slotCool', s) < 0x80 && smartBoost(s, c, sl[s].type, front)) {
+          // boostSmart: aimed at the toy's actual target (the nearest monster ahead, as the game picks it)
+          add((sl[s].type === TANK ? 50 : 45) + pressure[L], s, 'boost', 0, `power ${TOYNAME[sl[s].type]}`);
+        } else if (o.boost && !o.boostSmart && (sl[s].type === ARMY || sl[s].type === TANK || sl[s].type === CANNON) && batt >= o.boostAt && sc('slotCool', s) < 0x80
           && front.some((e) => e.type !== EJET && e.x > COLX[c] && e.x - COLX[c] <= o.boostReach && (sl[s].type !== TANK || e.type !== BALLOON))) {
           // spare batteries: a power shot at what's coming
           add(45 + pressure[L], s, 'boost', 0, `power ${TOYNAME[sl[s].type]}`);
@@ -731,6 +793,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     const free = sl.find((q) => !q.type);
     return free ? { slot: free.s, fire: sweep && en.length === 5 } : null;
   };
+  const busy = { idle: 0, idleRich: 0, wait: 0, act: 0, kind: null, f0: 0, run: 0, idleMax: 0, idle10: 0, idle20: 0, rich: false, actions: 0 }; stats.busy = busy;
   while (sc('state') === 1 && frames < maxFrames) {
     if (o.probeCut) {
       const p = probeCut();
@@ -747,6 +810,17 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       if (!sc('slotType', pickedFor.slot) && sc('batt') >= COST[pickedFor.toy] && frames - pickedFor.at < 90) act = { slot: pickedFor.slot, op: 'place', toy: pickedFor.toy, why: 'replace' };
       else pickedFor = null;
     }
+    // stats.busy: play frames the player had nothing it wanted (idle; idleRich: with 40+ batteries),
+    // wanted something it couldn't afford yet (wait), or was acting (act); idle stretches (longest,
+    // and how many lasted 10 s+ / 20 s+); actions done (place, pick, boost)
+    {
+      const f = frames - busy.f0, b = busy;
+      if (b.kind) { b[b.kind] += f; if (b.kind === 'idle' && b.rich) b.idleRich += f; }
+      const kind = !act ? 'idle' : act.wait ? 'wait' : 'act';
+      if (b.kind === 'idle') b.run += f;
+      if (kind !== 'idle' && b.run) { b.idleMax = Math.max(b.idleMax, b.run); if (b.run >= 600) b.idle10 += 1; if (b.run >= 1200) b.idle20 += 1; b.run = 0; }
+      b.kind = kind; b.f0 = frames; b.rich = sc('batt') >= 40;
+    }
     if (!act || act.wait) { if (act && act.slot !== sc('cursor')) moveTo(act.slot); else run(); continue; }
     if (sc('cursor') !== act.slot) { moveTo(act.slot); continue; }
     if (act.op === 'place') {
@@ -762,6 +836,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
       run(0, true);
       const during = standRaw();
       run();
+      if (sc('batt') < b0) busy.actions += 1;
       if (sc('batt') < b0) { stats.spent[TOYNAME[act.toy]] = (stats.spent[TOYNAME[act.toy]] ?? 0) + COST[act.toy]; if (act.toy === JACK) jk.placed += 1; }
       if (act.toy === JET) { if (sc('batt') < b0) jetAt[Math.floor(act.slot / 3)] = frames; jetFrames.push(frames); if (full && sc('batt') < b0) { stats.jetBursts += 1; note(`jet burst on shelf ${Math.floor(act.slot / 3)}`); } }
       else {
@@ -780,19 +855,23 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
         if (sc('toy') === SHOVEL || sc('toy') === JET) { selectToy(ARMY); continue; }
         const bb = sc('batt');
         if (log) console.log(`f${frames} boost ${TOYNAME[t]} at ${act.slot} (${act.why})`);
+        const hp0 = sc('slotHP', act.slot), chewed = standing(enemies(), act.slot, false);
         tap();
+        if (sc('batt') < bb) { busy.actions += 1; if (t === TEDDY) { const mb = stats.mend ??= { n: 0, hpBefore: 0, underChewer: 0 }; mb.n += 1; mb.hpBefore += hp0; if (chewed) mb.underChewer += 1; } }
         if (sc('batt') < bb) { stats.boosts = stats.boosts ?? {}; stats.boosts[act.why] = (stats.boosts[act.why] ?? 0) + 1; stats.spent.boost = (stats.spent.boost ?? 0) + bb - sc('batt'); }
         continue;
       }
       // (fire on a toy boosts it unless the shovel is chosen)
       if (sc('toy') !== SHOVEL) { selectToy(SHOVEL); continue; }
       if (log) console.log(`f${frames} pick ${TOYNAME[t]} at ${act.slot} (${act.why})`);
-      const bp = sc('batt'); pickSlot = act.slot; tap(); pickSlot = -1; stats.refund = (stats.refund ?? 0) + Math.max(0, sc('batt') - bp);
+      const bp = sc('batt'); pickSlot = act.slot; tap(); pickSlot = -1; if (!sc('slotType', act.slot)) busy.actions += 1; stats.refund = (stats.refund ?? 0) + Math.max(0, sc('batt') - bp);
       if (act.why.startsWith('repair ')) pickedFor = { slot: act.slot, toy: t, at: frames };
       if (act.why === 'clear runway for jet') pickedFor = { slot: act.slot, toy: JET, at: frames };
     }
   }
   for (let i = 0; i < 5; i += 1) { endLife(lives[i]); lives[i] = null; }
+  if (busy.kind) { busy[busy.kind] += frames - busy.f0; if (busy.kind === 'idle') busy.run += frames - busy.f0; }
+  if (busy.run) { busy.idleMax = Math.max(busy.idleMax, busy.run); if (busy.run >= 600) busy.idle10 += 1; if (busy.run >= 1200) busy.idle20 += 1; }
   const score = Number([0, 1, 2].map((i) => sc('score', i).toString(16).padStart(2, '0')).join(''));
   const final = { enemies: enemies().map((e) => `${ENAME[e.type]}@L${e.lane}x${e.x}hp${e.hp}st${e.st.toString(16)}`), slots: slots().map((q) => `${TOYNAME[q.type]}${q.type ? q.hp : ''}`), spawnLeft: sc('spawnLeft'), spawnTimer: sc('spawnTimer'), packLeft: sc('packLeft'), bossLeft: sc('bossLeft'), batt: sc('batt') };
   return { strategy, seedFrames, final, wave: sc('wave'), seconds: Math.round(frames / 60), frames, score, over: sc('state') === 2, lids: sc('lids'), mistimed, mistimedAt, mistimedAll: mistimedAll.slice(0, 200), jetFrames, stats: { ...stats, longestWave: Math.max(0, ...Object.values(stats.waveFrames), frames - waveStart) }, scViolations: m.bus.scViolations, anomalies, events: events.filter((e) => /LID|GAME OVER|burst/.test(e)) };

@@ -621,6 +621,34 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a boost mends a teddy (5), has none for a jack, and gives a shooter a power shot now (army man 5: 4 damage, not 1)', mended && jack && armed && power && g.sc('eHP', 0) === 5 && g.sc('slotCool', 3) < 0x80, `mended ${mended}, jack ${jack}, armed ${armed}, power ${power} after ${f} frames, dino ${g.sc('eHP', 0)}`);
 }
 {
+  // a boost that would do nothing is refused, free: a teddy at full health, a shooter already charged
+  const g = quietGame();
+  g.set('wave', 9); g.set('unlock', 6); g.set('toy', 1); g.set('batt', 50);
+  slot(g, 3, 2, 40); g.set('cursor', 3); g.press();
+  const fullTeddy = g.sc('batt') === 50;
+  slot(g, 3, 3, 12); g.press(); const once = g.sc('batt') === 40 && g.sc('slotCool', 3) === 0x80;
+  g.press(); const twice = g.sc('batt') === 40;
+  check('no charge for mending a full teddy or boosting a toy whose power shot is still to come', fullTeddy && once && twice, `full teddy ${fullTeddy}, first ${once}, second ${twice}`);
+}
+{
+  // a cannon's power shot doubles its splash too (6, not 3)
+  const g = quietGame();
+  g.set('wave', 9); g.set('unlock', 6);
+  slot(g, 3, 5, 10); g.set('slotCool', 0x80, 3); // a charged cannon, middle shelf
+  enemy(g, 0, 1, 120, 1, 20); enemy(g, 1, 1, 126, 1, 20); // two dinos close together
+  let f = 0;
+  while (g.sc('eHP', 1) === 20 && f < 400) { g.run(1); f += 1; }
+  check("a cannon's power shot: 6 on the monster hit and 6 splashed on its neighbour", g.sc('eHP', 0) === 14 && g.sc('eHP', 1) === 14, `${g.sc('eHP', 0)} and ${g.sc('eHP', 1)} after ${f} frames`);
+}
+{
+  // on a toy, the cursor's blink shows what fire would do: the shovel or the jet when chosen, else nothing (a boost)
+  const g = quietGame();
+  g.set('unlock', 6); slot(g, 4, 2, 40); g.set('cursor', 4);
+  const blinkOf = (toy) => { g.set('toy', toy); const seen = new Set(); for (let k = 0; k < 40; k += 1) { g.run(1); seen.add(sceneFromRam(g).slots[4]); } return [...seen].map(String).sort().join('/'); };
+  const army = blinkOf(1), shovel = blinkOf(7), jet = blinkOf(6);
+  check('on a toy the cursor blinks it off (boost), to the shovel (dig up) or to the jet (launch)', army === 'null/teddy' && shovel === 'shovel/teddy' && jet === 'jet/teddy', `${army}; ${shovel}; ${jet}`);
+}
+{
   // the health pips: the toy under the cursor's health in thirds, on the status line's right end
   const g = quietGame();
   slot(g, 4, 2, 40); // teddy, middle shelf, column 1

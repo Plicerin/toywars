@@ -529,10 +529,10 @@ PrevToy:
     SOUND SND_SELECT
     rts
 
-; Act: on the cursor's slot, place the chosen toy (if there are batteries
-; for it, and no monster stands there) or pick up the toy there (half its
-; cost back). A jet takes off from any slot of the shelf, full or not: with
-; the jet chosen, fire never picks a toy up.
+; Act: on the cursor's slot, place the chosen toy on an empty slot (if
+; there are batteries for it, and no monster stands there); on a toy, boost
+; it (Boost), or with the shovel chosen dig it up (half its cost back). A jet
+; takes off from any slot of the shelf, full or not.
 Act:
     SUBROUTINE
     ldx R_cursor
@@ -605,6 +605,16 @@ Boost:
     lda BoostCost,y
     beq .cant                   ; (the jack has none)
     sta lt0
+    cpy #TOY_TEDDY
+    bne .shooter
+    lda R_slotHP,x
+    cmp ToyHP,y
+    bcs .cant                   ; (a teddy at full health: nothing to mend)
+    bcc .afford
+.shooter:
+    lda R_slotCool,x
+    bmi .cant                   ; (its power shot is still to come)
+.afford:
     lda R_batt
     cmp lt0
     bcc .cant
@@ -1575,7 +1585,13 @@ ShotHit:
     bne .direct                 ; (one burst at a time)
     lda R_eX,y
     sta W_splashX
-    stx W_splashL
+    lda R_shotDmg,x             ; (a power shot's burst: bit 7, the splash doubles too)
+    cmp #2*CANNON_DMG
+    txa
+    bcc .plainBurst
+    ora #$80
+.plainBurst:
+    sta W_splashL
     tya
     asl
     asl
@@ -1633,8 +1649,9 @@ Splash:
     beq .done                   ; (it took its hit already)
     lda R_eType,x
     beq .done
-    lda R_eLane,x
-    cmp R_splashL
+    lda R_splashL
+    and #$7F                    ; (bit 7: a power shot's burst)
+    cmp R_eLane,x
     bne .done                   ; (a flying jet's shelf is 4-6)
     lda lt0
     and #8
@@ -1652,6 +1669,10 @@ Splash:
     cmp #SPLASH+1
     bcs .done
     lda #CANNON_DMG
+    bit R_splashL
+    bpl .splashHit
+    asl                         ; a power shot's burst: twice
+.splashHit:
     jmp Damage
 .jack:
     cmp #JACK_REACH+1
@@ -1695,7 +1716,8 @@ Flash:                          ; shelves flash white after a lid slam or air st
 
 ; SlotPointers: the kernel's defender pointers, one shelf per frame plus the
 ; cursor's slot. The cursor's slot shows the chosen toy as a blinking ghost
-; when empty, or blinks its toy.
+; when empty, or blinks its toy: off (fire boosts it), or to the shovel or
+; the jet when one is chosen (fire digs it up, or launches a jet).
 SlotPointers:
     SUBROUTINE
     ldx R_cursor
@@ -1728,7 +1750,11 @@ SlotPointer:                    ; slot X
     lda frame
     and #24
     bne .show
+    lda R_toy                   ; blinking: the shovel or the jet when chosen
+    cmp #TOY_JET                ; (what fire would do: dig it up, launch a
+    bcs .what                   ; jet), else nothing (fire boosts it)
     lda #0
+.what:
     sta lt0
 .show:
     ldy lt0

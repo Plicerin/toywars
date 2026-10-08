@@ -86,8 +86,14 @@ shovel) gives half its cost back. Boosts *(2026-10-07: strong layouts sat at
 99 batteries a third of the game, the one chore replacing the front teddy)*:
 fire on a toy with any toy but the shovel chosen spends batteries on it
 (BoostCost): a teddy mended to full (5); an army man (5), tank or cannon (10)
-fires a power shot as soon as it has a target (BoostDmg: 4, 16, 6; bit 7 of
-its slotCool, no RAM); the jack has none. A toy can't go down where a monster stands (the balloon
+fires a power shot as soon as it has a target and its shelf's shot is free
+(BoostDmg: 4, 16, 6; bit 7 of its slotCool, no RAM; a cannon's burst carries
+bit 7 of splashL, so its splash is 6 too); the jack has none. A boost that
+would do nothing (the shooter's power shot still to come, a teddy at full
+health) buzzes and costs nothing. On a toy, the cursor's blink shows what
+fire does: off (a boost), or the shovel or the jet when chosen *(after the
+eighth playtest: a cannon's power splash stayed 3; a second boost charged
+again for nothing; nothing showed which toy was chosen)*. A toy can't go down where a monster stands (the balloon
 clown floats over toys, so it doesn't count).
 
 Drawing note: the jet flying along its shelf is a moving object, drawn by
@@ -246,7 +252,8 @@ the melody, at volume 3, and only when no sound effect has channel 0.
 - **Enemies**: at most 5 on screen (event queue); enemies that share lines
   take turns (flicker). The longest any enemy goes undrawn is 6 frames.
 - **Toys**: all green (one color for player 0's three copies), 8 px wide;
-  six toy sprites (plus a second frame each where they animate).
+  six toy sprites and the shovel, packed by height in one page (gen.mjs
+  checks every sprite in every slot); no room for more.
 - **RAM** *(as built, 2026-10-05)*: the console's 128 bytes hold the
   kernel's pointers, the event queue and scratch (106 used; the deepest
   stack outside the kernel leaves about 9 bytes spare). Game state lives in

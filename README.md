@@ -21,7 +21,8 @@ place toys in the nine slots (three per shelf) to stop them.
 - **Fire / Space:** place that toy on an empty slot (it costs batteries). On a
   toy, fire boosts it: a teddy is mended to full, an army man, tank or cannon
   fires a power shot (5, 5, 10, 10 batteries). With the shovel chosen (last in
-  the toy list), fire digs the toy up instead (half its cost back). With the
+  the toy list), fire digs the toy up instead (half its cost back); the toy
+  under the cursor blinks to the shovel (or the jet) to show it. With the
   jet chosen, fire launches it
   from any slot, full or not.
 - **Hold fire + left/right:** choose a different toy.
@@ -49,7 +50,7 @@ repeat, faster.
 
 ## Status
 
-Playable: placing toys, batteries, the six toys, all eight monsters, waves
+Playable: placing toys, batteries, the six toys and the shovel, boosts, all eight monsters, waves
 with unlocks and boss waves, lid slams, game over, sound effects (TIA: your
 actions and the jingles on one channel, the fighting on the other), music (a
 toy march: melody and bass before a game, the melody softly during play),
