@@ -370,12 +370,20 @@ Cursor:
     bpl .noPress
     lda #1
     sta W_fireState
+    lda lt1                     ; left or right already down as fire goes down
+    and #$0C                    ; (pressed a frame early, or on a shelf's end
+    beq .noPress                ; slot, where it doesn't move the cursor): a
+    and #$08                    ; toy change too, never a boost on release
+    bne .next
+    jsr PrevToy
+    jmp .changed
 .noPress:
     lda lt1
     bpl .notHeld
     lda lt2
     and #$08
     beq .noNext
+.next:
     jsr NextToy
     jmp .changed
 .noNext:
@@ -386,6 +394,8 @@ Cursor:
 .changed:
     lda #2
     sta W_fireState
+    lda #0                      ; (and no cursor step for the direction: a
+    sta W_repeat                ; pending one is cancelled, a held one waits)
 .heldDone:
     rts
 .notHeld:
@@ -399,9 +409,20 @@ Cursor:
     lda #0
     sta W_fireState
 .move:
+    ; a new direction waits 3 frames before the cursor steps (W_repeat: bit 7,
+    ; the frames left in bits 4-6, the direction in bits 0-3), so fire pressed
+    ; with it, in either order, chooses a toy instead; released sooner, it
+    ; steps then. Held, it repeats 18 frames after the press, then every 6.
     lda lt1
     and #$0F
     bne .dir
+    lda R_repeat
+    bpl .idle
+    and #$0F                    ; a tap released while waiting: step now
+    ldx #0
+    stx W_repeat
+    jmp .step
+.idle:
     lda #0
     sta W_repeat
     rts
@@ -409,12 +430,23 @@ Cursor:
     lda lt2
     and #$0F
     beq .held
-    lda #18                     ; first repeat after 18 frames
+    ora #$B0                    ; waiting, 3 frames, this direction
     sta W_repeat
-    lda lt2
-    jmp .step
+    rts
 .held:
     lda R_repeat
+    beq .done                   ; (held through a toy change: no steps)
+    bpl .again
+    sec
+    sbc #$10
+    sta W_repeat
+    and #$70
+    bne .done
+    lda #15                     ; the wait is over: step; the first repeat
+    sta W_repeat                ; 15 frames on (18 from the press)
+    lda lt1
+    jmp .step
+.again:
     sec
     sbc #1
     sta W_repeat

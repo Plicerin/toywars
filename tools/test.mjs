@@ -588,6 +588,20 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   check('a knight\'s shield holds after one hit (it breaks only at 2 health or less)', g.sc('eHP', 0) === 5 && (g.sc('eState', 0) & 0x40) === 0, `health ${g.sc('eHP', 0)}, shield ${(g.sc('eState', 0) & 0x40) ? 'broken' : 'whole'}`);
 }
 {
+  // a toy change pressed with the direction first (or on a shelf's end slot, where the cursor
+  // can't move) still changes the toy: the release must not boost the toy under the cursor
+  const g = quietGame();
+  g.set('unlock', 5); g.set('batt', 50); g.set('toy', 1);
+  slot(g, 5, 2, 12); g.set('cursor', 5); g.run(3); // a chewed teddy on the middle shelf's end slot
+  g.run(3, { stick: RIGHT }); g.run(8, { stick: RIGHT, fire: true }); g.run(3, { stick: RIGHT }); g.run(3);
+  check("right held, then fire, on a shelf's end slot: the toy changes, no boost", g.sc('toy') === 2 && g.sc('batt') === 50 && g.sc('slotHP', 5) === 12, `toy ${g.sc('toy')}, batteries ${g.sc('batt')}, teddy ${g.sc('slotHP', 5)}`);
+  slot(g, 4, 2, 12); g.set('cursor', 4); g.set('toy', 1); g.run(3); // a chewed teddy mid-shelf
+  g.run(2, { stick: RIGHT }); g.run(8, { stick: RIGHT, fire: true }); g.run(3);
+  const stayed = g.sc('cursor') === 4 && g.sc('toy') === 2 && g.sc('slotHP', 4) === 12 && g.sc('batt') === 50;
+  g.run(1, { stick: RIGHT }); g.run(3);
+  check('right 2 frames before fire, mid-shelf: the cursor waits, the toy changes, no boost; a 1-frame tap still steps', stayed && g.sc('cursor') === 5, `stayed ${stayed}, cursor after a tap ${g.sc('cursor')}`);
+}
+{
   // boosts: fire on a toy with any toy but the shovel chosen
   const g = quietGame();
   g.set('wave', 9); g.set('unlock', 6); g.set('toy', 1); g.set('batt', 50);

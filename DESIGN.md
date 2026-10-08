@@ -151,7 +151,12 @@ record gains one byte (the page).
 ## Controls
 
 - Joystick moves a cursor over the 9 slots; the slot shows a flashing ghost
-  of the toy about to be placed.
+  of the toy about to be placed. A new direction waits 3 frames before the
+  cursor steps (a tap released sooner steps then; held, it repeats 18 frames
+  after the press, then every 6), so fire + left/right chooses a toy in
+  either order *(2026-10-07: with the direction a frame first, the cursor
+  stepped and the release boosted the toy there; on a shelf's end slot,
+  the toy under the cursor)*.
 - Hold fire + left/right cycles the toy; fire on an empty slot places it
   (costs batteries; not on a monster standing there, which could hold it out
   of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot boosts the toy, or with the shovel chosen (after
