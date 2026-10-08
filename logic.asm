@@ -11,6 +11,7 @@ TOY_TANK    = 3
 TOY_JACK    = 4
 TOY_CANNON  = 5
 TOY_JET     = 6
+TOY_SHOVEL  = 7               ; (not a toy: chosen, fire on a toy picks it up)
 EN_DINO     = 1
 EN_HELI     = 2
 EN_CRAWL    = 3
@@ -61,6 +62,7 @@ SND_KILL    = 12
 SND_CHEW    = 13
 SND_SLAM    = 14
 SND_JET     = 15
+SND_BOOST   = 16
 
     MAC SOUND                   ; play sound {1} (keeps X and Y)
     lda #{1}
@@ -459,14 +461,19 @@ Cursor:
 .done:
     rts
 
-NextToy:
+NextToy:                        ; the unlocked toys, then the shovel
     SUBROUTINE
     lda R_toy
+    cmp #TOY_SHOVEL
+    beq .first
     clc
     adc #1
     cmp R_unlock
     beq .ok
     bcc .ok
+    lda #TOY_SHOVEL
+    bne .ok
+.first:
     lda #1
 .ok:
     sta W_toy
@@ -476,9 +483,14 @@ NextToy:
 PrevToy:
     SUBROUTINE
     lda R_toy
+    cmp #TOY_SHOVEL
+    beq .last
     sec
     sbc #1
     bne .ok
+    lda #TOY_SHOVEL
+    bne .ok
+.last:
     lda R_unlock
 .ok:
     sta W_toy
@@ -492,11 +504,19 @@ PrevToy:
 Act:
     SUBROUTINE
     ldx R_cursor
-    lda R_toy
-    cmp #TOY_JET
+    ldy R_toy
+    cpy #TOY_JET
     beq .place
     lda R_slotType,x
-    beq .place
+    beq .empty
+    cpy #TOY_SHOVEL
+    beq .pick
+    jmp Boost                   ; fire on a toy, any toy but the shovel chosen
+.empty:
+    cpy #TOY_SHOVEL
+    beq .cant                   ; (nothing to dig up)
+    bne .place
+.pick:
     tay
     lda ToyCost,y
     lsr
@@ -530,7 +550,9 @@ Act:
     lda #1                      ; (a busy frame: the spawner waits a frame)
     sta KILLED
     cpy #TOY_JET
-    beq JetStrike
+    bne .stand
+    jmp JetStrike
+.stand:
     tya
     sta W_slotType,x
     lda ToyHP,y
@@ -538,6 +560,36 @@ Act:
     lda #5                      ; first action after 30 frames
     sta W_slotCool,x
     SOUND SND_PLACE
+    rts
+.cant:
+    SOUND SND_NOBATT
+    rts
+
+; Boost (X = slot, A = its toy): a shooter's next shot a power shot, ready
+; now (ToyAct), or the teddy mended to full, for BoostCost batteries
+Boost:
+    SUBROUTINE
+    tay
+    lda BoostCost,y
+    beq .cant                   ; (the jack has none)
+    sta lt0
+    lda R_batt
+    cmp lt0
+    bcc .cant
+    sbc lt0
+    jsr SetBatt
+    cpy #TOY_TEDDY
+    bne .power
+    lda ToyHP,y
+    sta W_slotHP,x
+    bne .boosted
+.power:
+    lda #$80
+    sta W_slotCool,x
+.boosted:
+    lda #1                      ; (a busy frame: the spawner waits a frame)
+    sta KILLED
+    SOUND SND_BOOST
     rts
 .cant:
     SOUND SND_NOBATT
@@ -1346,6 +1398,7 @@ ToyAct:                         ; slot X (kept)
 .acts:
     sta lt5
     lda R_slotCool,x
+    and #$7F                    ; (bit 7: a boost's power shot, with a count of 0)
     beq .ready
     sec
     sbc #1
@@ -1363,7 +1416,13 @@ ToyAct:                         ; slot X (kept)
     lda R_shotDmg,y
     bne .next
     ldy lt5
+    lda R_slotCool,x
+    bpl .plain
+    lda BoostDmg,y              ; a boost's power shot
+    bne .dmg
+.plain:
     lda ToyDmg,y
+.dmg:
     ldy lt1
     sta W_shotDmg,y
     ldy lt5
@@ -1749,8 +1808,9 @@ SndStart:   .byte SdCursor-SndData, SdSelect-SndData, SdPlace-SndData, SdPick-Sn
             .byte SdNoBatt-SndData, SdWave-SndData, SdOver-SndData, SdPop-SndData
             .byte SdBoom-SndData, SdThump-SndData, SdSpring-SndData, SdHit-SndData
             .byte SdKill-SndData, SdChew-SndData, SdSlam-SndData, SdJet-SndData
-SndChan:    .byte 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1
-SndPri:     .byte 1, 2, 3, 3, 3, 4, 5, 1, 3, 3, 2, 2, 3, 1, 5, 5
+            .byte SdBoost-SndData
+SndChan:    .byte 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0
+SndPri:     .byte 1, 2, 3, 3, 3, 4, 5, 1, 3, 3, 2, 2, 3, 1, 5, 5, 3
 ToySound:   .byte 0, SND_POP, 0, SND_BOOM, 0, SND_THUMP, 0
 
 ;-------------------------------------------------------------------------------
@@ -1759,6 +1819,11 @@ ToyCost:    .byte 0, 10, 5, 25, 15, 20, 30
 ToyHP:      .byte 0, 8, 40, 12, 8, 10, 1         ; (the jack's 8 is never bitten: walkers spring it or wait)
 ToyPeriod:  .byte 0, 7, 0, 50, 0, 33, 0         ; visits (6 frames) between shots
 ToyDmg:     .byte 0, 1, 0, 8, 0, CANNON_DMG, 0
+; boosts (fire on a toy with any toy but the shovel chosen): the cost, and a
+; shooter's power shot (its next, as soon as it has a target); the teddy is
+; mended to full; the jack (0) has none
+BoostCost:  .byte 0, 5, 5, 10, 0, 10, 0
+BoostDmg:   .byte 0, 4, 0, 16, 0, 2*CANNON_DMG, 0
 ; enemy kinds:        -  dino heli crawl mouse knight balloon pogo trex
 EnHP:       .byte 0,   6,   5,   3,    1,    6,     2,     3,  20
 EnReward:   .byte 0,   2,   2,   1,    1,    2,     2,     2,   5   ; batteries

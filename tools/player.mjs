@@ -74,10 +74,11 @@ import { Machine } from './atari/machine.mjs';
 const SYM = Object.fromEntries(readFileSync(process.env.SYM ?? 'tools/build/toywars.sym', 'latin1').split(/\r?\n/).map((l) => /^(\S+)\s+([0-9a-f]{4})/i.exec(l)).filter(Boolean).map((x) => [x[1], parseInt(x[2], 16)]));
 const ROM = readFileSync(process.env.ROM ?? 'toywars.bin'); // (ROM=path: a variant cartridge, same symbols)
 
-const ARMY = 1, TEDDY = 2, TANK = 3, JACK = 4, CANNON = 5, JET = 6;
+const ARMY = 1, TEDDY = 2, TANK = 3, JACK = 4, CANNON = 5, JET = 6, SHOVEL = 7;
+const BOOST_COST = [0, 5, 5, 10, 0, 10, 0]; // (logic.asm BoostCost: shooters' power shot, the teddy mended)
 const COST = [0, 10, 5, 25, 15, 20, 30];
 const TOYHP = [0, 8, 40, 12, 8, 10, 1];
-const TOYNAME = ['-', 'army', 'teddy', 'tank', 'jack', 'cannon', 'jet'];
+const TOYNAME = ['-', 'army', 'teddy', 'tank', 'jack', 'cannon', 'jet', 'shovel'];
 const DINO = 1, HELI = 2, CRAWL = 3, MOUSE = 4, KNIGHT = 5, BALLOON = 6, POGO = 7, TREX = 8, EJET = 9;
 const ENAME = ['-', 'dino', 'heli', 'crawler', 'mouse', 'knight', 'balloon', 'pogo', 'trex', 'jet'];
 const COLX = [48, 80, 112];
@@ -138,7 +139,7 @@ function profileFrame(m, at) {
 export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 216000, opts = {}, log = false } = {}) {
   // legacy: the old player (repairs by picking up a chewed toy and dropping a
   // fresh one on the monster; the game now refuses that drop)
-  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, ...opts };
+  const o = { jetChew: 6, lap2: strategy === 'cannon' ? 'cannon2' : null, jetReserve: false, repairAt: 24, upgrade: true, jetX: 90, trexJetX: 110, jackTrap: true, jackSwap: true, bossPrep: true, trexGap: 40, overflow: 90, overflowHp: 12, repairShooters: false, shooterRepairAt: 2, legacy: false, salvage: true, cover: true, balloonFree: true, bossSave: 0, bossSaveLap1: false, trexSalvage: true, lap2At: 13, balloonRunway: false, runway: false, boost: true, boostAt: 40, boostReach: 60, mendHp: 12, mendAt: 25, ...opts };
   if (o.legacy) { if (!('repairShooters' in opts)) o.repairShooters = true; if (!('repairAt' in opts)) o.repairAt = 12; if (!('salvage' in opts)) o.salvage = false; if (!('cover' in opts)) o.cover = false; }
   const strat = STRATEGIES[strategy];
   const m = new Machine(ROM);
@@ -495,8 +496,8 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     run(bits); run();
   };
   const selectToy = (toy) => { // hold fire, flick left/right, release
-    const n = sc('unlock');
-    const fwd = (toy - sc('toy') + n) % n;
+    const n = sc('unlock') + 1, pos = (t) => (t === SHOVEL ? n - 1 : t - 1); // (the unlocked toys, then the shovel)
+    const fwd = (pos(toy) - pos(sc('toy')) + n) % n;
     const dir = fwd <= n - fwd ? RIGHT : LEFT;
     run(0, true);
     let guard = 0;
@@ -631,6 +632,13 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
           if (front.some((e) => e.type === TREX && e.x >= COLX[c] - 2 && e.x <= COLX[c] + o.trexGap)) continue;
           const colW = c === 2 ? 30 : c === 1 ? 26 : 22;
           add(colW + pressure[L] * 2 + (want === TEDDY ? 10 : 0), s, 'place', want, `layout ${TOYNAME[want]}`);
+        } else if (o.boost && sl[s].type === TEDDY && sl[s].hp < o.mendHp && batt >= o.mendAt) {
+          // mend it where it stands (a boost), chewer or not
+          add(60 + pressure[L], s, 'boost', 0, 'mend teddy');
+        } else if (o.boost && (sl[s].type === ARMY || sl[s].type === TANK || sl[s].type === CANNON) && batt >= o.boostAt && sc('slotCool', s) < 0x80
+          && front.some((e) => e.type !== EJET && e.x > COLX[c] && e.x - COLX[c] <= o.boostReach && (sl[s].type !== TANK || e.type !== BALLOON))) {
+          // spare batteries: a power shot at what's coming
+          add(45 + pressure[L], s, 'boost', 0, `power ${TOYNAME[sl[s].type]}`);
         } else if (sl[s].type === TEDDY && want === TEDDY && sl[s].hp < o.repairAt && batt >= 6 && !standing(en, s)) {
           // (only between chewers: with one on it the fresh teddy would be refused)
           add(60 + pressure[L], s, 'pick', 0, 'repair teddy');
@@ -699,6 +707,7 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     const bossKeep = o.bossSave && (sc('wave') >= 13 || o.bossSaveLap1) && u >= JET && trexAhead ? o.bossSave : 0;
     for (const c of cands) {
       if (c.op === 'pick') return c;
+      if (c.op === 'boost') { if (batt >= BOOST_COST[sl[c.slot].type]) return c; continue; }
       if (c.toy !== JET && c.toy !== JACK && doomed(c.slot)) continue; // (a jack springs on a T-Rex: that's its job)
       const reserve = Math.max((u >= JET && o.jetReserve && c.toy !== JET && c.score < 150 && !(c.toy === TEDDY && c.score >= 40)) ? COST[JET] : 0, c.toy !== JET && c.toy !== TEDDY && c.score < 150 ? bossKeep : 0);
       if (batt >= COST[c.toy] + reserve) return c;
@@ -766,10 +775,17 @@ export function playGame({ seedFrames = 0, strategy = 'cannon', maxFrames = 2160
     } else {
       const t = sc('slotType', act.slot);
       if (!t) { run(); continue; }
-      let pre = act.why.startsWith('repair ') && !act.why.startsWith('salvage') ? t : act.why === 'clear runway for jet' ? JET : 0;
-      // (with the jet chosen, fire launches a jet from any slot instead of picking up: choose another toy first)
-      if (pre === JET || (!pre && sc('toy') === JET)) pre = t;
-      if (pre && sc('toy') !== pre) { selectToy(pre); continue; }
+      if (act.op === 'boost') {
+        // any toy but the shovel or the jet chosen: fire boosts the toy there
+        if (sc('toy') === SHOVEL || sc('toy') === JET) { selectToy(ARMY); continue; }
+        const bb = sc('batt');
+        if (log) console.log(`f${frames} boost ${TOYNAME[t]} at ${act.slot} (${act.why})`);
+        tap();
+        if (sc('batt') < bb) { stats.boosts = stats.boosts ?? {}; stats.boosts[act.why] = (stats.boosts[act.why] ?? 0) + 1; stats.spent.boost = (stats.spent.boost ?? 0) + bb - sc('batt'); }
+        continue;
+      }
+      // (fire on a toy boosts it unless the shovel is chosen)
+      if (sc('toy') !== SHOVEL) { selectToy(SHOVEL); continue; }
       if (log) console.log(`f${frames} pick ${TOYNAME[t]} at ${act.slot} (${act.why})`);
       const bp = sc('batt'); pickSlot = act.slot; tap(); pickSlot = -1; stats.refund = (stats.refund ?? 0) + Math.max(0, sc('batt') - bp);
       if (act.why.startsWith('repair ')) pickedFor = { slot: act.slot, toy: t, at: frames };

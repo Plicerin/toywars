@@ -51,6 +51,8 @@ export const DEFENDERS = {
   jet: bits([ // seen from above, nose to the right: swept wings, tail fins
     '...#....', '#..##...', '##.###..', '.#######', '.#######', '##.###..', '#..##...', '...#....']),
 };
+// the shovel (toy type 7 in the pointer tables only): chosen, fire on a toy picks it up
+DEFENDERS.shovel = bits(['..###...', '...#....', '...#....', '...#....', '.#####..', '.#####..', '.#####..', '..###...', '...#....']); // grip, handle, blade
 export const TOYS = ['army', 'teddy', 'tank', 'jack', 'cannon', 'jet']; // toy type 1-6
 // two walking frames each; the kernel shows frame 2 while (x >> 2) is odd
 export const ENEMIES = {
@@ -224,18 +226,31 @@ export function build() {
   for (let i = 0; i < 160; i += 1) if (i % 16 === 0) out1.push(`    .byte ${colArr.slice(i, i + 16).map((c) => c.replace('COL_RED', 'COL_ORANGE')).join(',')}`);
   out1.push('    ALIGN 256');
 
-  // page C: toys, bottom row first, 29 apart from offset 58 (each needs 18
-  // zeros below it and 6 above within its band); offsets 224-255 stay zero
-  // for empty slots, whose pointer is chosen per slot so its band reads them
+  // page C: toys and the shovel, bottom row first, each a slot's band away
+  // from the next (a slot reads up to 16 rows below its toy's feet and 16
+  // above), from 56 (no pointer wraps below the page); offsets 224-255 stay
+  // zero for empty slots, whose pointer is chosen per slot so its band reads them
   const defPage = Array(256).fill(0);
-  TOYS.forEach((name, k) => {
-    const at = 58 + 29 * k;
+  const sprites = [...TOYS, 'shovel'];
+  let at = 56;
+  for (const name of sprites) {
     [...DEFENDERS[name]].reverse().forEach((v, i) => { defPage[at + i] = v; });
     layout.defenders[name] = at;
-  });
-  if (58 + 29 * 5 + DH + 6 > 224) throw new Error('defender page overflow');
+    at += DEFENDERS[name].length + 16;
+  }
+  // every sprite in every slot: its band reads only it and zeros, never across the page
+  const bandSwaps = [[17, 37, 57], [12, 33, 53], [7, 28, 48]]; // per column: the rows its pointer changes shelves
+  for (let s = 0; s < 9; s += 1) {
+    const L = Math.floor(s / 3), k = s % 3, f = feetRow(L, COLUMN_X[k] + 4), r0 = bandSwaps[k][L], r1 = L < 2 ? bandSwaps[k][L + 1] - 1 : 79;
+    for (const name of sprites) {
+      const a = layout.defenders[name], g = [...DEFENDERS[name]].reverse();
+      if (a + f - 79 < 0 || a + f - r0 > 255) throw new Error(`defender page: ${name} in slot ${s} crosses the page`);
+      for (let row = r0; row <= r1; row += 1) { const o = a + f - row, want = o >= a && o < a + g.length ? g[o - a] : 0; if (defPage[o] !== want) throw new Error(`defender page: ${name} in slot ${s} reads offset ${o}`); }
+    }
+  }
+  if (Math.max(...sprites.map((n) => layout.defenders[n] + DEFENDERS[n].length)) > 224) throw new Error('defender page overflow');
   out1.push('DefPage:', bytes(defPage));
-  for (const name of TOYS) out1.push(`D_${name.toUpperCase()} = DefPage + ${layout.defenders[name]}`);
+  for (const name of [...TOYS, 'shovel']) out1.push(`D_${name.toUpperCase()} = DefPage + ${layout.defenders[name]}`);
 
   // enemies: 80 zeros (the pointer before the first enemy and after the park
   // event reads them), then each frame (bottom-aligned in EH rows) followed by
@@ -295,7 +310,7 @@ export function build() {
   const swaps = [[17, 37, 57], [12, 33, 53], [7, 28, 48]];
   const emptyLo = [0, 1, 2].flatMap((L) => [0, 1, 2].map((k) => { const last = L < 2 ? swaps[k][L + 1] - 1 : 79; return 224 - (79 - last); }));
   const shotStart = [0, 1, 2].flatMap((L) => COLUMN_X.map((x) => 20 * L + 11 + Math.floor((149 - (x + 8)) / 6)));
-  out2.push('ToyLo:', `    .byte 0,${TOYS.map((n) => `<D_${n.toUpperCase()}`).join(',')}`);
+  out2.push('ToyLo:', `    .byte 0,${[...TOYS, 'shovel'].map((n) => `<D_${n.toUpperCase()}`).join(',')}`); // (7: the shovel)
   out2.push('SlotOfs:', bytes(slotF.map((f) => f - 79)), 'EmptyLo:', bytes(emptyLo));
   out2.push('SlotLane:', '    .byte 0,0,0,1,1,1,2,2,2', 'SlotCol:', '    .byte 0,1,2,0,1,2,0,1,2', 'ColX:', `    .byte ${COLUMN_X.join(',')}`);
   out2.push('ShotStart:', bytes(shotStart), 'LaneR0:', '    .byte 11,31,51');

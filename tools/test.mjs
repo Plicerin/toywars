@@ -44,7 +44,7 @@ function pipsOf(g) {
 }
 
 // the scene the kernel will draw next, read from RAM before the frame runs
-const toyAt = Object.fromEntries(TOYS.map((n) => [layout.defenders[n], n]));
+const toyAt = Object.fromEntries(Object.keys(layout.defenders).map((n) => [layout.defenders[n], n])); // (and the shovel's ghost)
 function sceneFromRam(g) {
   const { r, sc } = g;
   const slots = [...Array(9).keys()].map((s) => {
@@ -204,9 +204,12 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   g.frames(2);
   g.press();
   check('fire on an empty slot places the toy and costs its batteries', g.sc('slotType', 3) === 1 && g.sc('batt') === 20, `slot ${g.sc('slotType', 3)}, batteries ${g.sc('batt')}`);
+  g.set('toy', 7); // the shovel
   g.press();
-  check('fire on a toy picks it up for half its cost', g.sc('slotType', 3) === 0 && g.sc('batt') === 25, `batteries ${g.sc('batt')}`);
-  g.set('batt', 5);
+  check('fire on a toy with the shovel chosen picks it up for half its cost', g.sc('slotType', 3) === 0 && g.sc('batt') === 25, `batteries ${g.sc('batt')}`);
+  g.press();
+  check('the shovel on an empty slot does nothing', g.sc('slotType', 3) === 0 && g.sc('batt') === 25);
+  g.set('toy', 1); g.set('batt', 5);
   g.press();
   check('without enough batteries nothing is placed', g.sc('slotType', 3) === 0 && g.sc('batt') === 5);
 }
@@ -226,7 +229,11 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   g.frames(1, { fire: true }); g.frames(1, { fire: true, stick: RIGHT }); g.frames(1, { fire: true }); g.frames(1, { fire: true, stick: RIGHT }); g.frames(1, { fire: true }); g.frames(2);
   check('fire + right cycles through the unlocked toys, and releasing places nothing', g.sc('toy') === 3 && g.sc('slotType', 8) === 0, `toy ${g.sc('toy')}`);
   g.frames(1, { fire: true }); g.frames(1, { fire: true, stick: RIGHT }); g.frames(1, { fire: true }); g.frames(2);
-  check('past the last unlocked toy it wraps to the first', g.sc('toy') === 1);
+  check('past the last unlocked toy comes the shovel', g.sc('toy') === 7, `toy ${g.sc('toy')}`);
+  g.frames(1, { fire: true }); g.frames(1, { fire: true, stick: RIGHT }); g.frames(1, { fire: true }); g.frames(2);
+  check('and past the shovel the first toy', g.sc('toy') === 1);
+  g.frames(1, { fire: true }); g.frames(1, { fire: true, stick: LEFT }); g.frames(1, { fire: true }); g.frames(2);
+  check('left from the first toy goes back to the shovel', g.sc('toy') === 7);
 }
 {
   const g = quietGame();
@@ -469,7 +476,7 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   const g = boot();
   g.press(); g.frames(2);
   for (let i = 0; i < 5; i += 1) { g.set('eType', 0, i); g.set('eLane', 0xff, i); }
-  slot(g, 3, 2, 40); g.set('toy', 1); g.set('spawnTimer', 200); // a teddy under the cursor (slot 3)
+  slot(g, 3, 2, 40); g.set('toy', 7); g.set('spawnTimer', 200); // a teddy under the cursor (slot 3), the shovel chosen
   g.frames(1, { fire: true });
   if ((g.r('frame') + 1) & 1) g.frames(1, { fire: true });
   g.set('spawnLeft', 5); g.set('spawnTimer', 0);
@@ -579,6 +586,25 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
   let f = 0;
   while (g.sc('eHP', 0) === 6 && f < 600) { g.run(1); f += 1; }
   check('a knight\'s shield holds after one hit (it breaks only at 2 health or less)', g.sc('eHP', 0) === 5 && (g.sc('eState', 0) & 0x40) === 0, `health ${g.sc('eHP', 0)}, shield ${(g.sc('eState', 0) & 0x40) ? 'broken' : 'whole'}`);
+}
+{
+  // boosts: fire on a toy with any toy but the shovel chosen
+  const g = quietGame();
+  g.set('wave', 9); g.set('unlock', 6); g.set('toy', 1); g.set('batt', 50);
+  slot(g, 3, 2, 12); g.set('cursor', 3); // a chewed teddy
+  g.press();
+  const mended = g.sc('slotHP', 3) === 40 && g.sc('batt') === 45 && g.sc('slotType', 3) === 2;
+  slot(g, 3, 4, 8); g.press(); // a jack: no boost
+  const jack = g.sc('batt') === 45 && g.sc('slotType', 3) === 4;
+  slot(g, 3, 1, 8); g.set('slotCool', 30, 3); // an army man, reloading
+  g.press();
+  const armed = g.sc('slotCool', 3) === 0x80 && g.sc('batt') === 40;
+  enemy(g, 0, 1, 120, 1, 9); // a dino down the shelf
+  let f = 0;
+  while (!g.sc('shotDmg', 1) && f < 60) { g.run(1); f += 1; }
+  const power = g.sc('shotDmg', 1) === 4;
+  while (g.sc('shotDmg', 1) && f < 200) { g.run(1); f += 1; }
+  check('a boost mends a teddy (5), has none for a jack, and gives a shooter a power shot now (army man 5: 4 damage, not 1)', mended && jack && armed && power && g.sc('eHP', 0) === 5 && g.sc('slotCool', 3) < 0x80, `mended ${mended}, jack ${jack}, armed ${armed}, power ${power} after ${f} frames, dino ${g.sc('eHP', 0)}`);
 }
 {
   // the health pips: the toy under the cursor's health in thirds, on the status line's right end
@@ -776,9 +802,9 @@ const score = (g) => parseInt([0, 1, 2].map((i) => g.sc('score', i).toString(16)
     let f = 0;
     while (g.sc('eType', 0) && f < 300) { g.run(1); f += 1; }
     const killed = score(g) - s1; // 10 points for the dino + 2 for its batteries
-    slot(g, 3, 1, 8); g.set('batt', 99); g.set('cursor', 3);
+    slot(g, 3, 1, 8); g.set('batt', 99); g.set('cursor', 3); g.set('toy', 7);
     const s2 = score(g);
-    g.press(); // pick the army man up: half its cost back, but at the cap
+    g.press(); // dig the army man up: half its cost back, but at the cap
     check('batteries over the cap become points: 1 from the trickle, 2 from a dino\'s reward; a pick-up\'s refund doesn\'t count', trickled === 1 && killed === 12 && score(g) === s2 && g.sc('batt') === 99, `trickle +${trickled}, kill +${killed}, pick-up +${score(g) - s2}`);
   }
   // balloon clowns keep their first-lap pace in the second lap

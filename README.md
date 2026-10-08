@@ -18,8 +18,11 @@ place toys in the nine slots (three per shelf) to stop them.
 - **Joystick / arrow keys:** move the cursor over the slots. An empty slot
   shows a blinking ghost of the toy you're about to place; on a toy, three
   pips at the right end of the status line show its health in thirds.
-- **Fire / Space:** place that toy (it costs batteries), or pick up the toy
-  under the cursor (half its cost back). With the jet chosen, fire launches it
+- **Fire / Space:** place that toy on an empty slot (it costs batteries). On a
+  toy, fire boosts it: a teddy is mended to full, an army man, tank or cannon
+  fires a power shot (5, 5, 10, 10 batteries). With the shovel chosen (last in
+  the toy list), fire digs the toy up instead (half its cost back). With the
+  jet chosen, fire launches it
   from any slot, full or not.
 - **Hold fire + left/right:** choose a different toy.
 - **Game Reset / Enter:** new game. Fire also starts one.

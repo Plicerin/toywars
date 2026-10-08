@@ -235,6 +235,12 @@ SdJet:      STEP 2, 8, 12, 4
             STEP 3, 8, 8, 24
             STEP 4, 8, 5, 28
     .byte 0
+SdBoost:    STEP 1, 4, 8, 22        ; a rising zip
+            STEP 1, 4, 8, 17
+            STEP 1, 4, 8, 13
+            STEP 2, 4, 7, 9
+            STEP 3, 4, 5, 6
+    .byte 0
 SND_END = .
     IF SND_END - SndData > 255
         ERR                     ; positions are one byte

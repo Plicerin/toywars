@@ -81,8 +81,13 @@ has one shot in flight at a time, shared by its toys.
 | Cannon | wave 7 | 20 | 10 | Melon-pult | A cannonball every 3.3 s (198 frames), 3 damage, splashing the same to every other monster on the shelf within 12 pixels of the one hit. Hits balloons and chewing crawlers. | Crowds at a teddy, Crawler, Balloon Clown |
 | Jet | wave 9 | 30 | — | Cherry Bomb | One use: takes off from the toy box end of its shelf and flies it in about a second, hitting every monster on it once for 10 damage. It never stands in the slot, so it can launch where a monster stands. | T-Rex, emergencies |
 
-Placing costs batteries only (no per-toy recharge). Picking a toy up gives
-half its cost back. A toy can't go down where a monster stands (the balloon
+Placing costs batteries only (no per-toy recharge). Digging a toy up (the
+shovel) gives half its cost back. Boosts *(2026-10-07: strong layouts sat at
+99 batteries a third of the game, the one chore replacing the front teddy)*:
+fire on a toy with any toy but the shovel chosen spends batteries on it
+(BoostCost): a teddy mended to full (5); an army man (5), tank or cannon (10)
+fires a power shot as soon as it has a target (BoostDmg: 4, 16, 6; bit 7 of
+its slotCool, no RAM); the jack has none. A toy can't go down where a monster stands (the balloon
 clown floats over toys, so it doesn't count).
 
 Drawing note: the jet flying along its shelf is a moving object, drawn by
@@ -149,8 +154,8 @@ record gains one byte (the page).
   of the toy about to be placed.
 - Hold fire + left/right cycles the toy; fire on an empty slot places it
   (costs batteries; not on a monster standing there, which could hold it out
-  of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot picks it up (the shovel),
-  except with the jet chosen: a jet takes off from any slot, full or not
+  of every shot's reach for good; a jet, which takes off, is fine); fire on an occupied slot boosts the toy, or with the shovel chosen (after
+  the last unlocked toy) digs it up; with the jet chosen a jet takes off from any slot, full or not
   *(2026-10-07: a jet used to need a free slot, so a full shelf couldn't launch
   one without a pick-up first)*.
 - Game Reset starts; Game Select picks game 1/2/3 (start at wave 1/5/9);

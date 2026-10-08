@@ -1,11 +1,12 @@
 {
  "defenders": {
-  "army": 58,
-  "teddy": 87,
-  "tank": 116,
-  "jack": 145,
-  "cannon": 174,
-  "jet": 203
+  "army": 56,
+  "teddy": 83,
+  "tank": 108,
+  "jack": 130,
+  "cannon": 156,
+  "jet": 182,
+  "shovel": 206
  },
  "enemies": {
   "dino": 80,
