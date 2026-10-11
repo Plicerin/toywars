@@ -1,13 +1,15 @@
 // Plays the ROM's TIA sound registers through tiaSound.worklet.js. Browsers
 // only allow audio after a user gesture, so call start() from an input event.
 // update(bus.audio) after each frame; registers the ROM did not write keep
-// their values. setSilent() mutes without losing the register state.
+// their values. setSilent() mutes without losing the register state;
+// setVolume(0-1) sets the output level.
 
 export function createTiaAudio(workletUrl) {
   const regs = { c0: 0, f0: 0, v0: 0, c1: 0, f1: 0, v1: 0 };
   let ctx = null;
   let node = null;
   let silent = false;
+  let gain = null, volume = 1;
 
   const send = () => {
     if (node) node.port.postMessage(silent ? { ...regs, v0: 0, v1: 0 } : regs);
@@ -20,7 +22,10 @@ export function createTiaAudio(workletUrl) {
         ctx = new AudioContext();
         await ctx.audioWorklet.addModule(workletUrl);
         node = new AudioWorkletNode(ctx, 'tia-sound', { outputChannelCount: [2] });
-        node.connect(ctx.destination);
+        gain = ctx.createGain();
+        gain.gain.value = volume;
+        node.connect(gain);
+        gain.connect(ctx.destination);
         send();
       } catch (error) {
         console.warn('TIA sound unavailable:', error);
@@ -32,6 +37,10 @@ export function createTiaAudio(workletUrl) {
         if (regs[key] !== value) { regs[key] = value; changed = true; }
       }
       if (changed) send();
+    },
+    setVolume(value) {
+      volume = Math.max(0, Math.min(1, value));
+      if (gain) gain.gain.value = volume;
     },
     setSilent(value) {
       if (silent !== value) { silent = value; send(); }

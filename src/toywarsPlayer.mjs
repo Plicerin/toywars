@@ -3,7 +3,10 @@
 // focus, a gamepad, touch buttons on phones, Game Reset and Game Select, and
 // the TIA sound worklet. Mount with mountPlayer(root, rom, symbols); root
 // holds the canvas and the [data-*] controls, symbols maps the assembler's
-// labels (tools/build/toywars.sym) to addresses.
+// labels (tools/build/toywars.sym) to addresses. Around the cartridge, the
+// page adds a volume slider, a speed switch (1x, 2x, 4x: more emulated frames
+// per screen refresh) and number keys that choose a toy the way a player
+// would (fire held, flicking right until it comes up).
 import { RomMachine } from './romMachine.mjs';
 import { NTSC_PALETTE_RGB } from './palette.mjs';
 import { createTiaAudio } from './tiaAudio.mjs';
@@ -12,6 +15,9 @@ import { readGamepad, gamepadEdges } from './gamepad.mjs';
 export const FIRST_LINE = 40;    // VBLANK goes off early in frame line 40 and back on early in line 232
 export const VISIBLE_LINES = 192;
 const FRAME_MS = 1000 / 60;
+const SPEEDS = [1, 2, 4];
+const TOY_KEYS = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit0: 7, Digit7: 7, Numpad1: 1, Numpad2: 2, Numpad3: 3, Numpad4: 4, Numpad5: 5, Numpad6: 6, Numpad0: 7, Numpad7: 7 }; // (7: the shovel)
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* no storage: fine */ } } };
 const KEYS = {
   ArrowRight: 'right', KeyD: 'right', ArrowLeft: 'left', KeyA: 'left',
   ArrowDown: 'down', KeyS: 'down', ArrowUp: 'up', KeyW: 'up', Space: 'fire', KeyZ: 'fire',
@@ -25,6 +31,9 @@ export function mountPlayer(root, rom, symbols) {
   const hint = root.querySelector('[data-hint]');
   const muteButton = root.querySelector('[data-mute]');
   const pauseButton = root.querySelector('[data-pause]');
+  const speedButton = root.querySelector('[data-speed]');
+  const volumeSlider = root.querySelector('[data-volume]');
+  const intro = root.querySelector('[data-intro]');
 
   const game = new RomMachine(rom);
   const held = new Set();
@@ -37,13 +46,31 @@ export function mountPlayer(root, rom, symbols) {
 
   let started = false, paused = false, muted = false, resetHold = 0, resetDown = false, selectHold = 0, selectDown = false, difficultyA = false;
   let last = 0, acc = 0, pad = null, lastState = '';
+  let speed = 1, chooser = null; // chooser: a number key's toy change in progress
 
   const setHint = (text) => { if (hint) hint.textContent = text; };
   const silence = () => audio.setSilent(muted || paused || !started);
   const sc = (name) => game.bus.scram[symbols[`W_${name}`] & 0x7f]; // Super Chip RAM
 
+  // a number key: hold fire, flick right until the toy comes up, let go (a change places nothing)
+  function chooseToy(toy) {
+    if (sc('state') !== 1 || (toy !== 7 && toy > sc('unlock')) || sc('toy') === toy) return;
+    chooser = { toy, phase: 'press', frames: 0 };
+  }
+  function chooserInput() {
+    const c = chooser;
+    c.frames += 1;
+    if (sc('state') !== 1 || c.frames > 40) { chooser = null; return null; }
+    if (c.phase === 'press') { c.phase = 'flick'; return { fire: true }; }
+    if (c.phase === 'flick') { c.phase = 'held'; return { fire: true, right: true }; }
+    if (c.phase === 'held') { c.phase = sc('toy') === c.toy ? 'release' : 'flick'; return { fire: true }; }
+    chooser = null; // release: nothing pressed
+    return {};
+  }
+
   function step() {
-    const on = (control) => held.has(control) || !!pad?.[control];
+    const forced = chooser ? chooserInput() : null;
+    const on = (control) => (forced ? !!forced[control] : held.has(control) || !!pad?.[control]);
     let swcha = 0xff;
     if (on('right')) swcha &= ~0x80;
     if (on('left')) swcha &= ~0x40;
@@ -61,7 +88,7 @@ export function mountPlayer(root, rom, symbols) {
     const state = ['waiting', 'playing', 'over'][sc('state')] ?? 'waiting';
     if (started && state !== lastState) {
       if (state === 'waiting') setHint('Game Select (G) picks game 1, 2 or 3 (they start at waves 1, 5 and 9). Fire or Enter starts it. Difficulty A: faster monsters from the start.');
-      else if (state === 'playing') setHint('Joystick or arrows move the cursor over the nine slots. Space places the chosen toy (or picks one up). Hold Space and press left/right to choose another toy. Enter restarts.');
+      else if (state === 'playing') setHint('Arrows move the cursor. Space places the chosen toy, or on a toy boosts it (the shovel digs it up). Hold Space + left/right, or press 1-6 (0: shovel), to choose a toy. The green pips show the health of the toy under the cursor. F changes the speed.');
       else setHint('Game over. Fire starts a new game; Game Select (G) goes back to choosing one.');
     }
     lastState = state;
@@ -93,7 +120,7 @@ export function mountPlayer(root, rom, symbols) {
     if (edges.start) (started ? pressReset() : play());
     if (edges.back && started) togglePause();
     if (!paused && !document.hidden) {
-      acc += dt;
+      acc += dt * speed;
       while (acc >= FRAME_MS) { step(); acc -= FRAME_MS; }
     }
     draw();
@@ -108,6 +135,7 @@ export function mountPlayer(root, rom, symbols) {
   }
 
   async function play() {
+    if (intro && !intro.hidden) { intro.hidden = true; store.set('toywars-intro', 'seen'); }
     started = true;
     lastState = ''; // show the hint for wherever the game is now
     if (poster) poster.hidden = true;
@@ -130,6 +158,23 @@ export function mountPlayer(root, rom, symbols) {
       muteButton.setAttribute('aria-pressed', String(muted));
     }
     silence();
+  }
+
+  function cycleSpeed() {
+    speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    if (speedButton) { speedButton.textContent = `Speed ${speed}×`; speedButton.setAttribute('aria-pressed', String(speed > 1)); }
+  }
+  function setVolume(v) {
+    audio.setVolume(v / 100);
+    if (volumeSlider) volumeSlider.value = String(v);
+    store.set('toywars-volume', String(v));
+  }
+  setVolume(Number(store.get('toywars-volume') ?? 70));
+  volumeSlider?.addEventListener('input', () => setVolume(Number(volumeSlider.value)));
+  speedButton?.addEventListener('click', cycleSpeed);
+  if (intro) {
+    intro.hidden = store.get('toywars-intro') === 'seen';
+    intro.querySelector('[data-intro-go]')?.addEventListener('click', play);
   }
 
   playButton?.addEventListener('click', play);
@@ -157,6 +202,8 @@ export function mountPlayer(root, rom, symbols) {
     if (event.code === 'KeyG') { if (!event.repeat) selectHold = 2; selectDown = true; }
     if (event.code === 'KeyP') togglePause();
     if (event.code === 'KeyM') toggleMute();
+    if (event.code === 'KeyF' && !event.repeat) cycleSpeed();
+    if (TOY_KEYS[event.code] && !event.repeat) { event.preventDefault(); chooseToy(TOY_KEYS[event.code]); }
   });
   canvas.addEventListener('keyup', (event) => {
     const control = KEYS[event.code];
@@ -196,6 +243,8 @@ export function mountPlayer(root, rom, symbols) {
     hold(control, on) { if (on) held.add(control); else held.delete(control); },
     reset: pressReset,
     setDifficulty(a) { difficultyA = a; showDifficulty(); },
+    chooseToy,
+    get speed() { return speed; },
     play,
   };
 }

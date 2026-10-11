@@ -85,6 +85,23 @@
     .touch button { font-size: 20px; color: #eee; background: #2b2520; border: 1px solid #5b4f45; border-radius: 10px; touch-action: none; }
     .jump { width: 96px; height: 96px; border-radius: 50% !important; background: radial-gradient(circle at 40% 35%, #e05a4a, #8e2a22) !important; font: 11px/1 var(--pixel) !important; }
     @media (pointer: coarse) { .touch { display: flex; } }
+    .screen { position: relative; }
+    .intro { position: absolute; inset: 10px; display: flex; align-items: center; justify-content: center; background: rgba(6, 5, 12, 0.93); border-radius: 8px; padding: 14px; overflow: auto; }
+    .intro[hidden] { display: none; }
+    .intro div { max-width: 460px; color: var(--fg); font-size: 14px; line-height: 1.45; }
+    .intro h3 { font: 12px/1.4 var(--pixel); color: var(--gold-hi); margin: 0 0 10px; }
+    .intro ul { margin: 0 0 14px; padding-left: 18px; }
+    .intro li { margin: 4px 0; }
+    .intro kbd, .intro b { color: var(--gold-hi); }
+    .intro button { font: 10px/1.4 var(--pixel); color: #1a1205; background: linear-gradient(180deg, #e2c56b, #a8893a); border: 1px solid #c9ad5a; border-bottom-width: 4px; border-radius: 8px; padding: 10px 16px; cursor: pointer; }
+    .vol { display: flex; align-items: center; gap: 8px; font: 9px/1.4 var(--pixel); color: #e9e2d6; }
+    .vol input { width: 110px; accent-color: var(--gold); }
+    @media (max-width: 640px) {
+      /* the card would overflow the little screen: show it in the screen's place until it's dismissed */
+      .intro { position: static; display: block; }
+      .screen:has(.intro:not([hidden])) canvas { display: none; }
+      .intro div { font-size: 13px; }
+    }
 
     /* cards */
     .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
@@ -199,7 +216,21 @@
     <div class="wrap">
       <div class="console" id="player">
         <div class="screen">
-          <canvas width="640" height="480" tabindex="0" aria-label="Toy Wars. Arrow keys or WASD move the cursor, Space or Z places a toy, hold Space with left or right to choose a toy, Enter for Game Reset, G for Game Select."></canvas>
+          <canvas width="640" height="480" tabindex="0" aria-label="Toy Wars. Arrow keys or WASD move the cursor, Space or Z places a toy or boosts the toy under the cursor, hold Space with left or right or press 1 to 6 to choose a toy, 0 for the shovel, Enter for Game Reset, G for Game Select, F for the speed."></canvas>
+          <div class="intro" data-intro hidden>
+            <div>
+              <h3>How to play</h3>
+              <ul>
+                <li><b>Move</b> the cursor over the nine slots with the arrows (or WASD, the stick, the D-pad).</li>
+                <li><b>Choose a toy</b>: hold <kbd>Space</kbd> and press left/right, or press <kbd>1</kbd>–<kbd>6</kbd>. <kbd>0</kbd> is the shovel.</li>
+                <li><b><kbd>Space</kbd> on an empty slot</b> places the toy. <b>On a toy</b> it boosts it: a teddy is mended, a shooter fires a power shot. With the shovel chosen it digs the toy up.</li>
+                <li><b>Green pips</b> at the top right show the health of the toy under the cursor.</li>
+                <li>A monster that reaches the toy box slams that shelf's lid once. <b>The second one through ends the game.</b></li>
+                <li><kbd>F</kbd> speeds the game up (2&times;, 4&times;). Full instructions are below the game.</li>
+              </ul>
+              <button type="button" data-intro-go>Got it: play</button>
+            </div>
+          </div>
         </div>
         <div class="switches">
           <button type="button" data-play>Play</button>
@@ -207,7 +238,9 @@
           <button type="button" data-select>Game Select</button>
           <button type="button" data-difficulty aria-pressed="false" title="Left difficulty switch: A = monsters arrive more often from the start">Difficulty B</button>
           <button type="button" data-pause>Pause</button>
+          <button type="button" data-speed aria-pressed="false" title="Game speed (F): 1x, 2x, 4x">Speed 1&times;</button>
           <button type="button" data-mute aria-pressed="false">Mute</button>
+          <label class="vol">Volume <input type="range" min="0" max="100" value="70" data-volume aria-label="Volume"></label>
         </div>
         <div class="touch" aria-label="Touch controls">
           <div class="dpad">
@@ -218,7 +251,7 @@
           </div>
           <button type="button" class="jump" data-hold="fire">FIRE</button>
         </div>
-        <p id="hint" data-hint>Click the game to start. Arrows move the cursor, Space places a toy, hold Space and press left/right to choose a toy, Enter is Game Reset, G is Game Select. P pauses, M mutes.</p>
+        <p id="hint" data-hint>Click the game to start. Arrows move the cursor, Space places a toy (or boosts the toy under the cursor), hold Space and press left/right or press 1-6 to choose a toy (0: the shovel), Enter is Game Reset, G is Game Select. F changes the speed, P pauses, M mutes.</p>
       </div>
     </div>
   </section>
@@ -247,10 +280,12 @@
           <tbody>
             <tr><td>Move the cursor</td><td><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>Stick or D-pad</td><td>D-pad</td></tr>
             <tr><td>Place / boost / dig up</td><td>Tap <kbd>Space</kbd> or <kbd>Z</kbd></td><td>Tap any face button</td><td>Tap FIRE</td></tr>
-            <tr><td>Choose a toy (then the shovel)</td><td>Hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd>, or press them together</td><td>Hold fire + left/right</td><td>Hold FIRE + ◀/▶</td></tr>
+            <tr><td>Choose a toy (then the shovel)</td><td>Hold <kbd>Space</kbd> + <kbd>←</kbd>/<kbd>→</kbd>, or press them together; or <kbd>1</kbd>–<kbd>6</kbd>, <kbd>0</kbd> for the shovel</td><td>Hold fire + left/right</td><td>Hold FIRE + ◀/▶</td></tr>
             <tr><td>New game</td><td><kbd>Enter</kbd> (Game Reset)</td><td>Start</td><td>Game Reset button</td></tr>
             <tr><td>Game Select</td><td><kbd>G</kbd></td><td>—</td><td>Game Select button</td></tr>
             <tr><td>Pause / mute</td><td><kbd>P</kbd> / <kbd>M</kbd></td><td>Back pauses</td><td>Buttons</td></tr>
+            <tr><td>Game speed (1&times;, 2&times;, 4&times;)</td><td><kbd>F</kbd></td><td>—</td><td>Speed button</td></tr>
+            <tr><td>Volume</td><td colspan="3">The Volume slider under the game (it's remembered)</td></tr>
           </tbody>
         </table>
       </div>
